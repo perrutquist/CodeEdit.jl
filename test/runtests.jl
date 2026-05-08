@@ -27,6 +27,28 @@ using Test
         @test blocks[3].kind == :eof
     end
 
+    @testset "JuliaSyntax parsing" begin
+        text = "module M\n# attached\nf(x) = x\n\nconst y = 1\nend\n"
+        blocks = CodeEdit.parse_julia_blocks(text)
+
+        @test length(blocks) == 5
+        @test blocks[1].kind == :module_header
+        @test blocks[1].lines == 1:1
+        @test blocks[2].kind == :julia
+        @test blocks[2].lines == 2:3
+        @test blocks[3].kind == :julia
+        @test blocks[3].lines == 5:5
+        @test blocks[4].kind == :module_footer
+        @test blocks[4].lines == 6:6
+        @test blocks[5].kind == :eof
+
+        same_line = CodeEdit.parse_julia_blocks("x = 1; y = 2\n")
+        @test length(same_line) == 2
+        @test same_line[1].kind == :julia
+        @test same_line[1].lines == 1:1
+        @test same_line[2].kind == :eof
+    end
+
     @testset "file loading, handles, display, and search" begin
         CodeEdit.clear_cache!()
 

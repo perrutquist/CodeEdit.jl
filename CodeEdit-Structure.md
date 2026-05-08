@@ -521,29 +521,30 @@ If the parse mode for an already cached logical file changes, invalidate old han
 
 ## 11. Julia parsing
 
-Use `JuliaSyntax.jl`.
+Use `JuliaSyntax.jl` as the source of truth for Julia syntax.
 
 Responsibilities of `parse_julia.jl`:
 
-1. Parse the whole file.
-2. Throw `ArgumentError` on parse errors.
-3. Identify top-level syntactic expressions.
-4. Attach immediately adjacent leading comments to the following block.
-5. Attach immediately adjacent docstrings to the following block.
-6. Treat multiple stacked docstrings as part of one block.
-7. Attach docstrings only to the immediately following definition/block.
+1. Parse the whole file with `JuliaSyntax.parseall(JuliaSyntax.SyntaxNode, ...)`.
+2. Throw `ArgumentError` on JuliaSyntax parse errors.
+3. Identify top-level syntactic expressions from the JuliaSyntax tree, not from keyword counting or package-specific Julia grammar heuristics.
+4. Use JuliaSyntax source-location APIs (`source_line`, `sourcefile`, `last_byte`, `byte_range` when needed) to derive expression extents.
+5. Convert JuliaSyntax expression extents into CodeEdit's line-oriented block spans.
+6. Attach immediately adjacent leading line comments to the following block. Comments are trivia, so this is intentionally a small source-line attachment pass rather than Julia grammar parsing.
+7. Rely on JuliaSyntax `K"doc"` nodes for docstring attachment. Multiple stacked docstrings should remain part of the syntax node that JuliaSyntax reports.
 8. Store only the full block span; `docstring(handle)` reparses the block source when doc text is requested.
-9. Split modules specially:
+9. Split clear multi-line module nodes specially using the JuliaSyntax `K"module"` node and its body `K"block"` child:
    - module header line is one block,
-   - module contents are subdivided normally,
+   - module body children are subdivided recursively from the JuliaSyntax tree,
    - matching `end` line is one block.
-9. Leave EOF block creation to generic parse code.
+10. If multiple JuliaSyntax top-level statements expand to the same physical line, merge them conservatively into one non-overlapping line block.
+11. Leave EOF block creation to generic parse code.
 
 Conservative rule:
 
-> If the parser tree does not make a boundary clear, do not invent one. Either keep the larger syntactic expression as one block or throw `ArgumentError` if correctness is uncertain.
+> If the JuliaSyntax tree does not make a boundary clear, do not invent one. Either keep the larger syntactic expression as one block or throw `ArgumentError` if correctness is uncertain.
 
-Top-level `begin`, `let`, `quote`, `if`, `for`, `while`, etc. should be one block each, except for special module splitting.
+Top-level `begin`, `let`, `quote`, `if`, `for`, `while`, etc. should be one block each, except for clear module splitting driven by JuliaSyntax node structure.
 
 `include("file.jl")` is just a normal top-level block during parsing. Recursive include traversal is handled by `handles(...; includes=true)`.
 
@@ -1372,7 +1373,7 @@ error("cannot write through symlink path: $path")
 4. `state.jl`
 5. UTF-8 validation and line index helpers
 6. text parser
-7. basic Julia parser for top-level blocks
+7. JuliaSyntax-based block extraction for top-level blocks
 8. cache loading and parse dispatch
 9. handle constructors and handle display
 10. EOF handles
@@ -1401,7 +1402,7 @@ This order gives a usable vertical slice early while isolating the higher-risk o
 
 ### 1. JuliaSyntax node details
 
-Module splitting, docstring detection, and comments may require careful parser-tree inspection. Keep this logic isolated in `parse_julia.jl`.
+JuliaSyntax is the source of truth for Julia expression extents, docstring nodes, source ordering, and module structure. The main risk is compatibility with JuliaSyntax tree/API details, so compatibility helpers and conservative fallbacks should stay isolated in `parse_julia.jl`.
 
 ### 2. Byte offsets versus character positions
 
