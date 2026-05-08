@@ -279,6 +279,8 @@ struct Block
 end
 ```
 
+`span` is the full block span, including any attached leading comments and docstring source when present.
+
 Suggested internal `kind` values:
 
 - `:julia`

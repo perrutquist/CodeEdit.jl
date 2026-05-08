@@ -59,6 +59,8 @@ Under the hood, the package keeps a cache of all files that it has already parse
 
 The functions throw an `ArgumentError` if a Julia file cannot be parsed, if a file contains invalid UTF-8, or if `Handle(path, line, pos)` is asked for a location outside the file.
 
+Paths that currently refer to the same file are detected by comparing device and inode information. Internally, cached files are accessed via an absolute path, while handles retain the user-supplied path for display.
+
 Handles referring to the same code block are interned: they compare as identical  with `===`.
 
 ## Searching
