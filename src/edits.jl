@@ -77,28 +77,3 @@ Combine(edits::AbstractVector{<:AbstractEdit}) = Combine(AbstractEdit[edits...],
 
 Base.:*(a::AbstractEdit, b::AbstractEdit) = Combine(a, b)
 
-"""
-Set or clear the displayed marker for an edit.
-
-Full plan compilation is implemented later; for now this records a stable
-placeholder marker so constructors and state transitions are testable.
-"""
-function displayed!(edit::AbstractEdit, displayed::Bool=true)
-    edit.displayed[] = displayed ? DisplayedPlan("", true, "") : nothing
-    return edit
-end
-
-"""
-Return whether the current edit object is structurally valid.
-
-Syntax/filesystem validation is added with edit planning.
-"""
-is_valid(edit::AbstractEdit) = true
-
-function Base.show(io::IO, ::MIME"text/plain", edit::AbstractEdit)
-    print(io, summary(edit))
-end
-
-function Base.show(io::IO, edit::AbstractEdit)
-    print(io, summary(edit))
-end

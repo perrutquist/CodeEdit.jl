@@ -140,4 +140,156 @@ using Test
             @test replace.displayed[] === nothing
         end
     end
+
+    @testset "single edit display, validation, apply, and cache update" begin
+        CodeEdit.clear_cache!()
+
+        mktempdir() do dir
+            path = joinpath(dir, "apply.jl")
+            write(path, """
+            function first()
+                1
+            end
+
+            function second()
+                2
+            end
+            """)
+
+            first = Handle(path, 1)
+            second = Handle(path, 5)
+
+            edit = Replace(first, replace(string(first), "1" => "10"))
+            shown = sprint(show, MIME"text/plain"(), edit)
+
+            @test occursin("Edit modifies", shown)
+            @test occursin("<", shown)
+            @test occursin(">", shown)
+            @test edit.displayed[] !== nothing
+            @test is_valid(edit)
+
+            apply!(edit)
+
+            @test read(path, String) == """
+            function first()
+                10
+            end
+
+            function second()
+                2
+            end
+            """
+            @test is_valid(first)
+            @test occursin("10", string(first))
+            @test is_valid(second)
+            @test lines(second) == 5:7
+        end
+
+        CodeEdit.clear_cache!()
+
+        mktempdir() do dir
+            path = joinpath(dir, "insert.jl")
+            write(path, """
+            function first()
+                1
+            end
+
+            function second()
+                2
+            end
+            """)
+
+            second = Handle(path, 5)
+            edit = InsertBefore(second, "const inserted = 1\n\n")
+            displayed!(edit)
+            apply!(edit)
+
+            @test read(path, String) == """
+            function first()
+                1
+            end
+
+            const inserted = 1
+
+            function second()
+                2
+            end
+            """
+            @test is_valid(second)
+            @test lines(second) == 7:9
+            @test occursin("function second", string(second))
+        end
+
+        CodeEdit.clear_cache!()
+
+        mktempdir() do dir
+            path = joinpath(dir, "delete.jl")
+            write(path, """
+            x = 1
+
+            y = 2
+            """)
+
+            x = Handle(path, 1)
+            y = Handle(path, 3)
+            edit = Delete(x)
+            displayed!(edit)
+            apply!(edit)
+
+            @test !is_valid(x)
+            @test is_valid(y)
+            @test lines(y) == 3:3
+            @test read(path, String) == """
+            
+            y = 2
+            """
+        end
+    end
+
+    @testset "single edit safety failures" begin
+        CodeEdit.clear_cache!()
+
+        mktempdir() do dir
+            path = joinpath(dir, "invalid.jl")
+            write(path, "x = 1\n")
+
+            h = Handle(path, 1)
+            edit = Replace(h, "function broken(\n")
+            shown = sprint(show, MIME"text/plain"(), edit)
+
+            @test occursin("Validation errors:", shown)
+            @test !is_valid(edit)
+            @test edit.displayed[] !== nothing
+            @test_throws ErrorException apply!(edit)
+            @test read(path, String) == "x = 1\n"
+        end
+
+        CodeEdit.clear_cache!()
+
+        mktempdir() do dir
+            path = joinpath(dir, "changed.jl")
+            write(path, "x = 1\n")
+
+            h = Handle(path, 1)
+            edit = Replace(h, "x = 2\n")
+            displayed!(edit)
+            write(path, "x = 3\n")
+
+            @test_throws ErrorException apply!(edit)
+            @test read(path, String) == "x = 3\n"
+        end
+
+        CodeEdit.clear_cache!()
+
+        mktempdir() do dir
+            path = joinpath(dir, "undisplayed.jl")
+            write(path, "x = 1\n")
+
+            h = Handle(path, 1)
+            edit = Replace(h, "x = 2\n")
+
+            @test_throws ErrorException apply!(edit)
+            @test read(path, String) == "x = 1\n"
+        end
+    end
 end
