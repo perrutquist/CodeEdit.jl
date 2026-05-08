@@ -1,5 +1,5 @@
 module CodeEdit
 
-# Write your package code here.
+using JuliaSyntax, Glob
 
 end
