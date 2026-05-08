@@ -6,7 +6,7 @@ eof_span(text::AbstractString) = Span(ncodeunits(text) + 1, ncodeunits(text) + 1
 """
 Return the public EOF line number for `text`.
 """
-eof_line(text::AbstractString, line_starts::Vector{Int}) = isempty(text) ? 1 : length(line_starts) + 1
+eof_line(text::AbstractString, line_starts::Vector{Int}) = line_count(line_starts) + 1
 
 """
 Validate that `span` is a well-formed half-open byte span into `text`.
