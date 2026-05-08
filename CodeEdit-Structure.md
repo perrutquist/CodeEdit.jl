@@ -726,7 +726,7 @@ Also define:
 Base.:*(a::AbstractEdit, b::AbstractEdit) = Combine(a, b)
 ```
 
-`Combine` is an ordered edit. Its child edits are planned and applied conceptually from left to right, and each child edit sees the virtual filesystem state produced by the previous child edits.
+`Combine` is an ordered edit. Its child edits are planned and applied conceptually from left to right, and each child edit sees the virtual filesystem state produced by the previous child edits. Intermediate states are tracked directly from the ordered edits and are not reparsed until the full combined edit has been interpreted.
 
 `Combine(edit1, edit2, ...)` preserves the given order. Nested combines are flattened during planning, preserving left-to-right order. Thus `Combine(a, Combine(b, c))` and `a * b * c` are planned as `a`, then `b`, then `c`.
 
@@ -772,9 +772,9 @@ end
 
 Separate public edit objects from executable plans. A plan is compiled by interpreting edits against a virtual filesystem state, without mutating the real filesystem or the global handle registry.
 
-During planning, each touched file has a virtual state containing its current path, text, parse mode, parsed blocks, line index, file stamp or path precondition, and temporary handle bindings. These virtual handle bindings are updated after each ordered edit step, so later edits in a `Combine` resolve handles against the state produced by earlier edits.
+During planning, each touched file has a virtual state containing its current path, text, parse mode, initial parsed blocks, line index, file stamp or path precondition, and temporary handle bindings. After each ordered edit step, those virtual handle bindings and block locations are updated directly from the edit operations rather than by reparsing intermediate file contents. Later edits in a `Combine` therefore resolve handles against the tracked virtual state produced by earlier edits, and reparsing is deferred until the full ordered sequence has been interpreted.
 
-A handle-based edit is resolved at the moment that edit is reached in the ordered sequence. If an earlier edit shifted, replaced, moved, or invalidated the handle’s block, the later edit observes that updated state. If the planner cannot determine the handle’s current block unambiguously, planning fails conservatively.
+A handle-based edit is resolved at the moment that edit is reached in the ordered sequence. If an earlier edit shifted, replaced, moved, or invalidated the handle’s block, the later edit observes that updated tracked state. If the planner cannot determine the handle’s current block unambiguously, planning fails conservatively.
 
 Planning pipeline:
 
@@ -784,10 +784,10 @@ Planning pipeline:
 4. Resolve handles against the current virtual state.
 5. Check path preconditions against the current virtual path state.
 6. Apply the edit to the virtual state.
-7. Reparse affected files as needed.
-8. Update virtual handle bindings after each content edit or file move.
-9. Reject ambiguous, invalid, or unsafe intermediate states.
-10. Validate final modified and created file contents.
+7. Update tracked block locations and virtual handle bindings after each content edit or file move, without reparsing intermediate states.
+8. Reject ambiguous, invalid, or unsafe tracked intermediate handle/path states.
+9. Reparse and validate final modified and created file contents after the full ordered sequence has been interpreted.
+10. Produce a final executable plan and diff.
 11. Produce a final executable plan and diff.
 
 `EditPlan` should retain both the final grouped effects and the ordered operation trace used to produce them. The ordered trace is needed for display hashing, debugging, and faithful application of file creates, moves, deletes, and content writes.
@@ -806,9 +806,9 @@ A useful internal model is:
 
 Use ordered semantics for `Combine`.
 
-All child edits are interpreted from left to right against a virtual copy of the involved files and paths. Earlier edits can affect the meaning of later edits. For example, if `InsertBefore(h, code)` inserts text before `h`, a later `Replace(h, other)` resolves `h` at its shifted location.
+All child edits are interpreted from left to right against a virtual copy of the involved files and paths. Earlier edits can affect the meaning of later edits. For example, if `InsertBefore(h, code)` inserts text before `h`, a later `Replace(h, other)` resolves `h` at its shifted location. Intermediate virtual file contents do not need to be syntactically valid, because reparsing is deferred until the full ordered sequence has completed.
 
-Handles track their blocks through the virtual edit sequence when this is unambiguous. File moves update the virtual path associated with handles to that logical file. Deleting a block invalidates the corresponding virtual handle for the remainder of the plan. Replacing a block preserves the handle only if the replacement can be reparsed as a clear corresponding block; otherwise the handle becomes invalid and later uses of it fail.
+Handles track their blocks through the virtual edit sequence when this is unambiguous. File moves update the virtual path associated with handles to that logical file. Deleting a block invalidates the corresponding virtual handle for the remainder of the plan. Replacements and insertions update tracked block locations directly from their ordered byte-span effects; the planner does not require intermediate reparses to keep later handle resolution working. Once the whole ordered sequence has been interpreted, the final file contents are reparsed, validated, and used to determine final handle preservation conservatively.
 
 Planning must not mutate public handle records. The handle tracking described here is local to the plan. Public handles are updated only after `apply!` succeeds.
 
@@ -825,7 +825,7 @@ Reject by default:
 - deleting or moving a file and then later editing a handle whose logical file no longer exists,
 - creating a file at a virtual path that already exists,
 - moving a file to a virtual path that already exists,
-- ambiguous handle preservation after replacement or reparsing,
+- ambiguous handle tracking after replacement or other range-changing edits,
 - any ordered combination whose final filesystem effects cannot be represented safely.
 
 Allow when unambiguous:
@@ -853,13 +853,15 @@ EOF handles also track the virtual file state. After earlier insertions, moves, 
 
 Insertions do not add newlines automatically. Insert `code` exactly as supplied.
 
-After an insertion, the affected file is reparsed when later ordered edits need handle resolution in that file. If reparsing fails or block correspondence is ambiguous, planning fails.
+After an insertion, later ordered edits continue to resolve handles using the tracked virtual block locations produced by the ordered edits. If that tracking becomes ambiguous, planning fails. Reparsing is deferred until the final combined result is validated.
 
 ---
 
 ## 17. Validation
 
 Validation is syntax/encoding only.
+
+Intermediate states within an ordered `Combine` do not need to parse successfully. Validation is applied only to the final modified or created file contents.
 
 For each modified or created file:
 
@@ -897,7 +899,7 @@ The plan hash should include enough information to detect any meaningful change 
 - modified paths,
 - path moves across the ordered sequence,
 - old/new text hashes,
-- intermediate text hashes when they affect later handle resolution,
+- intermediate text hashes and tracked block-location state when they affect later handle resolution,
 - resolved replacement spans at each step,
 - create/move/delete operations in order,
 - parse modes,
@@ -971,7 +973,7 @@ Because ordered plans may include create, move, delete, and content edits to the
 
 ## 20. Cache update and reindexing after apply
 
-After a successful CodeEdit-applied edit, update caches using the ordered plan rather than generic heuristic reindexing whenever possible.
+After a successful CodeEdit-applied edit, update caches using the ordered plan rather than generic heuristic reindexing whenever possible. Reparse each affected file only after the full ordered edit sequence has been applied successfully.
 
 For each affected logical file:
 
@@ -985,10 +987,10 @@ For each affected logical file:
 
 Recommended deterministic rules:
 
-- `Replace(h, code)` preserves `h` if the replacement reparses to a clear corresponding block at that step.
-- If `Replace(h, code)` cannot preserve `h`, invalidate `h` for the remainder of the ordered plan.
+- `Replace(h, code)` keeps `h` bound to the replacement range for the remainder of the ordered plan when that tracking is unambiguous.
+- If tracked preservation of `Replace(h, code)` becomes ambiguous, invalidate `h` for the remainder of the ordered plan.
 - `Delete(h)` invalidates `h`, except EOF delete is a no-op.
-- `InsertBefore` / `InsertAfter` preserve the target handle if its block still exists after reparsing.
+- `InsertBefore` / `InsertAfter` preserve the target handle when the ordered edit tracking still leaves its block location unambiguous.
 - `MoveFile` preserves handles for the moved logical file and updates their path.
 - `DeleteFile` invalidates all handles for the deleted logical file.
 - Unedited blocks preserve their old handle ids when line shifts are unambiguous.
@@ -1279,6 +1281,7 @@ error("cannot write through symlink path: $path")
 - insert without automatic newline,
 - EOF replace/insert/delete behavior,
 - combined edits,
+- combined edits with syntactically invalid intermediate states but valid final states,
 - overlapping edit rejection,
 - duplicate handle edit rejection,
 - ambiguous same-location insertion rejection,
@@ -1401,12 +1404,14 @@ Do not normalize during parsing, display, or diffing. Edits insert exactly suppl
 
 Ordered `Combine` semantics are substantially more complex than simultaneous snapshot semantics.
 
-The planner must maintain a virtual filesystem state and virtual handle registry while interpreting child edits left to right. Handles must track their blocks through insertions, replacements, deletions, reparsing, and file moves, but only when this can be done unambiguously.
+The planner must maintain a virtual filesystem state and virtual handle registry while interpreting child edits left to right. Handles must track their blocks through insertions, replacements, deletions, and file moves without reparsing intermediate states, but only when this can be done unambiguously.
 
 The implementation should be conservative:
 
-- reparse after edits that may affect later handle resolution,
-- preserve handles only when there is a clear corresponding block,
+- update tracked block locations directly from ordered edits,
+- allow intermediate states that are not syntactically valid,
+- reparse only after the full ordered sequence when validating final contents,
+- preserve handles only when there is a clear corresponding final block,
 - invalidate rather than guess,
 - reject later uses of invalidated handles,
 - include ordered intermediate state in the displayed-plan hash.

@@ -85,7 +85,7 @@ Editing is performed by first creating one or more "edit" objects (`<: AbstractE
 
 `DeleteFile(path)` -  An edit which deletes a file.
 
-`Combine(edit1, edit2, ...)` - An edit that combines a set of other edits to be applied in the given order.  For example `Combine(InsertBefore(destination, string(source)), Delete(source))` creates an edit that will move a block of code. Combined edits are validated together before being applied. They are intended to succeed or fail as a unit.
+`Combine(edit1, edit2, ...)` - An edit that combines a set of other edits to be applied in the given order.  For example `Combine(InsertBefore(destination, string(source)), Delete(source))` creates an edit that will move a block of code. Within a combined edit, later child edits track the block locations produced by earlier child edits without reparsing in between, so intermediate states do not need to be syntactically valid. The affected files are reparsed and validated only after the entire combined edit has been planned. Combined edits are intended to succeed or fail as a unit.
 
 `edit1 * edit2` - Shorthand for `Combine(edit1, edit2)`
 
@@ -111,7 +111,7 @@ Invalid handles are displayed as `#invalid`.
 
 `display(handles)` - Displays an overview of a `Set` of handles, sorted by file, and giving the location and approximately 40 characters of code per handle.
 
-`display(edit)` - Displays a diff of the edit, and marks it as displayed. Also displays any syntax errors that would be introduced by the edit.
+`display(edit)` - Displays a diff of the edit, and marks it as displayed. Also displays any syntax errors that would be present in the final result of the edit.
 
 `displayed!(edit, true)` - Marks an edit as displayed, enabling application without actually displaying it. (Use with caution.)
 
@@ -127,7 +127,7 @@ Invalid handles are displayed as `#invalid`.
 
 `is_valid(handle)` - Returns true if the handle is valid, i.e. the block that it points to still exists.
 
-`is_valid(edit)` - Returns true if an edit could be applied without introducing any syntax errors.
+`is_valid(edit)` - Returns true if an edit could be applied without introducing any syntax errors in the final file contents.
 
 `Base.occursin(handle, trace)` - Returns `true` if the code that `handle` points to occurs in the stacktrace `trace`.
 
