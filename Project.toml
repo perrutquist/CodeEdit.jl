@@ -6,10 +6,12 @@ authors = ["Per Rutquist <per.rutquist@gmail.com> and contributors"]
 [deps]
 Glob = "c27321d9-0574-5035-807b-f59d2c89b15c"
 JuliaSyntax = "70703baa-626e-46a2-a12c-08ffd08c73b4"
+SHA = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 
 [compat]
 Glob = "1.4.0"
 JuliaSyntax = "1.0.2"
+SHA = "0.7.0"
 julia = "1.9"
 
 [extras]
