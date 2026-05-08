@@ -52,8 +52,8 @@ function build_file_cache!(
     path::AbstractString,
     display_path::AbstractString,
     parse_as::Symbol,
+    info=read_source_file(path),
 )
-    info = read_source_file(path)
     blocks = parse_source_blocks(info.text, info.line_starts, parse_as; path=String(path))
 
     cache = FileCache(
@@ -83,16 +83,17 @@ function replace_file_cache!(
     path::AbstractString,
     display_path::AbstractString,
     parse_as::Symbol,
+    info=read_source_file(path),
 )
     state = STATE[]
     old_cache = state.files[key]
     invalidate_file_handles!(key)
-    cache = build_file_cache!(key, path, display_path, parse_as)
+    cache = build_file_cache!(key, path, display_path, parse_as, info)
     cache.generation = old_cache.generation + 1
     cache.paths = union(old_cache.paths, Set([String(path)]))
     state.files[key] = cache
     state.path_index[String(path)] = key
-    state.id_index[cache.current_id::FileID] = key
+    state.id_index[cache.current_id] = key
     return cache
 end
 
@@ -116,7 +117,7 @@ function load_file(path::AbstractString; parse_as::Symbol=:auto)
             return cache
         end
 
-        return replace_file_cache!(key, abs_path, display_path, mode)
+        return replace_file_cache!(key, abs_path, display_path, mode, info)
     end
 
     info = read_source_file(abs_path)
@@ -130,14 +131,14 @@ function load_file(path::AbstractString; parse_as::Symbol=:auto)
             return cache
         end
 
-        return replace_file_cache!(key, abs_path, display_path, mode)
+        return replace_file_cache!(key, abs_path, display_path, mode, info)
     end
 
     key = allocate_file_key!()
-    cache = build_file_cache!(key, abs_path, display_path, mode)
+    cache = build_file_cache!(key, abs_path, display_path, mode, info)
     state.files[key] = cache
     state.path_index[abs_path] = key
-    state.id_index[cache.current_id::FileID] = key
+    state.id_index[cache.current_id] = key
     return cache
 end
 

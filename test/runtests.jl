@@ -6,7 +6,7 @@ using Test
         text = "αβ\nx\r\ny"
         starts = CodeEdit.build_line_starts(text)
 
-        @test starts == [1, 5, 8]
+        @test starts == [1, 6, 9]
         @test CodeEdit.line_count(starts) == 3
         @test CodeEdit.span_text(text, CodeEdit.line_content_span(text, starts, 1)) == "αβ"
         @test CodeEdit.line_char_count(text, starts, 1) == 2

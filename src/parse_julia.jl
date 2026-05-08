@@ -40,6 +40,99 @@ function next_julia_code_line(text::AbstractString, line_starts::Vector{Int}, li
     return line_total + 1
 end
 
+const JULIA_BLOCK_OPENING_KEYWORDS = (
+    "baremodule",
+    "begin",
+    "do",
+    "for",
+    "function",
+    "if",
+    "let",
+    "macro",
+    "module",
+    "quote",
+    "struct",
+    "try",
+    "while",
+)
+
+"""
+Return `line` with any trailing Julia line comment removed.
+
+This helper is intentionally conservative and only supports enough lexical
+state to keep block-boundary heuristics from treating comments as code.
+JuliaSyntax still validates the whole source before block detection runs.
+"""
+function strip_julia_line_comment(line::AbstractString)
+    in_string = false
+    quote_char = '\0'
+    escaped = false
+
+    for i in eachindex(line)
+        char = line[i]
+
+        if in_string
+            if escaped
+                escaped = false
+            elseif char == '\\'
+                escaped = true
+            elseif char == quote_char
+                in_string = false
+            end
+        elseif char == '"' || char == '\''
+            in_string = true
+            quote_char = char
+        elseif char == '#'
+            return i == firstindex(line) ? "" : String(line[firstindex(line):prevind(line, i)])
+        end
+    end
+
+    return String(line)
+end
+
+"""
+Return the stripped source used for Julia block-boundary heuristics.
+"""
+function julia_boundary_source(text::AbstractString, line_starts::Vector{Int}, line::Integer)
+    source = span_text(text, line_content_span(text, line_starts, line))
+    return strip(strip_julia_line_comment(source))
+end
+
+"""
+Return the number of word-boundary occurrences of a Julia keyword in `source`.
+"""
+function julia_keyword_count(source::AbstractString, keyword::AbstractString)
+    return length(collect(eachmatch(Regex("\\b$(keyword)\\b"), source)))
+end
+
+"""
+Return the block-nesting delta implied by a single physical source line.
+"""
+function julia_line_nesting_delta(source::AbstractString)
+    isempty(source) && return 0
+
+    openings = sum(keyword -> julia_keyword_count(source, keyword), JULIA_BLOCK_OPENING_KEYWORDS)
+    closings = julia_keyword_count(source, "end")
+    return openings - closings
+end
+
+"""
+Return the final line of the top-level Julia block starting at `code_line`.
+"""
+function julia_block_end_line(text::AbstractString, line_starts::Vector{Int}, code_line::Integer)
+    line_total = line_count(line_starts)
+    nesting = 0
+
+    for line in code_line:line_total
+        source = julia_boundary_source(text, line_starts, line)
+        nesting += julia_line_nesting_delta(source)
+
+        nesting <= 0 && return line
+    end
+
+    return line_total
+end
+
 """
 Parse Julia text into conservative top-level blocks.
 
@@ -69,13 +162,7 @@ function parse_julia_blocks(
         code_line = next_julia_code_line(text, line_starts, line)
         code_line > line_total && break
 
-        expr_start = line_span(text, line_starts, code_line).lo
-        expr, next_index = Meta.parse(String(text), expr_start; greedy=false, raise=true)
-        expr === nothing && throw(ArgumentError("Julia file could not be parsed: $path"))
-
-        expr_span = Span(expr_start, min(next_index, ncodeunits(text) + 1))
-        expr_lines = line_range_for_span(text, line_starts, expr_span)
-        end_line = expr_lines.stop
+        end_line = julia_block_end_line(text, line_starts, code_line)
 
         block_lo = line_span(text, line_starts, start_line).lo
         block_hi = line_span(text, line_starts, end_line).hi
