@@ -128,7 +128,7 @@ Filesystem inode/device identity is useful but cannot be the sole cache key, bec
 
 Use two concepts:
 
-1. **Filesystem identity**: current `stat(path)` device/inode.
+1. **Filesystem identity**: current `stat(path)` device/inode, used to detect aliases between user-supplied paths that currently refer to the same file.
 2. **Logical file key**: stable internal identity for a cached file across atomic replacement.
 
 ```julia
@@ -149,7 +149,14 @@ struct FileKey
 end
 ```
 
-Use `FileID` to coalesce paths that currently refer to the same file. Use `FileKey` as the primary key for cached files and handle records.
+Use `FileID` to coalesce user-supplied paths that currently refer to the same file. Use `FileKey` as the primary key for cached files and handle records.
+
+Path policy:
+
+- cached files store and use an absolute path for filesystem access,
+- aliases are detected by `stat(path)` device/inode comparison,
+- handles retain the user-supplied path associated with them for display purposes,
+- handle identity and cache lookup are based on `FileKey`, not on the display path string alone.
 
 ### 3.2 File stamps
 
@@ -269,7 +276,6 @@ struct Block
     span::Span
     lines::UnitRange{Int}
     kind::Symbol
-    docspan::Union{Nothing,Span}
 end
 ```
 
@@ -311,12 +317,13 @@ end
 
 Notes:
 
-- `primary_path` is the path most recently used for writing/display.
-- `paths` stores known aliases as supplied by users.
+- `primary_path` is an absolute path used for filesystem access and writing.
+- `paths` stores known user-supplied path aliases for this file.
 - `current_id` is refreshed from `stat(primary_path)`.
 - Atomic writes may change `current_id`, but the `FileKey` remains stable.
 - `blocks[i]` and `handles[i]` correspond.
 - `handles[i]` is the internal handle id for that block.
+- A cached logical file has exactly one active parse mode at a time.
 
 ---
 
@@ -366,6 +373,7 @@ Properties:
 - Public `Handle` values are immutable.
 - Invalidation only mutates `HandleRecord`.
 - Existing handles can adapt when their backing record is updated.
+- `path` stores the user-associated display path, while `file` identifies the cached logical file.
 - Invalid handles never become valid again.
 - `string(h)` should throw for invalid handles; it should not return stale text.
 
@@ -445,10 +453,11 @@ For content edits to existing files:
 
 Atomic rename over a symlink path may replace the symlink itself rather than the target. Initially use one conservative policy:
 
-- either resolve to `realpath(path)` before writing,
-- or reject writing through symlink paths with a clear error.
+- reject content writes through symlink paths with a clear error,
+- reject `MoveFile` when either source or destination path is a symlink path,
+- reject `DeleteFile` on a symlink path.
 
-The recommended initial implementation is to **reject writing through symlink paths** unless tests explicitly cover realpath behavior.
+The recommended initial implementation is to **reject mutating symlink paths** unless tests explicitly cover a different behavior.
 
 ---
 
@@ -521,7 +530,8 @@ Responsibilities of `parse_julia.jl`:
 5. Attach immediately adjacent docstrings to the following block.
 6. Treat multiple stacked docstrings as part of one block.
 7. Attach docstrings only to the immediately following definition/block.
-8. Split modules specially:
+8. Store only the full block span; `docstring(handle)` reparses the block source when doc text is requested.
+9. Split modules specially:
    - module header line is one block,
    - module contents are subdivided normally,
    - matching `end` line is one block.
@@ -538,6 +548,8 @@ Top-level `begin`, `let`, `quote`, `if`, `for`, `while`, etc. should be one bloc
 ### Docstring extraction
 
 `docstring(handle)` should return text, not Julia source code.
+
+It should work by reparsing the handle's full block source when needed rather than by storing docstring spans in the cached block representation.
 
 Supported initially:
 
@@ -627,6 +639,8 @@ follow `include("...")` statements recursively when:
 - it can be resolved relative to the including file,
 - the target exists.
 
+Use cycle detection based on the canonical cached file identity or absolute path so recursive include loops are traversed at most once.
+
 Do not evaluate dynamic include expressions.
 
 ### Location lookup
@@ -634,10 +648,13 @@ Do not evaluate dynamic include expressions.
 For `Handle(path, line, pos)`:
 
 1. Load/reindex file as needed.
-2. Convert `(line, pos)` to byte offset.
-3. Find block containing the offset.
-4. If none, choose next block after the offset.
-5. If none, return EOF handle.
+2. Validate that `line` and `pos` are inside the file's line/character bounds; otherwise throw `ArgumentError`.
+3. Convert `(line, pos)` to byte offset.
+4. Find block containing the offset.
+5. If none, choose next block after the offset.
+6. If none, return EOF handle.
+
+Querying an empty or blank region within the file returns the next block after that location, or EOF if there is no later block.
 
 ### Invalid handles
 
@@ -691,6 +708,7 @@ end
 struct CreateFile <: AbstractEdit
     path::String
     code::String
+    parse_as::Symbol
     displayed::Base.RefValue{Union{Nothing,DisplayedPlan}}
 end
 
@@ -718,6 +736,9 @@ Example:
 ```julia
 Replace(h::Handle, code::AbstractString) =
     Replace(h, String(code), Ref{Union{Nothing,DisplayedPlan}}(nothing))
+
+CreateFile(path::AbstractString, code::AbstractString; parse_as=:auto) =
+    CreateFile(String(path), String(code), parse_as, Ref{Union{Nothing,DisplayedPlan}}(nothing))
 ```
 
 Also define:
@@ -788,7 +809,6 @@ Planning pipeline:
 8. Reject ambiguous, invalid, or unsafe tracked intermediate handle/path states.
 9. Reparse and validate final modified and created file contents after the full ordered sequence has been interpreted.
 10. Produce a final executable plan and diff.
-11. Produce a final executable plan and diff.
 
 `EditPlan` should retain both the final grouped effects and the ordered operation trace used to produce them. The ordered trace is needed for display hashing, debugging, and faithful application of file creates, moves, deletes, and content writes.
 
@@ -837,7 +857,7 @@ Allow when unambiguous:
 - moving a file and then deleting it,
 - `Combine(InsertBefore(destination, string(source)), Delete(source))`, including when both handles are in the same file, provided the source handle still resolves unambiguously after the insertion.
 
-Same-location insertions resolve in the order they appear in the flattened `Combine`. `Combine(InsertBefore(C, A), InsertBefore(C, B))` gives the order `A`, `B`, `C`.
+Same-location insertions resolve in the order they appear in the flattened `Combine`. `Combine(InsertBefore(C, A), InsertBefore(C, B))` gives the order `A`, `B`, `C`. This ordered behavior is intentional and is not treated as an ambiguity by itself.
 
 ### EOF behavior
 
@@ -871,6 +891,8 @@ For each modified or created file:
   - reject parse errors.
 - If parsed as text:
   - validate UTF-8 only.
+
+For created files, `parse_as=:auto` means infer from the created path's extension using the same rules as `load_file`.
 
 Do not:
 
@@ -907,7 +929,7 @@ The plan hash should include enough information to detect any meaningful change 
 
 For a `Combine`, changing the order of child edits must change the plan hash, even if the final text would coincidentally be the same.
 
-`string(edit)` may generate a diff, but must not mark the edit as displayed.
+`string(edit)` may generate a diff and does mark the edit as displayed.
 
 `displayed!(edit, true)` should compile and store the current ordered plan without printing it. It bypasses visual display only. It should not bypass validation, path preconditions, plan hashing, ordered handle resolution, or file-change checks.
 
@@ -944,6 +966,7 @@ Application must not silently reinterpret handles differently from the displayed
 - It does not create parent directories.
 - It validates UTF-8.
 - It validates Julia syntax if parse mode is Julia.
+- `parse_as` may be `:auto`, `:julia`, or `:text`.
 - Later ordered edits may modify, move, or delete the created file.
 
 `MoveFile`:
@@ -951,12 +974,14 @@ Application must not silently reinterpret handles differently from the displayed
 - Old path must exist in the current virtual path state.
 - New path must not exist in the current virtual path state.
 - Parent of new path must exist.
+- Source or destination symlink paths are rejected.
 - If the old path is cached, the logical file key is preserved and virtual handles to that file move with it.
 - Later ordered edits to handles from that file resolve at the new virtual path.
 
 `DeleteFile`:
 
 - Path must exist in the current virtual path state.
+- Symlink paths are rejected.
 - It invalidates all virtual handles for the corresponding logical file for the remainder of the plan.
 - Later ordered edits to those handles fail.
 - After successful application, public handles for the deleted logical file are invalidated.
@@ -965,9 +990,9 @@ Application must not silently reinterpret handles differently from the displayed
 
 There is no true cross-file transactionality.
 
-Before writing anything, validate all final files, ordered path conditions, and the displayed plan hash. During application, use atomic content writes where possible. If a later filesystem operation fails, report partial failure clearly.
+Planning and validation are all-or-nothing, but applying a multi-file edit is still best-effort at the filesystem level. Before writing anything, validate all final files, ordered path conditions, and the displayed plan hash. During application, use atomic content writes where possible. If a later filesystem operation fails, report partial failure clearly.
 
-Because ordered plans may include create, move, delete, and content edits to the same logical file, application should use the ordered operation trace to choose a safe execution sequence. It must preserve the displayed final result and must not expose a different interpretation of the ordered edits.
+Because ordered plans may include create, move, delete, and content edits to the same logical file, application should derive a safe execution schedule from the ordered plan rather than blindly replaying low-level effects. That schedule must preserve the displayed final result and must not expose a different interpretation of the ordered edits. In particular, content writes should target final surviving paths, and temporary paths may be used internally when needed to realize safe move/write ordering.
 
 ---
 
@@ -1018,7 +1043,7 @@ reindex(path)
 Algorithm:
 
 1. Parse the new file.
-2. Match old blocks to new blocks:
+2. Match old blocks to new blocks using full block spans:
    - exact text match if unique,
    - otherwise nearby old line range with similar content,
    - otherwise invalidate.
@@ -1284,7 +1309,7 @@ error("cannot write through symlink path: $path")
 - combined edits with syntactically invalid intermediate states but valid final states,
 - overlapping edit rejection,
 - duplicate handle edit rejection,
-- ambiguous same-location insertion rejection,
+- same-location insertion ordering,
 - syntax validation failure,
 - non-Julia UTF-8 validation.
 
@@ -1415,6 +1440,8 @@ The implementation should be conservative:
 - invalidate rather than guess,
 - reject later uses of invalidated handles,
 - include ordered intermediate state in the displayed-plan hash.
+
+Changing a file's extension or loading a cached logical file with a different `parse_as` than its current cached parse mode invalidates all handles for that file and reloads it under the new mode. A cached logical file has only one parse mode at a time.
 
 Do not mutate the real cache or public handle records during planning. Public state changes only after successful `apply!`.
 
