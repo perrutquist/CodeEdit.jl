@@ -1391,8 +1391,7 @@ error("cannot write through symlink path: $path")
 22. file create/move/delete
 23. recursive include traversal
 24. method and stacktrace integration
-25. parser polish: modules, docstrings, comments, semicolons
-26. filesystem edge cases: symlinks, aliases, mode bits, CRLF
+25. filesystem edge cases: symlinks, aliases, mode bits, CRLF
 
 This order gives a usable vertical slice early while isolating the higher-risk ordered planning and virtual handle-tracking logic.
 
