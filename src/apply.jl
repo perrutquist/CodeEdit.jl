@@ -352,7 +352,13 @@ function apply!(edit::AbstractEdit)
         error("file changed since edit was displayed; display the edit again")
 
     apply_plan!(plan)
-    run_post_apply_hooks!()
+
+    try
+        maybe_revise()
+    catch err
+        @warn "Revise failed after apply" exception=(err, catch_backtrace())
+    end
+
     println("Success.")
     return nothing
 end

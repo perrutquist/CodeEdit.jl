@@ -4,7 +4,7 @@ using CodeEdit
 using Revise
 
 function __init__()
-    CodeEdit.register_post_apply_hook!(:Revise) do
+    CodeEdit._maybe_revise_callback[] = function ()
         Revise.revise()
         return nothing
     end
