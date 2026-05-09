@@ -21,6 +21,13 @@ end
 """)
 
 include(error_source)
+
+# The Documenter.jl "REPL" doesn't actually catch `err`, so we cheat...
+err = try
+    outer(1)
+catch e
+    catch_backtrace()
+end
 ```
 
 ## Starting from a stacktrace
@@ -37,17 +44,15 @@ function outer(x)
 end
 ```
 
-Capture both the exception and stacktrace:
+Capture the stacktrace:
 
 ```@repl searching_errors
-err = nothing
 trace = nothing
 
 try
     outer(1)
 catch caught
     global trace = catch_backtrace()
-    global err = CapturedException(caught, trace)
 end;
 ```
 
@@ -60,15 +65,13 @@ matches = search(hs, trace)
 
 The result contains handles for blocks whose source locations appear in the stacktrace.
 
-## Starting from an exception
+## At the REPL
 
-You can also pass a captured exception directly:
+At the Julia REPL, the caught `ExceptionStack` is in the variable `err`, which we can use:
 
 ```@repl searching_errors
 matches = search(hs, err)
 ```
-
-This is convenient when the exception object carries stacktrace information that CodeEdit.jl can inspect.
 
 ## Inspecting the most relevant block
 
