@@ -341,6 +341,15 @@ function apply_plan!(plan::EditPlan)
     return nothing
 end
 
+"""
+    apply!(edit::AbstractEdit)
+
+Apply a previously displayed edit to the filesystem.
+
+The edit must have been displayed, either by printing or displaying it, or by
+calling [`displayed!`](@ref). The edit is replanned before application and is
+rejected if the current plan no longer matches the displayed plan.
+"""
 function apply!(edit::AbstractEdit)
     displayed = edit.displayed[]
     displayed === nothing && error("edit has not been displayed")

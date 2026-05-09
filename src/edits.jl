@@ -1,3 +1,11 @@
+"""
+    AbstractEdit
+
+Abstract supertype for all edit values.
+
+Edit objects describe source or filesystem changes that can be displayed,
+validated, and then applied with [`apply!`](@ref).
+"""
 abstract type AbstractEdit end
 
 """
@@ -9,29 +17,60 @@ struct DisplayedPlan
     text::String
 end
 
+"""
+    Replace(handle::Handle, code::AbstractString)
+
+Edit that replaces the source block referred to by `handle` with `code`.
+"""
 struct Replace <: AbstractEdit
     handle::Handle
     code::String
     displayed::Base.RefValue{Union{Nothing,DisplayedPlan}}
 end
 
+"""
+    Delete(handle::Handle)
+
+Edit that deletes the source block referred to by `handle`.
+
+Deleting an EOF handle has no effect.
+"""
 struct Delete <: AbstractEdit
     handle::Handle
     displayed::Base.RefValue{Union{Nothing,DisplayedPlan}}
 end
 
+"""
+    InsertBefore(handle::Handle, code::AbstractString)
+
+Edit that inserts `code` immediately before the source block referred to by
+`handle`.
+"""
 struct InsertBefore <: AbstractEdit
     handle::Handle
     code::String
     displayed::Base.RefValue{Union{Nothing,DisplayedPlan}}
 end
 
+"""
+    InsertAfter(handle::Handle, code::AbstractString)
+
+Edit that inserts `code` immediately after the source block referred to by
+`handle`.
+"""
 struct InsertAfter <: AbstractEdit
     handle::Handle
     code::String
     displayed::Base.RefValue{Union{Nothing,DisplayedPlan}}
 end
 
+"""
+    CreateFile(path::AbstractString, code::AbstractString; parse_as::Symbol=:auto)
+
+Edit that creates a new file at `path` containing `code`.
+
+`parse_as` may be `:auto`, `:julia`, or `:text`.
+"""
 struct CreateFile <: AbstractEdit
     path::String
     code::String
@@ -39,17 +78,35 @@ struct CreateFile <: AbstractEdit
     displayed::Base.RefValue{Union{Nothing,DisplayedPlan}}
 end
 
+"""
+    MoveFile(old_path::AbstractString, new_path::AbstractString)
+
+Edit that moves or renames a file from `old_path` to `new_path`.
+"""
 struct MoveFile <: AbstractEdit
     old_path::String
     new_path::String
     displayed::Base.RefValue{Union{Nothing,DisplayedPlan}}
 end
 
+"""
+    DeleteFile(path::AbstractString)
+
+Edit that deletes the file at `path`.
+"""
 struct DeleteFile <: AbstractEdit
     path::String
     displayed::Base.RefValue{Union{Nothing,DisplayedPlan}}
 end
 
+"""
+    Combine(edits::AbstractEdit...)
+    Combine(edits::AbstractVector{<:AbstractEdit})
+
+Edit that combines multiple edits into one planned operation.
+
+Combined edits are interpreted in order and validated as a unit.
+"""
 struct Combine <: AbstractEdit
     edits::Vector{AbstractEdit}
     displayed::Base.RefValue{Union{Nothing,DisplayedPlan}}
