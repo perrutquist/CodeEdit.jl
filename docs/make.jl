@@ -21,6 +21,7 @@ try
             "API reference" => "api.md",
         ],
         checkdocs = :none,
+        workdir = @__DIR__
     )
 
     if get(ENV, "CI", "false") == "true" && haskey(ENV, "GITHUB_REPOSITORY")
