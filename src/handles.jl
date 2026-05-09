@@ -30,10 +30,71 @@ function lines(handle::Handle)
 end
 
 """
-Return a handle's cached docstring text, if available.
+Return whether `text` begins with a Julia string literal docstring prefix.
+"""
+function leading_julia_string_literal(text::AbstractString)
+    stripped = lstrip(text)
+    isempty(stripped) && return nothing
+
+    if startswith(stripped, "\"\"\"")
+        stop = findnext("\"\"\"", stripped, nextind(stripped, nextind(stripped, nextind(stripped, firstindex(stripped)))))
+        stop === nothing && return nothing
+        content_start = nextind(stripped, nextind(stripped, nextind(stripped, firstindex(stripped))))
+        content_stop = prevind(stripped, stop)
+        rest_start = nextind(stripped, nextind(stripped, nextind(stripped, stop)))
+        return (
+            text = content_start > content_stop ? "" : String(stripped[content_start:content_stop]),
+            rest = rest_start > ncodeunits(stripped) ? "" : String(stripped[rest_start:end]),
+        )
+    end
+
+    startswith(stripped, "\"") || return nothing
+    index = nextind(stripped, firstindex(stripped))
+    escaped = false
+
+    while index <= ncodeunits(stripped)
+        char = stripped[index]
+
+        if escaped
+            escaped = false
+        elseif char == '\\'
+            escaped = true
+        elseif char == '"'
+            content_start = nextind(stripped, firstindex(stripped))
+            content_stop = prevind(stripped, index)
+            rest_start = nextind(stripped, index)
+            return (
+                text = content_start > content_stop ? "" : String(stripped[content_start:content_stop]),
+                rest = rest_start > ncodeunits(stripped) ? "" : String(stripped[rest_start:end]),
+            )
+        end
+
+        index = nextind(stripped, index)
+    end
+
+    return nothing
+end
+
+"""
+Return a handle's docstring text, if available.
 """
 function docstring(handle::Handle)
-    return valid_handle_record(handle).doc
+    record = valid_handle_record(handle)
+    record.doc !== nothing && return record.doc
+
+    docs = String[]
+    rest = record.text
+
+    while true
+        literal = leading_julia_string_literal(rest)
+        literal === nothing && break
+        push!(docs, literal.text)
+        rest = literal.rest
+        isempty(strip(rest)) && break
+    end
+
+    record.doc = isempty(docs) ? nothing : join(docs, "\n")
+    return record.doc
 end
 
 """
@@ -92,11 +153,54 @@ function eof_handle(path::AbstractString; parse_as::Symbol=:auto)
 end
 
 """
+Return statically resolvable include paths in a parsed Julia cache.
+"""
+function included_paths(cache::FileCache)
+    cache.parse_as == :julia || return String[]
+
+    result = String[]
+    include_pattern = r"^\s*include\(\s*([\"'])(.*?)\1\s*\)\s*$"m
+
+    for block in cache.blocks
+        block.kind == :eof && continue
+        source = span_text(cache.text, block.span)
+
+        for match in eachmatch(include_pattern, source)
+            path = joinpath(dirname(cache.primary_path), match.captures[2])
+            isfile(path) && push!(result, absolute_path(path))
+        end
+    end
+
+    return result
+end
+
+function collect_handles!(
+    result::Set{Handle},
+    path::AbstractString,
+    includes::Bool,
+    parse_as::Symbol,
+    seen::Set{String},
+)
+    cache = load_file(path; parse_as=parse_as)
+    abs_path = cache.primary_path
+    abs_path in seen && return result
+    push!(seen, abs_path)
+    union!(result, Set(Handle.(cache.handles)))
+
+    if includes
+        for included in included_paths(cache)
+            collect_handles!(result, included, true, :auto, seen)
+        end
+    end
+
+    return result
+end
+
+"""
 Return all handles for a file.
 """
 function handles(path::AbstractString; includes::Bool=false, parse_as::Symbol=:auto)
-    cache = load_file(path; parse_as=parse_as)
-    return Set(Handle.(cache.handles))
+    return collect_handles!(Set{Handle}(), path, includes, parse_as, Set{String}())
 end
 
 """

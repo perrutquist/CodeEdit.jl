@@ -17,8 +17,10 @@ include("edits.jl")
 include("diff.jl")
 include("plan.jl")
 include("apply.jl")
+include("reindex.jl")
+include("methods.jl")
 
-export Handle, eof_handle, handles
+export Handle, eof_handle, handles, reindex
 export search
 export AbstractEdit, Replace, Delete, InsertBefore, InsertAfter
 export CreateFile, MoveFile, DeleteFile, Combine, apply!, displayed!

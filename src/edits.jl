@@ -76,4 +76,6 @@ Combine(edits::AbstractEdit...) = Combine(AbstractEdit[edits...], display_ref())
 Combine(edits::AbstractVector{<:AbstractEdit}) = Combine(AbstractEdit[edits...], display_ref())
 
 Base.:*(a::AbstractEdit, b::AbstractEdit) = Combine(a, b)
+Base.:*(a::Combine, b::AbstractEdit) = Combine(vcat(a.edits, AbstractEdit[b]), display_ref())
+Base.:*(a::AbstractEdit, b::Combine) = Combine(vcat(AbstractEdit[a], b.edits), display_ref())
 

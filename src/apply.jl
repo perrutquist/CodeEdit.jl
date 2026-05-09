@@ -191,6 +191,149 @@ function update_cache_after_replacement_plan!(plan::ReplacementEditPlan)
     return cache
 end
 
+function update_cache_after_effect!(effect::FileEditEffect)
+    state = STATE[]
+
+    if effect.key === nothing
+        effect.deleted && return nothing
+        effect.new_text === nothing && return nothing
+
+        if isfile(effect.path)
+            cache = load_file(effect.path; parse_as=effect.parse_as)
+            return cache
+        end
+
+        return nothing
+    end
+
+    key = effect.key
+
+    if effect.deleted
+        if haskey(state.files, key)
+            cache = state.files[key]
+            delete!(state.path_index, cache.primary_path)
+
+            for path in cache.paths
+                delete!(state.path_index, path)
+            end
+
+            cache.current_id !== nothing && delete!(state.id_index, cache.current_id)
+            delete!(state.files, key)
+        end
+
+        invalidate_file_handles!(key)
+        return nothing
+    end
+
+    info = read_source_file(effect.path)
+    blocks = parse_source_blocks(info.text, info.line_starts, effect.parse_as; path=effect.path)
+    old_cache = get(state.files, key, nothing)
+    old_paths = old_cache === nothing ? Set{String}() : old_cache.paths
+    generation = old_cache === nothing ? 1 : old_cache.generation + 1
+
+    cache = FileCache(
+        key,
+        info.id,
+        effect.path,
+        union(old_paths, Set([effect.path])),
+        info.stamp,
+        effect.parse_as,
+        info.text,
+        info.line_starts,
+        info.line_ending,
+        blocks,
+        fill(0, length(blocks)),
+        generation,
+    )
+
+    span_index = Dict{Tuple{Int,Int},Vector{Int}}()
+    for (index, block) in pairs(blocks)
+        push!(get!(span_index, (block.span.lo, block.span.hi), Int[]), index)
+    end
+
+    assigned = falses(length(blocks))
+
+    for (id, span) in effect.handle_spans
+        record = get(state.handles, id, nothing)
+        record === nothing && continue
+
+        if span === nothing
+            invalidate_record!(record)
+            continue
+        end
+
+        candidates = get(span_index, (span.lo, span.hi), Int[])
+
+        if length(candidates) == 1 && !assigned[only(candidates)]
+            index = only(candidates)
+            update_record_from_block!(record, key, index, blocks[index], info.text)
+            record.path = effect.path
+            cache.handles[index] = id
+            assigned[index] = true
+        else
+            invalidate_record!(record)
+        end
+    end
+
+    for (index, block) in pairs(blocks)
+        assigned[index] && continue
+
+        record = HandleRecord(
+            key,
+            effect.path,
+            index,
+            block.span,
+            block.lines,
+            span_text(info.text, block.span),
+            nothing,
+            true,
+        )
+        handle = register_handle!(record)
+        cache.handles[index] = handle.id
+    end
+
+    state.files[key] = cache
+    state.path_index[effect.path] = key
+    state.id_index[cache.current_id] = key
+    return cache
+end
+
+function apply_plan!(plan::ReplacementEditPlan)
+    atomic_write(plan.path, plan.new_text)
+    update_cache_after_replacement_plan!(plan)
+    return nothing
+end
+
+function apply_plan!(plan::EditPlan)
+    for effect in plan.effects
+        if effect.deleted
+            effect.original_path !== nothing && ispath(effect.original_path) && rm(effect.original_path; force=true)
+            update_cache_after_effect!(effect)
+            continue
+        end
+
+        if effect.created
+            open(effect.path, "w") do io
+                write(io, effect.new_text === nothing ? "" : effect.new_text)
+            end
+            update_cache_after_effect!(effect)
+            continue
+        end
+
+        if effect.original_path !== nothing && effect.original_path != effect.path
+            mv(effect.original_path, effect.path; force=false)
+        end
+
+        if effect.new_text !== nothing && effect.old_text != effect.new_text
+            atomic_write(effect.path, effect.new_text)
+        end
+
+        update_cache_after_effect!(effect)
+    end
+
+    return nothing
+end
+
 function apply!(edit::AbstractEdit)
     displayed = edit.displayed[]
     displayed === nothing && error("edit has not been displayed")
@@ -201,8 +344,7 @@ function apply!(edit::AbstractEdit)
     plan.fingerprint == displayed.fingerprint ||
         error("file changed since edit was displayed; display the edit again")
 
-    atomic_write(plan.path, plan.new_text)
-    update_cache_after_replacement_plan!(plan)
+    apply_plan!(plan)
     println("Success.")
     return nothing
 end

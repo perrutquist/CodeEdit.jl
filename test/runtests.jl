@@ -293,4 +293,163 @@ using Test
             @test read(path, String) == "x = 1\n"
         end
     end
+
+    @testset "docstrings, recursive includes, method handles, and stacktrace search" begin
+        CodeEdit.clear_cache!()
+
+        mktempdir() do dir
+            child = joinpath(dir, "child.jl")
+            parent = joinpath(dir, "parent.jl")
+
+            write(child, """
+            "child doc"
+            child_function() = error("boom")
+            """)
+            write(parent, """
+            include("child.jl")
+
+            parent_function() = child_function()
+            """)
+
+            hs = handles(parent; includes=true)
+            @test any(h -> occursin("child_function", string(h)), hs)
+
+            child_handle = only(search(hs, "child_function() = error"))
+            @test docstring(child_handle) == "child doc"
+
+            include(parent)
+            method_handle = Handle(first(methods(parent_function)))
+            @test occursin("parent_function", string(method_handle))
+
+            trace = try
+                parent_function()
+            catch
+                catch_backtrace()
+            end
+
+            found = search(hs, trace)
+            @test any(h -> occursin("child_function", string(h)), found)
+        end
+    end
+
+    @testset "ordered Combine planning and apply" begin
+        CodeEdit.clear_cache!()
+
+        mktempdir() do dir
+            path = joinpath(dir, "combine.jl")
+            write(path, """
+            x = 1
+
+            y = 2
+            """)
+
+            x = Handle(path, 1)
+            y = Handle(path, 3)
+            edit = Combine(InsertBefore(y, "z = 3\n\n"), Replace(y, "y = 20\n"))
+            displayed!(edit)
+            apply!(edit)
+
+            @test read(path, String) == """
+            x = 1
+
+            z = 3
+
+            y = 20
+            """
+            @test is_valid(y)
+            @test lines(y) == 5:5
+            @test occursin("y = 20", string(y))
+            @test is_valid(x)
+        end
+
+        CodeEdit.clear_cache!()
+
+        mktempdir() do dir
+            path = joinpath(dir, "moveblock.jl")
+            write(path, """
+            a = 1
+
+            b = 2
+            """)
+
+            a = Handle(path, 1)
+            b = Handle(path, 3)
+            edit = Combine(InsertBefore(b, string(a) * "\n"), Delete(a))
+            displayed!(edit)
+            apply!(edit)
+
+            @test read(path, String) == """
+            
+            a = 1
+
+            b = 2
+            """
+            @test !is_valid(a)
+            @test is_valid(b)
+        end
+    end
+
+    @testset "file create, move, delete, and cache updates" begin
+        CodeEdit.clear_cache!()
+
+        mktempdir() do dir
+            created = joinpath(dir, "created.jl")
+            moved = joinpath(dir, "moved.jl")
+
+            create = CreateFile(created, "created_value = 1\n")
+            displayed!(create)
+            apply!(create)
+
+            @test read(created, String) == "created_value = 1\n"
+            @test length(search(created, "created_value")) == 1
+
+            h = Handle(created, 1)
+            edit = Combine(MoveFile(created, moved), Replace(h, "created_value = 2\n"))
+            displayed!(edit)
+            apply!(edit)
+
+            @test !ispath(created)
+            @test read(moved, String) == "created_value = 2\n"
+            @test is_valid(h)
+            @test filepath(h) == moved
+
+            delete = DeleteFile(moved)
+            displayed!(delete)
+            apply!(delete)
+
+            @test !ispath(moved)
+            @test !is_valid(h)
+        end
+    end
+
+    @testset "external reindexing" begin
+        CodeEdit.clear_cache!()
+
+        mktempdir() do dir
+            path = joinpath(dir, "reindex.jl")
+            write(path, """
+            first = 1
+
+            second = 2
+            """)
+
+            first = Handle(path, 1)
+            second = Handle(path, 3)
+
+            write(path, """
+            inserted = 0
+
+            first = 1
+
+            second = 2
+            """)
+
+            reindex(path)
+
+            @test is_valid(first)
+            @test is_valid(second)
+            @test lines(first) == 3:3
+            @test lines(second) == 5:5
+        end
+    end
 end

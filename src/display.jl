@@ -57,3 +57,23 @@ function Base.show(io::IO, ::MIME"text/plain", set::Set{Handle})
         show_handle(io, handle)
     end
 end
+
+function Base.show(io::IO, ::MIME"text/plain", vector::Vector{Handle})
+    if length(vector) == 1
+        show_handle(io, only(vector))
+        return
+    end
+
+    for (index, handle) in pairs(sort(collect(vector); by=handle_sort_key))
+        record = handle_record(handle)
+        index > 1 && println(io)
+
+        if record === nothing || !record.valid
+            print(io, "#invalid")
+        else
+            preview = replace(strip(record.text), '\n' => ' ')
+            ncodeunits(preview) > 40 && (preview = first(preview, 40) * "…")
+            print(io, "$(handle_header(handle)) $preview")
+        end
+    end
+end
