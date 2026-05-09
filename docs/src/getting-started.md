@@ -7,8 +7,8 @@ using CodeEdit
 ```
 
 ```@setup getting_started
-dir = mktempdir()
-srcdir = joinpath(dir, "src")
+rm("examples"; recursive=true, force=true)
+srcdir = "examples"
 mkpath(srcdir)
 mypackage = joinpath(srcdir, "MyPackage.jl")
 helper = joinpath(srcdir, "helpers.jl")
@@ -43,7 +43,7 @@ end
 Use [`Handle`](@ref) to point at the block containing a source location:
 
 ```@repl getting_started
-h = Handle(mypackage, 10)
+h = Handle("examples/MyPackage.jl", 10)
 ```
 
 If line 10 is inside a function, `h` points to the whole function block, not just that line.
@@ -65,19 +65,19 @@ source = string(h)
 List all blocks in one file:
 
 ```@repl getting_started
-hs = handles(mypackage)
+hs = handles("examples/MyPackage.jl")
 ```
 
 List all blocks in files matching a glob:
 
 ```@repl getting_started
-hs = handles(srcdir, "*.jl")
+hs = handles("examples", "*.jl")
 ```
 
 Follow Julia `include` statements recursively:
 
 ```@repl getting_started
-hs = handles(mypackage; includes = true)
+hs = handles("examples/MyPackage.jl"; includes = true)
 ```
 
 ## Getting the end-of-file handle
@@ -85,7 +85,7 @@ hs = handles(mypackage; includes = true)
 Use [`eof_handle`](@ref) when inserting new code at the end of a file:
 
 ```@repl getting_started
-h = eof_handle(mypackage)
+h = eof_handle("examples/MyPackage.jl")
 edit = InsertBefore(h, raw"""
 function new_function()
     return nothing
@@ -99,7 +99,7 @@ end
 Search within a set of handles:
 
 ```@repl getting_started
-hs = handles(srcdir, "*.jl")
+hs = handles("examples", "*.jl")
 matches = search(hs, "old_function_name")
 display(matches)
 ```

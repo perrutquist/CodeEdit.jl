@@ -5,20 +5,21 @@ Edits are represented as values that subtype [`AbstractEdit`](@ref). Construct a
 ```@setup editing
 using CodeEdit
 
-dir = mktempdir()
-replace_example = joinpath(dir, "replace_example.jl")
-insert_before_example = joinpath(dir, "insert_before_example.jl")
-insert_after_example = joinpath(dir, "insert_after_example.jl")
-delete_example = joinpath(dir, "delete_example.jl")
-old_name = joinpath(dir, "old_name.jl")
-new_name = joinpath(dir, "new_name.jl")
-unused_file = joinpath(dir, "unused_file.jl")
-new_file = joinpath(dir, "new_file.jl")
-source_file = joinpath(dir, "source.jl")
-destination_file = joinpath(dir, "destination.jl")
-source_shorthand_file = joinpath(dir, "source_shorthand.jl")
-destination_shorthand_file = joinpath(dir, "destination_shorthand.jl")
-nodisplay_example = joinpath(dir, "nodisplay_example.jl")
+rm("examples"; recursive=true, force=true)
+mkpath("examples")
+replace_example = "examples/replace.jl"
+insert_before_example = "examples/insert-before.jl"
+insert_after_example = "examples/insert-after.jl"
+delete_example = "examples/delete.jl"
+old_name = "examples/old-name.jl"
+new_name = "examples/new-name.jl"
+unused_file = "examples/unused.jl"
+new_file = "examples/new-file.jl"
+source_file = "examples/source.jl"
+destination_file = "examples/destination.jl"
+source_shorthand_file = "examples/source-shorthand.jl"
+destination_shorthand_file = "examples/destination-shorthand.jl"
+nodisplay_example = "examples/no-display.jl"
 
 write(replace_example, """
 function foo(x)
@@ -71,7 +72,7 @@ write(nodisplay_example, "status() = :old\n")
 ## Replacing a block
 
 ```@repl editing
-h = Handle(replace_example, 2)
+h = Handle("examples/replace.jl", 2)
 new_code = replace(string(h), "x + 1" => "x + 2");
 edit = Replace(h, new_code)
 apply!(edit)
@@ -82,7 +83,7 @@ apply!(edit)
 Insert before a block:
 
 ```@repl editing
-h = Handle(insert_before_example, 1)
+h = Handle("examples/insert-before.jl", 1)
 edit = InsertBefore(h, raw"""
 const DEFAULT_LIMIT = 10
 
@@ -93,7 +94,7 @@ apply!(edit)
 Insert after a block:
 
 ```@repl editing
-h = Handle(insert_after_example, 1)
+h = Handle("examples/insert-after.jl", 1)
 edit = InsertAfter(h, raw"""
 
 function helper(x)
@@ -108,7 +109,7 @@ Use raw string literals such as `raw"""..."""` when writing Julia code as string
 ## Deleting code
 
 ```@repl editing
-h = Handle(delete_example, 5)
+h = Handle("examples/delete.jl", 5)
 edit = Delete(h)
 apply!(edit)
 ```
@@ -118,7 +119,7 @@ EOF handles are unaffected by [`Delete`](@ref).
 ## Creating, moving, and deleting files
 
 ```@repl editing
-edit = CreateFile(new_file, raw"""
+edit = CreateFile("examples/new-file.jl", raw"""
 function new_file_function()
     return :ok
 end
@@ -128,12 +129,12 @@ apply!(edit)
 ```
 
 ```@repl editing
-edit = MoveFile(old_name, new_name)
+edit = MoveFile("examples/old-name.jl", "examples/new-name.jl")
 apply!(edit)
 ```
 
 ```@repl editing
-edit = DeleteFile(unused_file)
+edit = DeleteFile("examples/unused.jl")
 apply!(edit)
 ```
 
@@ -142,8 +143,8 @@ apply!(edit)
 Use [`Combine`](@ref), or the `*` shorthand, when multiple edits should be planned together:
 
 ```@repl editing
-source = Handle(source_file, 1)
-destination = eof_handle(destination_file)
+source = Handle("examples/source.jl", 1)
+destination = eof_handle("examples/destination.jl")
 edit = Combine(
     InsertBefore(destination, string(source)),
     Delete(source),
@@ -154,8 +155,8 @@ apply!(edit)
 Equivalent shorthand:
 
 ```@repl editing
-source = Handle(source_shorthand_file, 1)
-destination = eof_handle(destination_shorthand_file)
+source = Handle("examples/source-shorthand.jl", 1)
+destination = eof_handle("examples/destination-shorthand.jl")
 edit = InsertBefore(destination, string(source)) * Delete(source)
 ```
 
@@ -168,7 +169,7 @@ By default, [`apply!`](@ref) refuses to apply an edit until it has been displaye
 If you intentionally need to bypass display, use [`displayed!`](@ref):
 
 ```@repl editing
-h = Handle(nodisplay_example, 1)
+h = Handle("examples/no-display.jl", 1)
 edit = Replace(h, replace(string(h), ":old" => ":new"));
 displayed!(edit, true);
 apply!(edit)

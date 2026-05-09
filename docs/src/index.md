@@ -27,10 +27,10 @@ For non-Julia files, blocks are split like paragraphs using blank lines.
 ```@setup index
 using CodeEdit
 
-dir = mktempdir()
-foo_path = joinpath(dir, "foo.jl")
+rm("examples"; recursive=true, force=true)
+mkpath("examples")
 
-write(foo_path, """
+write("examples/foo.jl", """
 function foo(x)
     x + 1
 end
@@ -38,11 +38,11 @@ end
 ```
 
 ```@repl index
-h = Handle(foo_path, 2)
+h = Handle("examples/foo.jl", 2)
 replacement = replace(string(h), "x + 1" => "x + 2");
 edit = Replace(h, replacement)
 apply!(edit)
-read(foo_path, String)
+read("examples/foo.jl", String)
 ```
 
 If Revise.jl is loaded, CodeEdit.jl asks Revise to revise after a successful edit, so changed method definitions usually take effect immediately.

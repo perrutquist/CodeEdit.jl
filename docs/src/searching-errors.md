@@ -5,10 +5,10 @@ CodeEdit.jl can search for source blocks referenced by a stacktrace or by a caug
 ```@setup searching_errors
 using CodeEdit
 
-dir = mktempdir()
-srcdir = joinpath(dir, "src")
+rm("examples"; recursive=true, force=true)
+srcdir = "examples"
 mkpath(srcdir)
-error_source = joinpath(srcdir, "Example.jl")
+error_source = joinpath(srcdir, "error-example.jl")
 
 write(error_source, raw"""
 function inner(x)
@@ -54,7 +54,7 @@ end
 Collect source handles and search for stacktrace frames:
 
 ```@repl searching_errors
-hs = handles(srcdir, "*.jl")
+hs = handles("examples", "*.jl")
 matches = search(hs, trace)
 
 display(matches)
