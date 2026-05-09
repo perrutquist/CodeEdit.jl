@@ -2,6 +2,17 @@
 
 CodeEdit.jl is a package for locating, viewing, and editing Julia source code from the Julia command line. It has some built-in safety measures, such as requiring edit diffs to be viewed before they can be applied, but is intended to be used in conjunction with version-control software.
 
+## Documentation
+
+The full documentation is built with [Documenter.jl](https://documenter.juliadocs.org/). To build it locally, run:
+
+```shell
+julia --project=docs -e 'using Pkg; Pkg.develop(Pkg.PackageSpec(path=pwd())); Pkg.instantiate()'
+julia --project=docs docs/make.jl
+```
+
+Then open `docs/build/index.html`.
+
 ## Example
 
 Let's say we want to look at the code in "foo.jl" on line 2.

@@ -1,0 +1,6 @@
+[deps]
+CodeEdit = "ef324658-459a-46c1-a175-ab8d0771bbcc"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+
+[compat]
+Documenter = "1"
