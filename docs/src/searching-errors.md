@@ -48,7 +48,7 @@ try
 catch caught
     global err = caught
     global trace = catch_backtrace()
-end
+end;
 ```
 
 Collect source handles and search for stacktrace frames:
@@ -56,8 +56,6 @@ Collect source handles and search for stacktrace frames:
 ```@repl searching_errors
 hs = handles("examples", "*.jl")
 matches = search(hs, trace)
-
-display(matches)
 ```
 
 The result contains handles for blocks whose source locations appear in the stacktrace.
@@ -66,9 +64,8 @@ The result contains handles for blocks whose source locations appear in the stac
 
 You can also pass the caught exception directly:
 
-```julia
+```@repl julia
 matches = search(hs, err)
-display(matches)
 ```
 
 This is convenient when the exception object carries stacktrace information that CodeEdit.jl can inspect.
