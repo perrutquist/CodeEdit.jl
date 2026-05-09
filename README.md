@@ -31,7 +31,7 @@ julia> apply!(edit)
 Success.
 ```
 
-If `foo.jl` was loaded via **Revise.jl** then the new definition of `foo(x)` typically takes effect immediately.
+If **Revise.jl** is loaded, CodeEdit.jl triggers `Revise.revise()` after each successful edit so the new definition of `foo(x)` typically takes effect immediately.
 
 ## Blocks
 
@@ -100,6 +100,8 @@ Applying edits can modify or invalidate the handles that they contain. An invali
 Use raw string literals, e.g. `raw"""..."""`, to avoid escaping backslashes and dollar signs when writing Julia code into a string literal.
 
 There is no undo function. It is recommended to use **git** for version control.
+
+**Revise.jl** is an optional weak dependency. When Revise is loaded, CodeEdit.jl calls `Revise.revise()` after a successful `apply!`. Revise failures are reported as warnings because the filesystem edit has already been applied.
 
 ## Viewing
 

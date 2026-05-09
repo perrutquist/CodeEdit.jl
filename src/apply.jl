@@ -352,6 +352,7 @@ function apply!(edit::AbstractEdit)
         error("file changed since edit was displayed; display the edit again")
 
     apply_plan!(plan)
+    run_post_apply_hooks!()
     println("Success.")
     return nothing
 end
