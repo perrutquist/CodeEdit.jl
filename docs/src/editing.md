@@ -123,8 +123,7 @@ edit = CreateFile("examples/new-file.jl", raw"""
 function new_file_function()
     return :ok
 end
-""");
-display(edit)
+""")
 apply!(edit)
 ```
 

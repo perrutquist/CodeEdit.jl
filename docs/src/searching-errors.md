@@ -46,8 +46,8 @@ trace = nothing
 try
     outer(1)
 catch caught
-    global err = caught
     global trace = catch_backtrace()
+    global err = CapturedException(caught, trace)
 end;
 ```
 
@@ -62,9 +62,9 @@ The result contains handles for blocks whose source locations appear in the stac
 
 ## Starting from an exception
 
-You can also pass the caught exception directly:
+You can also pass a captured exception directly:
 
-```@repl julia
+```@repl searching_errors
 matches = search(hs, err)
 ```
 

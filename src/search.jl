@@ -2,10 +2,19 @@
 Return normalized stack frames for a Julia stacktrace-like object.
 """
 function normalized_trace_frames(trace)
+    if trace isa Base.CapturedException
+        return stacktrace(getfield(trace, :processed_bt))
+    end
+
     try
         return stacktrace(trace)
     catch
-        return trace
+        try
+            iterate(trace) === nothing && return ()
+            return trace
+        catch
+            return ()
+        end
     end
 end
 
@@ -49,6 +58,8 @@ function Base.occursin(handle::Handle, trace)
 end
 
 """
+    search(handle_set, needle::AbstractString)
+
 Search an existing handle collection for blocks containing `needle`.
 """
 function search(handle_set, needle::AbstractString)
@@ -63,7 +74,11 @@ function search(handle_set, needle::AbstractString)
 end
 
 """
-Search an existing handle collection for blocks referenced by a stacktrace.
+    search(handle_set, trace)
+
+Search an existing handle collection for blocks referenced by a stacktrace-like
+object, such as a backtrace from `catch_backtrace()`, a collection of stack
+frames, or a `CapturedException`.
 """
 function search(handle_set, trace)
     result = Set{Handle}()
@@ -76,6 +91,8 @@ function search(handle_set, trace)
 end
 
 """
+    search(path::AbstractString, needle::AbstractString; parse_as=:auto)
+
 Search all blocks in a file.
 """
 function search(path::AbstractString, needle::AbstractString; parse_as::Symbol=:auto)
@@ -83,6 +100,8 @@ function search(path::AbstractString, needle::AbstractString; parse_as::Symbol=:
 end
 
 """
+    search(paths::AbstractVector{<:AbstractString}, needle::AbstractString; parse_as=:auto)
+
 Search all blocks in a collection of files.
 """
 function search(paths::AbstractVector{<:AbstractString}, needle::AbstractString; parse_as::Symbol=:auto)
@@ -90,6 +109,8 @@ function search(paths::AbstractVector{<:AbstractString}, needle::AbstractString;
 end
 
 """
+    search(root::AbstractString, pattern::AbstractString, needle::AbstractString; includes=false, parse_as=:auto)
+
 Search files under `root` matching `pattern`.
 """
 function search(

@@ -1,5 +1,13 @@
 # Getting started
 
+## Installation
+
+Install CodeEdit.jl from the Julia package manager. If the package is not yet registered, add it from its repository URL:
+
+```julia-repl
+pkg> add https://github.com/perrutquist/CodeEdit.jl
+```
+
 ## Loading the package
 
 ```@repl getting_started
@@ -12,9 +20,14 @@ srcdir = "examples"
 mkpath(srcdir)
 mypackage = joinpath(srcdir, "MyPackage.jl")
 helper = joinpath(srcdir, "helpers.jl")
+append_example = joinpath(srcdir, "append-example.jl")
 
 write(helper, """
 helper(x) = x + 1
+""")
+
+write(append_example, """
+const APPEND_EXAMPLE = true
 """)
 
 write(mypackage, """
@@ -51,7 +64,7 @@ If line 10 is inside a function, `h` points to the whole function block, not jus
 Display the handle to inspect the code:
 
 ```@repl getting_started
-display(h)
+h
 ```
 
 or convert it to a string:
@@ -85,7 +98,7 @@ hs = handles("examples/MyPackage.jl"; includes = true)
 Use [`eof_handle`](@ref) when inserting new code at the end of a file:
 
 ```@repl getting_started
-h = eof_handle("examples/MyPackage.jl")
+h = eof_handle("examples/append-example.jl")
 edit = InsertBefore(h, raw"""
 function new_function()
     return nothing
@@ -101,7 +114,7 @@ Search within a set of handles:
 ```@repl getting_started
 hs = handles("examples", "*.jl")
 matches = search(hs, "old_function_name")
-display(matches)
+matches
 ```
 
 The search result is a `Set` of handles, so you can inspect or edit each matching block.

@@ -78,7 +78,7 @@ Handles referring to the same code block are interned: they compare as identical
 
 `search(handles, needle)` - Returns a `Set` of blocks that contain `needle`. This is a convenience wrapper for `filter(h -> occursin(needle, string(h)), handles)`
 
-`search(handles, trace)`/ `search(handles, exception)` - Returns handles to code referenced by the stack trace or an exception.
+`search(handles, trace)` / `search(handles, exception)` - Returns handles to code referenced by a stacktrace-like object, such as a backtrace from `catch_backtrace()`, a collection of stack frames, or a `CapturedException`.
 
 The `search` functions also accept a file path, a vector of file paths, or a directory path and a glob pattern in place of `handles`.
 

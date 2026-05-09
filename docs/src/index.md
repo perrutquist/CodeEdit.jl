@@ -4,15 +4,10 @@ CodeEdit.jl locates, displays, searches, and edits Julia source code from the Ju
 
 It is designed for interactive source navigation and small, reviewable source edits. Edits must be displayed before they can be applied, and CodeEdit.jl is intended to be used together with version control.
 
-```@contents
-Pages = [
-    "getting-started.md",
-    "editing.md",
-    "searching-errors.md",
-    "api.md",
-]
-Depth = 2
-```
+- [Getting started](getting-started.md)
+- [Editing code](editing.md)
+- [Finding errors from stacktraces](searching-errors.md)
+- [API reference](api.md)
 
 ## What CodeEdit.jl works with
 
