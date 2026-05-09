@@ -8,8 +8,14 @@ function valid_handle_record(handle::Handle)
 end
 
 """
-Return whether a handle currently refers to a valid block.
+    is_valid(handle)
+    is_valid(edit)
+
+Return whether a handle currently refers to a valid block, or whether an edit
+can be applied without validation errors.
 """
+function is_valid end
+
 function is_valid(handle::Handle)
     record = handle_record(handle)
     return record !== nothing && record.valid
@@ -123,9 +129,6 @@ function block_index_at_offset(cache::FileCache, offset::Integer)
     return length(cache.blocks)
 end
 
-"""
-Return a handle to the block containing `(line, pos)`, or the next block.
-"""
 function Handle(path::AbstractString, line::Integer, pos::Integer=1; parse_as::Symbol=:auto)
     cache = load_file(path; parse_as=parse_as)
     eof_lineno = eof_line(cache.text, cache.line_starts)
@@ -197,15 +200,22 @@ function collect_handles!(
 end
 
 """
-Return all handles for a file.
+    handles(path; includes=false, parse_as=:auto)
+    handles(paths; includes=false, parse_as=:auto)
+    handles(root, pattern; includes=false, parse_as=:auto)
+
+Return handles for all parsed blocks in one file, a collection of files, or
+files under `root` matching `pattern`.
+
+If `includes=true`, statically resolvable Julia `include(...)` paths are
+followed recursively. `parse_as` may be `:auto`, `:julia`, or `:text`.
 """
+function handles end
+
 function handles(path::AbstractString; includes::Bool=false, parse_as::Symbol=:auto)
     return collect_handles!(Set{Handle}(), path, includes, parse_as, Set{String}())
 end
 
-"""
-Return all handles for a collection of paths.
-"""
 function handles(paths; includes::Bool=false, parse_as::Symbol=:auto)
     result = Set{Handle}()
 
@@ -216,9 +226,6 @@ function handles(paths; includes::Bool=false, parse_as::Symbol=:auto)
     return result
 end
 
-"""
-Return all handles for files under `root` matching `pattern`.
-"""
 function handles(root::AbstractString, pattern::AbstractString; includes::Bool=false, parse_as::Symbol=:auto)
     return handles(glob(pattern, root); includes=includes, parse_as=parse_as)
 end

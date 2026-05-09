@@ -24,16 +24,26 @@ For non-Julia files, blocks are split like paragraphs using blank lines.
 
 ## Basic example
 
-```julia
+```@setup index
 using CodeEdit
 
+dir = mktempdir()
+cd(dir)
+
+write("foo.jl", """
+function foo(x)
+    x + 1
+end
+""")
+```
+
+```@repl index
 h = Handle("foo.jl", 2)
-
-replacement = replace(string(h), "x + 1" => "x + 2")
-edit = Replace(h, replacement)
-
+replacement = replace(string(h), "x + 1" => "x + 2");
+edit = Replace(h, replacement);
 display(edit)
 apply!(edit)
+read("foo.jl", String)
 ```
 
 If Revise.jl is loaded, CodeEdit.jl asks Revise to revise after a successful edit, so changed method definitions usually take effect immediately.

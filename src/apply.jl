@@ -20,9 +20,6 @@ function displayed!(edit::AbstractEdit, displayed::Bool=true)
     return edit
 end
 
-"""
-Return whether the current edit object can be applied without validation errors.
-"""
 function is_valid(edit::Union{Replace,Delete,InsertBefore,InsertAfter})
     return compile_edit_plan(edit).valid
 end

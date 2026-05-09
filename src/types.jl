@@ -69,7 +69,14 @@ mutable struct FileCache
 end
 
 """
-Reference to a source/text block.
+    Handle(path, line, pos=1; parse_as=:auto)
+    Handle(method)
+
+Reference to a parsed source/text block.
+
+The path-based constructor returns a handle to the block containing `(line, pos)`,
+or to the next block after that location. The method-based constructor returns a
+handle to a method definition when source information is available.
 """
 struct Handle
     id::Int

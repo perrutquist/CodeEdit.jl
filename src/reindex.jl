@@ -9,8 +9,17 @@ function reindex_match_score(old_text::AbstractString, old_lines::UnitRange{Int}
 end
 
 """
-Reparse a cached file and conservatively preserve handles for uniquely matched blocks.
+    reindex(path)
+    reindex()
+
+Reparse cached files and conservatively preserve handles for uniquely matched
+blocks.
+
+The path form reindexes one cached file. The zero-argument form reindexes all
+cached files that still exist.
 """
+function reindex end
+
 function reindex(path::AbstractString)
     abs_path = absolute_path(path)
     state = STATE[]
@@ -98,9 +107,6 @@ function reindex(path::AbstractString)
     return nothing
 end
 
-"""
-Reindex all cached files that still exist.
-"""
 function reindex()
     paths = String[]
 

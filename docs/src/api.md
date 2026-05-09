@@ -36,7 +36,25 @@ This page summarizes the public API exported by CodeEdit.jl.
 
 ## Exported names
 
-```@autodocs
-Modules = [CodeEdit]
-Private = false
+```@docs
+Handle
+eof_handle
+handles
+reindex
+search
+AbstractEdit
+Replace
+Delete
+InsertBefore
+InsertAfter
+CreateFile
+MoveFile
+DeleteFile
+Combine
+apply!
+displayed!
+filepath
+lines
+docstring
+is_valid
 ```
