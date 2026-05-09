@@ -2,6 +2,27 @@
 
 CodeEdit.jl can search for source blocks referenced by a stacktrace or by a caught exception. This is useful when debugging interactively: catch the error, search project source for referenced frames, inspect the matching blocks, then edit the source.
 
+```@setup searching_errors
+using CodeEdit
+
+dir = mktempdir()
+srcdir = joinpath(dir, "src")
+mkpath(srcdir)
+error_source = joinpath(srcdir, "Example.jl")
+
+write(error_source, raw"""
+function inner(x)
+    error("bad input: $x")
+end
+
+function outer(x)
+    return inner(x + 1)
+end
+""")
+
+include(error_source)
+```
+
 ## Starting from a stacktrace
 
 Suppose a function throws:
@@ -18,7 +39,7 @@ end
 
 Capture both the exception and stacktrace:
 
-```julia
+```@repl searching_errors
 err = nothing
 trace = nothing
 
@@ -32,8 +53,8 @@ end
 
 Collect source handles and search for stacktrace frames:
 
-```julia
-hs = handles("src", "*.jl")
+```@repl searching_errors
+hs = handles(srcdir, "*.jl")
 matches = search(hs, trace)
 
 display(matches)
@@ -56,7 +77,7 @@ This is convenient when the exception object carries stacktrace information that
 
 If the result has only a few matches, display each block:
 
-```julia
+```@repl searching_errors
 for h in matches
     display(h)
 end
@@ -68,13 +89,11 @@ A displayed handle includes the file name and line range, followed by the source
 
 After finding the relevant block, construct a replacement:
 
-```julia
-h = first(matches)
+```@repl searching_errors
+h = only(search(matches, "error("))
 
-fixed = replace(string(h), "error(\"bad input: \$x\")" => "throw(ArgumentError(\"bad input: \$x\"))")
+fixed = replace(string(h), "error(\"bad input: \$x\")" => "throw(ArgumentError(\"bad input: \$x\"))");
 edit = Replace(h, fixed)
-
-display(edit)
 apply!(edit)
 ```
 
