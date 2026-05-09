@@ -91,6 +91,10 @@ function replace_file_cache!(
     cache = build_file_cache!(key, path, display_path, parse_as, info)
     cache.generation = old_cache.generation + 1
     cache.paths = union(old_cache.paths, Set([String(path)]))
+    if old_cache.current_id !== nothing && old_cache.current_id != cache.current_id
+        delete!(state.id_index, old_cache.current_id)
+    end
+
     state.files[key] = cache
     state.path_index[String(path)] = key
     state.id_index[cache.current_id] = key

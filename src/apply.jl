@@ -1,4 +1,4 @@
-function store_displayed_plan!(edit::AbstractEdit, plan::ReplacementEditPlan)
+function store_displayed_plan!(edit::AbstractEdit, plan)
     edit.displayed[] = DisplayedPlan(plan.fingerprint, plan.valid, plan.display_text)
     return edit
 end
@@ -27,7 +27,6 @@ function is_valid(edit::Union{Replace,Delete,InsertBefore,InsertAfter})
     return compile_edit_plan(edit).valid
 end
 
-is_valid(edit::Combine) = all(is_valid, edit.edits)
 is_valid(edit::AbstractEdit) = compile_edit_plan(edit).valid
 
 function Base.show(io::IO, ::MIME"text/plain", edit::AbstractEdit)
@@ -228,7 +227,7 @@ function update_cache_after_effect!(effect::FileEditEffect)
     info = read_source_file(effect.path)
     blocks = parse_source_blocks(info.text, info.line_starts, effect.parse_as; path=effect.path)
     old_cache = get(state.files, key, nothing)
-    old_paths = old_cache === nothing ? Set{String}() : old_cache.paths
+    old_paths = old_cache === nothing ? Set{String}() : setdiff(old_cache.paths, Set([something(effect.original_path, "")]))
     generation = old_cache === nothing ? 1 : old_cache.generation + 1
 
     cache = FileCache(
@@ -290,6 +289,14 @@ function update_cache_after_effect!(effect::FileEditEffect)
         )
         handle = register_handle!(record)
         cache.handles[index] = handle.id
+    end
+
+    if effect.original_path !== nothing && effect.original_path != effect.path
+        delete!(state.path_index, effect.original_path)
+    end
+
+    if old_cache !== nothing && old_cache.current_id !== nothing && old_cache.current_id != cache.current_id
+        delete!(state.id_index, old_cache.current_id)
     end
 
     state.files[key] = cache

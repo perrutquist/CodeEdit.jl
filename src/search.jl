@@ -1,15 +1,32 @@
 """
-Return source locations from a Julia backtrace-like object.
+Return normalized stack frames for a Julia stacktrace-like object.
+"""
+function normalized_trace_frames(trace)
+    try
+        return stacktrace(trace)
+    catch
+        return trace
+    end
+end
+
+"""
+Return source locations from a Julia stacktrace-like object.
 """
 function trace_locations(trace)
     locations = Tuple{String,Int}[]
 
-    for frame in trace
+    for frame in normalized_trace_frames(trace)
+        hasproperty(frame, :file) || continue
+        hasproperty(frame, :line) || continue
+
         file = getproperty(frame, :file)
         line = getproperty(frame, :line)
 
         if file !== nothing && line !== nothing
-            push!(locations, (absolute_path(String(file)), Int(line)))
+            try
+                push!(locations, (absolute_path(String(file)), Int(line)))
+            catch
+            end
         end
     end
 

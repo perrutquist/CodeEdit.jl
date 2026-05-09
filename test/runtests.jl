@@ -317,12 +317,13 @@ using Test
             child_handle = only(search(hs, "child_function() = error"))
             @test docstring(child_handle) == "child doc"
 
-            include(parent)
-            method_handle = Handle(first(methods(parent_function)))
+            Base.invokelatest(include, parent)
+            parent_function_ref = getfield(@__MODULE__, :parent_function)
+            method_handle = Handle(first(methods(parent_function_ref)))
             @test occursin("parent_function", string(method_handle))
 
             trace = try
-                parent_function()
+                Base.invokelatest(parent_function_ref)
             catch
                 catch_backtrace()
             end
