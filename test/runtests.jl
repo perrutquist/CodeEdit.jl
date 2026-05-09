@@ -232,13 +232,14 @@ using Test
 
             x = Handle(path, 1)
             y = Handle(path, 3)
+            @test lines(y) == 3:3
             edit = Delete(x)
             displayed!(edit)
             apply!(edit)
 
             @test !is_valid(x)
             @test is_valid(y)
-            @test lines(y) == 3:3
+            @test lines(y) == 2:2 # location updated after code was removed
             @test read(path, String) == """
             
             y = 2
