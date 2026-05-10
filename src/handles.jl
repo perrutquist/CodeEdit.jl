@@ -1,3 +1,5 @@
+const _refreshing_file_keys = Set{FileKey}()
+
 """
 Refresh a handle's backing cache if the file changed externally.
 """
@@ -12,6 +14,10 @@ function refresh_handle!(handle::Handle)
     cache = get(state.files, record.file, nothing)
     cache === nothing && return record
 
+    if cache.key in _refreshing_file_keys
+        return record
+    end
+
     if !isfile(cache.primary_path)
         invalidate_file_handles!(cache.key)
         return record
@@ -19,12 +25,20 @@ function refresh_handle!(handle::Handle)
 
     info = read_source_file(cache.primary_path)
 
-    if !same_stamp(cache.stamp, info.stamp)
-        reindex(cache.primary_path)
-        return handle_record(handle)
+    if same_file_contents(cache.stamp, info.stamp)
+        cache.stamp = info.stamp
+        return record
     end
 
-    return record
+    push!(_refreshing_file_keys, cache.key)
+
+    try
+        reindex(cache.primary_path)
+    finally
+        delete!(_refreshing_file_keys, cache.key)
+    end
+
+    return get(STATE[].handles, handle.id, nothing)
 end
 
 """

@@ -38,6 +38,13 @@ function file_stamp(path::AbstractString, bytes::Vector{UInt8}=read(path))
 end
 
 """
+Return whether two file stamps describe identical file contents.
+"""
+function same_file_contents(a::FileStamp, b::FileStamp)
+    return a.size == b.size && a.hash == b.hash
+end
+
+"""
 Return the current filesystem identity for `path`.
 """
 function file_id(path::AbstractString)
