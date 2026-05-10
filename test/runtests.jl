@@ -270,6 +270,7 @@ using Test
         mktempdir() do dir
             path = joinpath(dir, "changed.jl")
             write(path, "x = 1\n")
+            sleep(1.1)
 
             h = Handle(path, 1)
             edit = Replace(h, "x = 2\n")
