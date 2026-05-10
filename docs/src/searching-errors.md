@@ -22,10 +22,10 @@ end
 
 include(error_source)
 
-# The Documenter.jl "REPL" doesn't actually catch a real backtrace here, so we cheat...
-trace = try
+#  The Documenter.jl "REPL" doesn't actually catch a stacktrace in `err` as the actual REPL would, so we cheat...
+err = try
     outer(1)
-catch
+catch e
     catch_backtrace()
 end
 ```
@@ -67,15 +67,11 @@ The result contains handles for blocks whose source locations appear in the stac
 
 ## At the REPL
 
-CodeEdit needs a stacktrace or backtrace object, not the thrown error value itself. Capture the backtrace explicitly with `catch_backtrace()`:
+At the Julia REPL, the caught `ExceptionStack` is in the variable `err` is a stacktrace which we can use:
 
 ```@repl searching_errors
-trace = try
-    outer(1)
-catch
-    catch_backtrace()
-end
-matches = search(hs, trace)
+outer(1)
+matches = search(hs, err)
 ```
 
 ## Inspecting the most relevant block
