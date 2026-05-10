@@ -65,16 +65,36 @@ end
 Return a single-line preview of handle contents.
 """
 function handle_preview(record::HandleRecord)
-    preview = replace(strip(record.text), '\n' => ' ')
+    preview = replace(strip(record.text), r"\n[ \t]*" => " ")
     ncodeunits(preview) > 40 && (preview = first(preview, 40) * "…")
     return preview
 end
 
 """
+Return line/span label column widths for overview entries.
+"""
+function handle_line_label_widths(records)
+    start_width = 0
+    stop_width = 0
+
+    for record in records
+        record.span.lo == record.span.hi && continue
+        start_width = max(start_width, ndigits(record.lines.start))
+        stop_width = max(stop_width, ndigits(record.lines.stop))
+    end
+
+    return (start_width, stop_width)
+end
+
+"""
 Return a compact line/span label for an overview entry.
 """
-function handle_line_label(record::HandleRecord)
-    return record.span.lo == record.span.hi ? "EOF" : "$(record.lines.start) - $(record.lines.stop)"
+function handle_line_label(record::HandleRecord, start_width::Integer=0, stop_width::Integer=0)
+    if record.span.lo == record.span.hi
+        return lpad("EOF", max(start_width, 3))
+    end
+
+    return "$(lpad(string(record.lines.start), start_width)) - $(lpad(string(record.lines.stop), stop_width))"
 end
 
 function Base.show(io::IO, ::MIME"text/plain", set::Set{Handle})
@@ -82,6 +102,20 @@ function Base.show(io::IO, ::MIME"text/plain", set::Set{Handle})
     count = length(ordered)
     print(io, "$count handle$(count == 1 ? "" : "s")")
     isempty(ordered) && return
+
+    label_widths = Dict{String,Tuple{Int,Int}}()
+
+    for handle in ordered
+        record = handle_record(handle)
+        (record === nothing || !record.valid) && continue
+        primary_path = handle_primary_path(record)
+        current_widths = get(label_widths, primary_path, (0, 0))
+        record_widths = handle_line_label_widths((record,))
+        label_widths[primary_path] = (
+            max(current_widths[1], record_widths[1]),
+            max(current_widths[2], record_widths[2]),
+        )
+    end
 
     current_primary_path = nothing
 
@@ -102,7 +136,8 @@ function Base.show(io::IO, ::MIME"text/plain", set::Set{Handle})
             current_primary_path = primary_path
         end
 
-        println(io, "  $(handle_line_label(record)): $(handle_preview(record))")
+        widths = get(label_widths, primary_path, (0, 0))
+        println(io, "  $(handle_line_label(record, widths...)): $(handle_preview(record))")
     end
 end
 
