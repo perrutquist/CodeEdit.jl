@@ -65,7 +65,6 @@ function reindex(path::AbstractString)
     state = STATE[]
 
     if !haskey(state.path_index, abs_path)
-        load_file(abs_path)
         return nothing
     end
 
