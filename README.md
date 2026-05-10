@@ -4,7 +4,7 @@ CodeEdit.jl is a package for locating, viewing, and editing Julia source code fr
 
 ## Documentation
 
-The full documentation is built with [Documenter.jl](https://documenter.juliadocs.org/). To build it locally, run:
+The full documentation is built with [Documenter.jl](https://documenter.juliadocs.org/). It includes conceptual pages for blocks, handles, edit review, and safety behavior. To build it locally, run:
 
 ```shell
 julia --project=docs -e 'using Pkg; Pkg.develop(Pkg.PackageSpec(path=pwd())); Pkg.instantiate()'
@@ -100,11 +100,11 @@ Editing is performed by first creating one or more "edit" objects (`<: AbstractE
 
 `Combine(edit1, edit2, ...)` - An edit that combines a set of other edits to be applied in the given order.  For example `Combine(InsertBefore(destination, string(source)), Delete(source))` creates an edit that will move a block of code. Within a combined edit, later child edits track the block locations produced by earlier child edits without reparsing in between, so intermediate states do not need to be syntactically valid. The affected files are reparsed and validated only after the entire combined edit has been planned. Planning and validation are all-or-nothing, but applying a multi-file combined edit is still best-effort at the filesystem level, so a later filesystem failure can still cause a partial apply.
 
-`edit1 * edit2` - Shorthand for `Combine(edit1, edit2)`
+`edit1 * edit2` - Shorthand for `Combine(edit1, edit2)`. Chaining `*` appends edits in left-to-right order.
 
 `apply!(edit)` - Apply an edit, updating files on disk.
 
-For safety, `apply!` refuses to apply an edit unless it has previously been displayed. REPL printing, calls to `Base.display(edit)`, and calls to `string(edit)` all count. Handles automatically adapt to changing line numbers due to edits elsewhere in the file.
+For safety, `apply!` refuses to apply an edit unless it has previously been displayed. REPL printing, calls to `Base.display(edit)`, and calls to `string(edit)` all count. Displaying an edit records the exact plan that was shown; `apply!` replans the edit and rejects it if the plan changed. Handles automatically adapt to changing line numbers due to edits elsewhere in the file.
 
 Applying edits can modify or invalidate the handles that they contain. An invalidated handle no longer refers to any code.
 

@@ -16,6 +16,7 @@ try
         pages = [
             "Home" => "index.md",
             "Getting started" => "getting-started.md",
+            "Blocks and handles" => "concepts.md",
             "Editing code" => "editing.md",
             "Finding errors from stacktraces" => "searching-errors.md",
             "API reference" => "api.md",

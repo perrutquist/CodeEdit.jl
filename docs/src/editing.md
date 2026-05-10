@@ -1,6 +1,10 @@
 # Editing code
 
-Edits are represented as values that subtype [`AbstractEdit`](@ref). Construct an edit, display it to review the diff, then apply it. In REPL examples, leaving the semicolon off the `edit = ...` line displays the edit and marks it as displayed; calling `display(edit)` works too.
+Edits are represented as values that subtype [`AbstractEdit`](@ref). Construct an edit, display it to review the diff, then apply it.
+
+Displaying, printing, or stringifying an edit records the exact plan that was shown. [`apply!`](@ref) replans the edit and refuses to apply it if the new plan does not match the displayed plan. In REPL examples, leaving the semicolon off the `edit = ...` line displays the edit and marks it as displayed; calling `display(edit)` works too.
+
+Use [`displayed!`](@ref) only when you intentionally want to mark an edit as reviewed without printing the diff.
 
 ```@setup editing
 using CodeEdit
@@ -160,6 +164,8 @@ edit = InsertBefore(destination, string(source)) * Delete(source)
 ```
 
 Combined edits are validated after the full combined result is planned. This allows intermediate states to be temporarily invalid Julia syntax.
+
+Planning and validation are all-or-nothing, but applying a combined edit that touches multiple files is best-effort at the filesystem level. If a later filesystem operation fails, earlier operations may already have been applied. Use version control so changes can be reviewed and recovered.
 
 ## Applying edits without display
 

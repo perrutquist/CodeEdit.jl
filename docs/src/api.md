@@ -27,12 +27,23 @@ This page summarizes the public API exported by CodeEdit.jl.
 - [`apply!`](@ref): apply a displayed edit.
 - [`displayed!`](@ref): mark an edit as displayed.
 
+Display, printing, and `string(edit)` mark an edit as displayed by storing the exact plan that was shown. [`apply!`](@ref) replans the edit and rejects it if the current plan differs from the displayed plan.
+
+The `edit1 * edit2` operator is shorthand for `Combine(edit1, edit2)`. Chaining `*` appends edits to a combined edit.
+
+Combined edits are planned and validated as a unit, but applying a combined edit that touches multiple files is best-effort at the filesystem level and can partially apply if a later filesystem operation fails.
+
 ## Convenience functions
 
 - [`filepath`](@ref): return the file path for a handle.
 - [`lines`](@ref): return the line range for a handle.
 - [`docstring`](@ref): extract an attached docstring.
 - [`is_valid`](@ref): test whether a handle or edit is valid.
+- `string(handle)`: return the block text for a handle.
+- `string(edit)`: return the displayed edit plan and mark the edit as displayed.
+- `display(handle)`: show a handle header and source block.
+- `display(edit)`: show the edit plan and mark the edit as displayed.
+- `occursin(handle, trace)`: test whether a handle's source location occurs in a stacktrace-like object.
 
 ## Exported names
 

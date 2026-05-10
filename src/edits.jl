@@ -105,7 +105,9 @@ end
 
 Edit that combines multiple edits into one planned operation.
 
-Combined edits are interpreted in order and validated as a unit.
+Combined edits are interpreted in order and validated as a unit. Applying a
+combined edit that touches multiple files is best-effort at the filesystem
+level, so a later filesystem failure can leave earlier operations applied.
 """
 struct Combine <: AbstractEdit
     edits::Vector{AbstractEdit}
@@ -132,6 +134,12 @@ DeleteFile(path::AbstractString) = DeleteFile(String(path), display_ref())
 Combine(edits::AbstractEdit...) = Combine(AbstractEdit[edits...], display_ref())
 Combine(edits::AbstractVector{<:AbstractEdit}) = Combine(AbstractEdit[edits...], display_ref())
 
+"""
+    edit1 * edit2
+
+Shorthand for `Combine(edit1, edit2)`. Chaining `*` appends edits to a combined
+edit in left-to-right order.
+"""
 Base.:*(a::AbstractEdit, b::AbstractEdit) = Combine(a, b)
 Base.:*(a::Combine, b::AbstractEdit) = Combine(vcat(a.edits, AbstractEdit[b]), display_ref())
 Base.:*(a::AbstractEdit, b::Combine) = Combine(vcat(AbstractEdit[a], b.edits), display_ref())

@@ -6,8 +6,9 @@ end
 """
 Set or clear the displayed marker for an edit.
 
-This compiles and validates the current single-edit plan when marking an edit
-as displayed. It does not print the diff.
+When `displayed` is `true`, this compiles and validates the current edit plan
+and stores its fingerprint as the plan approved for application. It does not
+print the diff. Use this only when intentionally bypassing visible review.
 """
 function displayed!(edit::AbstractEdit, displayed::Bool=true)
     if displayed
@@ -26,6 +27,14 @@ end
 
 is_valid(edit::AbstractEdit) = compile_edit_plan(edit).valid
 
+"""
+    display(edit)
+    string(edit)
+
+Display an edit plan and mark that exact plan as displayed. `apply!` replans
+the edit and refuses to apply it if the current plan differs from the displayed
+plan.
+"""
 function Base.show(io::IO, ::MIME"text/plain", edit::AbstractEdit)
     plan = compile_edit_plan(edit)
     store_displayed_plan!(edit, plan)
@@ -343,9 +352,13 @@ end
 
 Apply a previously displayed edit to the filesystem.
 
-The edit must have been displayed, either by printing or displaying it, or by
-calling [`displayed!`](@ref). The edit is replanned before application and is
-rejected if the current plan no longer matches the displayed plan.
+The edit must have been displayed, either by printing, displaying, stringifying
+it, or by calling [`displayed!`](@ref). The edit is replanned before application
+and is rejected if the current plan no longer matches the displayed plan.
+
+Combined edits are planned and validated as a unit, but applying a combined edit
+that touches multiple files is best-effort at the filesystem level. If a later
+operation fails, earlier file operations may already have been applied.
 """
 function apply!(edit::AbstractEdit)
     displayed = edit.displayed[]
