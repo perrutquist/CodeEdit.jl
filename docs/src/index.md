@@ -34,6 +34,9 @@ end
 ```
 
 ```@repl index
+versioninfo()
+readlines("examples/foo.jl")
+methods(Handle)
 h = Handle("examples/foo.jl", 2)
 replacement = replace(string(h), "x + 1" => "x + 2");
 edit = Replace(h, replacement)
