@@ -70,6 +70,7 @@ The result contains handles for blocks whose source locations appear in the stac
 At the Julia REPL, the caught `ExceptionStack` is in the variable `err`, which we can use:
 
 ```@repl searching_errors
+outer(1)
 matches = search(hs, err)
 ```
 
@@ -103,10 +104,9 @@ After a successful edit, existing handles are updated or invalidated as needed. 
 
 For a package entry point that uses `include`, start from that file and follow includes recursively:
 
-```julia
-hs = handles("src/CodeEdit.jl"; includes = true)
-matches = search(hs, trace)
-display(matches)
+```@repl searching_errors
+hs = handles(pathof(CodeEdit); includes = true);
+search(hs, "search")
 ```
 
 Recursive include traversal uses cycle detection, so include loops are visited at most once.
