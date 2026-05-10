@@ -19,7 +19,7 @@ function refresh_handle!(handle::Handle)
     end
 
     if !isfile(cache.primary_path)
-        invalidate_file_handles!(cache.key)
+        remove_file_cache!(cache.key)
         return record
     end
 

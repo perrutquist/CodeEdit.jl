@@ -91,7 +91,8 @@ function replace_file_cache!(
     cache = build_file_cache!(key, path, display_path, parse_as, info)
     cache.generation = old_cache.generation + 1
     cache.paths = union(old_cache.paths, Set([String(path)]))
-    if old_cache.current_id !== nothing && old_cache.current_id != cache.current_id
+    if old_cache.current_id !== nothing && old_cache.current_id != cache.current_id &&
+        get(state.id_index, old_cache.current_id, nothing) == key
         delete!(state.id_index, old_cache.current_id)
     end
 
@@ -99,6 +100,22 @@ function replace_file_cache!(
     state.path_index[String(path)] = key
     state.id_index[cache.current_id] = key
     return cache
+end
+
+"""
+Return whether an existing identity-index hit still has a live matching path.
+"""
+function has_live_cached_identity(cache::FileCache, id::FileID)
+    for path in cache.paths
+        isfile(path) || continue
+
+        try
+            file_id(path) == id && return true
+        catch
+        end
+    end
+
+    return false
 end
 
 """
@@ -116,14 +133,16 @@ function load_file(path::AbstractString; parse_as::Symbol=:auto)
         info = read_source_file(abs_path)
 
         if cache.parse_as == mode
-            if same_stamp(cache.stamp, info.stamp)
+            if cache.current_id == info.id && same_stamp(cache.stamp, info.stamp)
                 push!(cache.paths, abs_path)
                 state.id_index[info.id] = key
                 return cache
             end
 
-            reindex(abs_path)
-            return state.files[key]
+            if cache.current_id == info.id
+                reindex_file!(key, abs_path)
+                return state.files[key]
+            end
         end
 
         return replace_file_cache!(key, abs_path, display_path, mode, info)
@@ -132,20 +151,24 @@ function load_file(path::AbstractString; parse_as::Symbol=:auto)
     info = read_source_file(abs_path)
     if haskey(state.id_index, info.id)
         key = state.id_index[info.id]
-        cache = state.files[key]
+        cache = get(state.files, key, nothing)
 
-        if cache.parse_as == mode
+        if cache === nothing || !has_live_cached_identity(cache, info.id)
+            delete!(state.id_index, info.id)
+        elseif cache.parse_as == mode
+            state.path_index[abs_path] = key
+
             if same_stamp(cache.stamp, info.stamp)
                 push!(cache.paths, abs_path)
-                state.path_index[abs_path] = key
                 return cache
             end
 
-            reindex(abs_path)
+            reindex_file!(key, abs_path)
             return state.files[key]
+        else
+            state.path_index[abs_path] = key
+            return replace_file_cache!(key, abs_path, display_path, mode, info)
         end
-
-        return replace_file_cache!(key, abs_path, display_path, mode, info)
     end
 
     key = allocate_file_key!()

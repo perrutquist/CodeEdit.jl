@@ -78,3 +78,31 @@ function invalidate_file_handles!(key::FileKey)
 
     return nothing
 end
+
+"""
+Remove a cached file and its path/identity indexes.
+
+Existing handles for the file are invalidated by default. This is used when a
+cached filesystem object disappears or is replaced, so future lookups of the
+same path build a fresh cache instead of reusing stale handle ids.
+"""
+function remove_file_cache!(key::FileKey; invalidate_handles::Bool=true)
+    state = STATE[]
+    haskey(state.files, key) || return nothing
+
+    cache = state.files[key]
+    invalidate_handles && invalidate_file_handles!(key)
+
+    for path in cache.paths
+        get(state.path_index, path, nothing) == key && delete!(state.path_index, path)
+    end
+
+    get(state.path_index, cache.primary_path, nothing) == key && delete!(state.path_index, cache.primary_path)
+
+    if cache.current_id !== nothing && get(state.id_index, cache.current_id, nothing) == key
+        delete!(state.id_index, cache.current_id)
+    end
+
+    delete!(state.files, key)
+    return nothing
+end

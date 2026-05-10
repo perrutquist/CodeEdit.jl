@@ -455,6 +455,28 @@ using Test
         end
     end
 
+    @testset "deleted and recreated files do not reuse stale invalid handles" begin
+        CodeEdit.clear_cache!()
+
+        mktempdir() do dir
+            path = joinpath(dir, "recreated.jl")
+            write(path, "original_value = 1\n")
+
+            original = Handle(path, 1)
+            @test is_valid(original)
+
+            rm(path)
+            @test !is_valid(original)
+
+            write(path, "recreated_value = 2\n")
+            recreated = Handle(path, 1)
+
+            @test is_valid(recreated)
+            @test occursin("recreated_value = 2", string(recreated))
+            @test !is_valid(original)
+        end
+    end
+
     @testset "automatic external reindexing" begin
         CodeEdit.clear_cache!()
 

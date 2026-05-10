@@ -60,25 +60,30 @@ cached files that still exist.
 """
 function reindex end
 
-function reindex(path::AbstractString)
-    abs_path = absolute_path(path)
+function reindex_file!(key::FileKey, abs_path::AbstractString)
+    path = String(abs_path)
     state = STATE[]
+    haskey(state.files, key) || return nothing
 
-    if !haskey(state.path_index, abs_path)
-        return nothing
-    end
-
-    key = state.path_index[abs_path]
     old_cache = state.files[key]
     old_records = Dict(id => state.handles[id] for id in old_cache.handles if haskey(state.handles, id))
-    info = read_source_file(abs_path)
-    blocks = parse_source_blocks(info.text, info.line_starts, old_cache.parse_as; path=abs_path)
+    info = read_source_file(path)
+
+    if old_cache.current_id !== nothing && old_cache.current_id != info.id
+        if get(state.id_index, old_cache.current_id, nothing) == key
+            delete!(state.id_index, old_cache.current_id)
+        end
+
+        return replace_file_cache!(key, path, path, old_cache.parse_as, info)
+    end
+
+    blocks = parse_source_blocks(info.text, info.line_starts, old_cache.parse_as; path=path)
 
     cache = FileCache(
         key,
         info.id,
-        abs_path,
-        union(old_cache.paths, Set([abs_path])),
+        path,
+        union(old_cache.paths, Set([path])),
         info.stamp,
         old_cache.parse_as,
         info.text,
@@ -114,7 +119,7 @@ function reindex(path::AbstractString)
 
         if best_index != 0 && !tied && best_score > 0
             update_record_from_block!(record, key, best_index, blocks[best_index], info.text)
-            record.path = abs_path
+            record.path = path
             cache.handles[best_index] = id
             assigned_blocks[best_index] = true
             push!(assigned_records, id)
@@ -128,7 +133,7 @@ function reindex(path::AbstractString)
 
         record = HandleRecord(
             key,
-            abs_path,
+            path,
             index,
             block.span,
             block.lines,
@@ -140,9 +145,27 @@ function reindex(path::AbstractString)
         cache.handles[index] = handle.id
     end
 
+    if old_cache.current_id !== nothing && old_cache.current_id != cache.current_id &&
+        get(state.id_index, old_cache.current_id, nothing) == key
+        delete!(state.id_index, old_cache.current_id)
+    end
+
     state.files[key] = cache
-    state.path_index[abs_path] = key
+    state.path_index[path] = key
     state.id_index[cache.current_id] = key
+    return nothing
+end
+
+function reindex(path::AbstractString)
+    abs_path = absolute_path(path)
+    state = STATE[]
+
+    if !haskey(state.path_index, abs_path)
+        return nothing
+    end
+
+    key = state.path_index[abs_path]
+    reindex_file!(key, abs_path)
     return nothing
 end
 
