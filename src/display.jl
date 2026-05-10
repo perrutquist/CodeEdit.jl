@@ -37,7 +37,19 @@ function Base.show(io::IO, handle::Handle)
 end
 
 """
-Sort key used when displaying sets of handles.
+Return the canonical cache path used when ordering a handle.
+"""
+function handle_primary_path(record::HandleRecord)
+    if record.file !== nothing
+        cache = get(STATE[].files, record.file, nothing)
+        cache !== nothing && return cache.primary_path
+    end
+
+    return record.path
+end
+
+"""
+Sort key used when displaying collections of handles.
 """
 function handle_sort_key(handle::Handle)
     record = handle_record(handle)
@@ -46,15 +58,51 @@ function handle_sort_key(handle::Handle)
         return ("\uffff", typemax(Int), typemax(Int), handle.id)
     end
 
-    return (record.path, record.lines.start, record.lines.stop, handle.id)
+    return (handle_primary_path(record), record.span.lo, record.span.hi, handle.id)
+end
+
+"""
+Return a single-line preview of handle contents.
+"""
+function handle_preview(record::HandleRecord)
+    preview = replace(strip(record.text), '\n' => ' ')
+    ncodeunits(preview) > 40 && (preview = first(preview, 40) * "…")
+    return preview
+end
+
+"""
+Return a compact line/span label for an overview entry.
+"""
+function handle_line_label(record::HandleRecord)
+    return record.span.lo == record.span.hi ? "EOF" : "$(record.lines.start) - $(record.lines.stop)"
 end
 
 function Base.show(io::IO, ::MIME"text/plain", set::Set{Handle})
     ordered = sort(collect(set); by=handle_sort_key)
+    count = length(ordered)
+    print(io, "$count handle$(count == 1 ? "" : "s")")
+    isempty(ordered) && return
 
-    for (index, handle) in pairs(ordered)
-        index > 1 && println(io)
-        show_handle(io, handle)
+    current_primary_path = nothing
+
+    for handle in ordered
+        record = handle_record(handle)
+
+        if record === nothing || !record.valid
+            current_primary_path != "#invalid" && println(io, "\n#invalid:")
+            current_primary_path = "#invalid"
+            println(io, "  #invalid")
+            continue
+        end
+
+        primary_path = handle_primary_path(record)
+
+        if primary_path != current_primary_path
+            println(io, "\n# $(record.path):")
+            current_primary_path = primary_path
+        end
+
+        println(io, "  $(handle_line_label(record)): $(handle_preview(record))")
     end
 end
 
@@ -71,9 +119,7 @@ function Base.show(io::IO, ::MIME"text/plain", vector::Vector{Handle})
         if record === nothing || !record.valid
             print(io, "#invalid")
         else
-            preview = replace(strip(record.text), '\n' => ' ')
-            ncodeunits(preview) > 40 && (preview = first(preview, 40) * "…")
-            print(io, "$(handle_header(handle)) $preview")
+            print(io, "$(handle_header(handle)) $(handle_preview(record))")
         end
     end
 end
