@@ -34,12 +34,7 @@ end
 ```
 
 ```@repl index
-try
-    h = Handle("examples/foo.jl", 2)
-catch e
-    display(catch_backtrace())
-end;
-h
+h = Handle("examples/foo.jl", 2)
 replacement = replace(string(h), "x + 1" => "x + 2");
 edit = Replace(h, replacement)
 apply!(edit)
