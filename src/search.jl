@@ -3,18 +3,42 @@ Return normalized stack frames for a Julia stacktrace-like object.
 """
 function normalized_trace_frames(trace)
     if trace isa Base.CapturedException
-        return stacktrace(getfield(trace, :processed_bt))
+        for field in (:processed_bt, :bt, :backtrace)
+            hasfield(typeof(trace), field) || continue
+            frames = normalized_trace_frames(getfield(trace, field))
+            iterate(frames) !== nothing && return frames
+        end
+
+        return ()
     end
 
     try
         return stacktrace(trace)
     catch
+    end
+
+    if trace isa Vector{Any}
         try
-            iterate(trace) === nothing && return ()
-            return trace
+            raw_trace = Union{Ptr{Nothing},Base.InterpreterIP}[]
+
+            for item in trace
+                if item isa Ptr{Nothing} || item isa Base.InterpreterIP
+                    push!(raw_trace, item)
+                else
+                    error("not a raw backtrace")
+                end
+            end
+
+            return stacktrace(raw_trace)
         catch
-            return ()
         end
+    end
+
+    try
+        iterate(trace) === nothing && return ()
+        return trace
+    catch
+        return ()
     end
 end
 

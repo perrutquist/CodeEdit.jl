@@ -1,8 +1,37 @@
 """
+Refresh a handle's backing cache if the file changed externally.
+"""
+function refresh_handle!(handle::Handle)
+    record = handle_record(handle)
+
+    if record === nothing || !record.valid || record.file === nothing
+        return record
+    end
+
+    state = STATE[]
+    cache = get(state.files, record.file, nothing)
+    cache === nothing && return record
+
+    if !isfile(cache.primary_path)
+        invalidate_file_handles!(cache.key)
+        return record
+    end
+
+    info = read_source_file(cache.primary_path)
+
+    if !same_stamp(cache.stamp, info.stamp)
+        reindex(cache.primary_path)
+        return handle_record(handle)
+    end
+
+    return record
+end
+
+"""
 Throw if `handle` is invalid, otherwise return its handle record.
 """
 function valid_handle_record(handle::Handle)
-    record = handle_record(handle)
+    record = refresh_handle!(handle)
     (record === nothing || !record.valid) && throw(ArgumentError("invalid handle"))
     return record
 end
@@ -17,7 +46,7 @@ can be applied without validation errors.
 function is_valid end
 
 function is_valid(handle::Handle)
-    record = handle_record(handle)
+    record = refresh_handle!(handle)
     return record !== nothing && record.valid
 end
 

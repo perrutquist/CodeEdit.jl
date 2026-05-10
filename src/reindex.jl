@@ -1,11 +1,51 @@
 """
+Return the length of the longest common subsequence of two strings.
+"""
+function lcs_length(a::AbstractString, b::AbstractString)
+    ac = collect(a)
+    bc = collect(b)
+
+    isempty(ac) && return 0
+    isempty(bc) && return 0
+
+    previous = zeros(Int, length(bc) + 1)
+    current = zeros(Int, length(bc) + 1)
+
+    for ca in ac
+        for (j, cb) in pairs(bc)
+            current[j + 1] = ca == cb ? previous[j] + 1 : max(previous[j + 1], current[j])
+        end
+
+        previous, current = current, previous
+        fill!(current, 0)
+    end
+
+    return previous[end]
+end
+
+"""
 Return a simple deterministic score for matching old and new blocks.
 """
 function reindex_match_score(old_text::AbstractString, old_lines::UnitRange{Int}, block::Block, new_text::AbstractString)
     candidate_text = span_text(new_text, block.span)
-    text_score = old_text == candidate_text ? 10_000 : 0
     line_penalty = abs(old_lines.start - block.lines.start) + abs(old_lines.stop - block.lines.stop)
-    return text_score - line_penalty
+
+    if old_text == candidate_text
+        return 10_000 - line_penalty
+    end
+
+    old_chars = length(old_text)
+    candidate_chars = length(candidate_text)
+
+    if old_chars == 0 || candidate_chars == 0
+        return -line_penalty
+    end
+
+    common = lcs_length(old_text, candidate_text)
+    similarity = 2 * common / (old_chars + candidate_chars)
+
+    similarity >= 0.60 || return -line_penalty
+    return floor(Int, 1_000 * similarity) - line_penalty
 end
 
 """

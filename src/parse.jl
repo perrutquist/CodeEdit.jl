@@ -115,10 +115,15 @@ function load_file(path::AbstractString; parse_as::Symbol=:auto)
         cache = state.files[key]
         info = read_source_file(abs_path)
 
-        if cache.parse_as == mode && same_stamp(cache.stamp, info.stamp)
-            push!(cache.paths, abs_path)
-            state.id_index[info.id] = key
-            return cache
+        if cache.parse_as == mode
+            if same_stamp(cache.stamp, info.stamp)
+                push!(cache.paths, abs_path)
+                state.id_index[info.id] = key
+                return cache
+            end
+
+            reindex(abs_path)
+            return state.files[key]
         end
 
         return replace_file_cache!(key, abs_path, display_path, mode, info)
@@ -129,10 +134,15 @@ function load_file(path::AbstractString; parse_as::Symbol=:auto)
         key = state.id_index[info.id]
         cache = state.files[key]
 
-        if cache.parse_as == mode && same_stamp(cache.stamp, info.stamp)
-            push!(cache.paths, abs_path)
-            state.path_index[abs_path] = key
-            return cache
+        if cache.parse_as == mode
+            if same_stamp(cache.stamp, info.stamp)
+                push!(cache.paths, abs_path)
+                state.path_index[abs_path] = key
+                return cache
+            end
+
+            reindex(abs_path)
+            return state.files[key]
         end
 
         return replace_file_cache!(key, abs_path, display_path, mode, info)
