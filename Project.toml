@@ -4,7 +4,6 @@ version = "0.1.0-DEV"
 authors = ["Per Rutquist <per.rutquist@gmail.com> and contributors"]
 
 [deps]
-DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 Glob = "c27321d9-0574-5035-807b-f59d2c89b15c"
 JuliaSyntax = "70703baa-626e-46a2-a12c-08ffd08c73b4"
 SHA = "ea8e919c-243c-51af-8825-aaa63cd721ce"
@@ -16,7 +15,6 @@ Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 CodeEditReviseExt = "Revise"
 
 [compat]
-DataStructures = "0.19.4"
 Glob = "1.4.0"
 JuliaSyntax = "1.0.2"
 Revise = "3.14.2"
