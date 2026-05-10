@@ -4,7 +4,7 @@ CodeEdit.jl is a package for locating, viewing, and editing Julia source code fr
 
 ## Documentation
 
-The full documentation is built with [Documenter.jl](https://documenter.juliadocs.org/). It includes conceptual pages for blocks, handles, edit review, and safety behavior. To build it locally, run:
+The full documentation is built with [Documenter.jl](https://documenter.juliadocs.org/). It includes conceptual pages for blocks, handles, edit review, and safety behavior. The documentation workflow publishes the built documentation to GitHub Pages once Pages is enabled for the repository. To build it locally, run:
 
 ```shell
 julia --project=docs -e 'using Pkg; Pkg.develop(Pkg.PackageSpec(path=pwd())); Pkg.instantiate()'
