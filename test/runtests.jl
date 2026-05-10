@@ -469,7 +469,6 @@ using Test
             first = Handle(path, 1)
             second = Handle(path, 3)
 
-            sleep(1.1)
             write(path, """
             inserted = 0
 
