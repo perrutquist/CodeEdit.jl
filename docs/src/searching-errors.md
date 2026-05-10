@@ -1,6 +1,6 @@
 # Finding errors from stacktraces
 
-CodeEdit.jl can search for source blocks referenced by a stacktrace or by a caught exception. This is useful when debugging interactively: catch the error, search project source for referenced frames, inspect the matching blocks, then edit the source.
+CodeEdit.jl can search for source blocks referenced by a stacktrace. This is useful when debugging interactively: catch the error, capture its stacktrace with `catch_backtrace()`, search project source for referenced frames, inspect the matching blocks, then edit the source.
 
 ```@setup searching_errors
 using CodeEdit
@@ -22,10 +22,10 @@ end
 
 include(error_source)
 
-# The Documenter.jl "REPL" doesn't actually catch `err`, so we cheat...
-err = try
+# The Documenter.jl "REPL" doesn't actually catch a real backtrace here, so we cheat...
+trace = try
     outer(1)
-catch e
+catch
     catch_backtrace()
 end
 ```
@@ -67,11 +67,15 @@ The result contains handles for blocks whose source locations appear in the stac
 
 ## At the REPL
 
-At the Julia REPL, the caught `ExceptionStack` is in the variable `err`, which we can use:
+CodeEdit needs a stacktrace or backtrace object, not the thrown error value itself. Capture the backtrace explicitly with `catch_backtrace()`:
 
 ```@repl searching_errors
-outer(1)
-matches = search(hs, err)
+trace = try
+    outer(1)
+catch
+    catch_backtrace()
+end
+matches = search(hs, trace)
 ```
 
 ## Inspecting the most relevant block

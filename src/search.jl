@@ -1,17 +1,7 @@
 """
-Return normalized stack frames for a Julia stacktrace-like object.
+Return normalized stack frames for a Julia stacktrace or backtrace-like object.
 """
 function normalized_trace_frames(trace)
-    if trace isa Base.CapturedException
-        for field in (:processed_bt, :bt, :backtrace)
-            hasfield(typeof(trace), field) || continue
-            frames = normalized_trace_frames(getfield(trace, field))
-            iterate(frames) !== nothing && return frames
-        end
-
-        return ()
-    end
-
     try
         return stacktrace(trace)
     catch
@@ -43,7 +33,7 @@ function normalized_trace_frames(trace)
 end
 
 """
-Return source locations from a Julia stacktrace-like object.
+Return source locations from a Julia stacktrace or backtrace-like object.
 """
 function trace_locations(trace)
     locations = Tuple{String,Int}[]
@@ -100,9 +90,9 @@ end
 """
     search(handle_set, trace)
 
-Search an existing handle collection for blocks referenced by a stacktrace-like
-object, such as a backtrace from `catch_backtrace()`, a collection of stack
-frames, or a `CapturedException`.
+Search an existing handle collection for blocks referenced by a stacktrace or
+backtrace-like object, such as a backtrace from `catch_backtrace()` or a
+collection of stack frames.
 """
 function search(handle_set, trace)
     result = Set{Handle}()

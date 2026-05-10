@@ -689,18 +689,15 @@ using Test
             Base.invokelatest(include, path)
             traced_ref = getfield(@__MODULE__, :traced_function)
 
-            err, trace = try
+            trace = try
                 Base.invokelatest(traced_ref)
-            catch err
-                err, catch_backtrace()
+            catch
+                catch_backtrace()
             end
-            captured = CapturedException(err, trace)
 
             @test occursin(traced, trace)
-            @test occursin(traced, captured)
             @test !occursin(other, trace)
             @test traced in search(hs, trace)
-            @test traced in search(hs, captured)
 
             deleteat!(Base.LOAD_PATH, findall(==(dir), Base.LOAD_PATH))
         end
