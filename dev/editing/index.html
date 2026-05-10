@@ -11,7 +11,7 @@ function foo(x)
 end</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; edit = InsertBefore(h, raw&quot;&quot;&quot;
        const DEFAULT_LIMIT = 10
        
-       &quot;&quot;&quot;)</code><code class="nohighlight hljs ansi" style="display:block;">Edit modifies examples/insert-before.jl:
+       &quot;&quot;&quot;)</code><code class="nohighlight hljs ansi" style="display:block;">Edit modifies /tmp/jl_qbTrwX/examples/insert-before.jl:
 0c1,2
 ---
 &gt; const DEFAULT_LIMIT = 10
@@ -23,7 +23,7 @@ end</code><br/><code class="language-julia-repl hljs" style="display:block;">jul
        function helper(x)
            return x + 1
        end
-       &quot;&quot;&quot;)</code><code class="nohighlight hljs ansi" style="display:block;">Edit modifies examples/insert-after.jl:
+       &quot;&quot;&quot;)</code><code class="nohighlight hljs ansi" style="display:block;">Edit modifies /tmp/jl_qbTrwX/examples/insert-after.jl:
 3c4,7
 ---
 &gt;
@@ -32,7 +32,7 @@ end</code><br/><code class="language-julia-repl hljs" style="display:block;">jul
 &gt; end</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; apply!(edit)</code><code class="nohighlight hljs ansi" style="display:block;">Success.</code></pre><p>Use raw string literals such as <code>raw&quot;&quot;&quot;...&quot;&quot;&quot;</code> when writing Julia code as strings. They avoid accidental escaping of backslashes and dollar signs.</p><h2 id="Deleting-code"><a class="docs-heading-anchor" href="#Deleting-code">Deleting code</a><a id="Deleting-code-1"></a><a class="docs-heading-anchor-permalink" href="#Deleting-code" title="Permalink"></a></h2><pre><code class="language-julia-repl hljs" style="display:block;">julia&gt; h = Handle(&quot;examples/delete.jl&quot;, 5)</code><code class="nohighlight hljs ansi" style="display:block;"># examples/delete.jl 5 - 7:
 function obsolete()
     return :remove_me
-end</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; edit = Delete(h)</code><code class="nohighlight hljs ansi" style="display:block;">Edit modifies examples/delete.jl:
+end</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; edit = Delete(h)</code><code class="nohighlight hljs ansi" style="display:block;">Edit modifies /tmp/jl_qbTrwX/examples/delete.jl:
 5,7c4
 &lt; function obsolete()
 &lt;     return :remove_me
@@ -41,24 +41,22 @@ end</code><br/><code class="language-julia-repl hljs" style="display:block;">jul
        function new_file_function()
            return :ok
        end
-       &quot;&quot;&quot;)</code><code class="nohighlight hljs ansi" style="display:block;">Edit creates examples/new-file.jl:
-0c1,3
----
-&gt; function new_file_function()
-&gt;     return :ok
-&gt; end</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; apply!(edit)</code><code class="nohighlight hljs ansi" style="display:block;">Success.</code></pre><pre><code class="language-julia-repl hljs" style="display:block;">julia&gt; edit = MoveFile(&quot;examples/old-name.jl&quot;, &quot;examples/new-name.jl&quot;)</code><code class="nohighlight hljs ansi" style="display:block;">Edit moves examples/old-name.jl -&gt; examples/new-name.jl</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; apply!(edit)</code><code class="nohighlight hljs ansi" style="display:block;">Success.</code></pre><pre><code class="language-julia-repl hljs" style="display:block;">julia&gt; edit = DeleteFile(&quot;examples/unused.jl&quot;)</code><code class="nohighlight hljs ansi" style="display:block;">Edit deletes examples/unused.jl</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; apply!(edit)</code><code class="nohighlight hljs ansi" style="display:block;">Success.</code></pre><h2 id="Combining-edits"><a class="docs-heading-anchor" href="#Combining-edits">Combining edits</a><a id="Combining-edits-1"></a><a class="docs-heading-anchor-permalink" href="#Combining-edits" title="Permalink"></a></h2><p>Use <a href="../api/#CodeEdit.Combine"><code>Combine</code></a>, or the <code>*</code> shorthand, when multiple edits should be planned together:</p><pre><code class="language-julia-repl hljs" style="display:block;">julia&gt; source = Handle(&quot;examples/source.jl&quot;, 1)</code><code class="nohighlight hljs ansi" style="display:block;"># examples/source.jl 1 - 3:
+       &quot;&quot;&quot;)</code><code class="nohighlight hljs ansi" style="display:block;">Validation errors:
+- ArgumentError: parent directory does not exist: /home/runner/work/CodeEdit.jl/CodeEdit.jl/docs/examples</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; apply!(edit)</code><code class="nohighlight hljs ansi" style="display:block;">ERROR: displayed edit was invalid</code></pre><pre><code class="language-julia-repl hljs" style="display:block;">julia&gt; edit = MoveFile(&quot;examples/old-name.jl&quot;, &quot;examples/new-name.jl&quot;)</code><code class="nohighlight hljs ansi" style="display:block;">Validation errors:
+- ArgumentError: file does not exist: /home/runner/work/CodeEdit.jl/CodeEdit.jl/docs/examples/old-name.jl</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; apply!(edit)</code><code class="nohighlight hljs ansi" style="display:block;">ERROR: displayed edit was invalid</code></pre><pre><code class="language-julia-repl hljs" style="display:block;">julia&gt; edit = DeleteFile(&quot;examples/unused.jl&quot;)</code><code class="nohighlight hljs ansi" style="display:block;">Validation errors:
+- ArgumentError: file does not exist: /home/runner/work/CodeEdit.jl/CodeEdit.jl/docs/examples/unused.jl</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; apply!(edit)</code><code class="nohighlight hljs ansi" style="display:block;">ERROR: displayed edit was invalid</code></pre><h2 id="Combining-edits"><a class="docs-heading-anchor" href="#Combining-edits">Combining edits</a><a id="Combining-edits-1"></a><a class="docs-heading-anchor-permalink" href="#Combining-edits" title="Permalink"></a></h2><p>Use <a href="../api/#CodeEdit.Combine"><code>Combine</code></a>, or the <code>*</code> shorthand, when multiple edits should be planned together:</p><pre><code class="language-julia-repl hljs" style="display:block;">julia&gt; source = Handle(&quot;examples/source.jl&quot;, 1)</code><code class="nohighlight hljs ansi" style="display:block;"># examples/source.jl 1 - 3:
 function source()
     return :moved
 end</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; destination = eof_handle(&quot;examples/destination.jl&quot;)</code><code class="nohighlight hljs ansi" style="display:block;"># examples/destination.jl EOF:</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; edit = Combine(
            InsertBefore(destination, string(source)),
            Delete(source),
-       )</code><code class="nohighlight hljs ansi" style="display:block;">Edit modifies examples/destination.jl:
+       )</code><code class="nohighlight hljs ansi" style="display:block;">Edit modifies /tmp/jl_qbTrwX/examples/destination.jl:
 0c1,3
 ---
 &gt; function source()
 &gt;     return :moved
 &gt; end
-Edit modifies examples/source.jl:
+Edit modifies /tmp/jl_qbTrwX/examples/source.jl:
 1,3c0
 &lt; function source()
 &lt;     return :moved
@@ -66,16 +64,16 @@ Edit modifies examples/source.jl:
 ---</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; apply!(edit)</code><code class="nohighlight hljs ansi" style="display:block;">Success.</code></pre><p>Equivalent shorthand:</p><pre><code class="language-julia-repl hljs" style="display:block;">julia&gt; source = Handle(&quot;examples/source-shorthand.jl&quot;, 1)</code><code class="nohighlight hljs ansi" style="display:block;"># examples/source-shorthand.jl 1 - 3:
 function source_shorthand()
     return :moved
-end</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; destination = eof_handle(&quot;examples/destination-shorthand.jl&quot;)</code><code class="nohighlight hljs ansi" style="display:block;"># examples/destination-shorthand.jl EOF:</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; edit = InsertBefore(destination, string(source)) * Delete(source)</code><code class="nohighlight hljs ansi" style="display:block;">Edit modifies examples/destination-shorthand.jl:
+end</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; destination = eof_handle(&quot;examples/destination-shorthand.jl&quot;)</code><code class="nohighlight hljs ansi" style="display:block;"># examples/destination-shorthand.jl EOF:</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; edit = InsertBefore(destination, string(source)) * Delete(source)</code><code class="nohighlight hljs ansi" style="display:block;">Edit modifies /tmp/jl_qbTrwX/examples/destination-shorthand.jl:
 0c1,3
 ---
 &gt; function source_shorthand()
 &gt;     return :moved
 &gt; end
-Edit modifies examples/source-shorthand.jl:
+Edit modifies /tmp/jl_qbTrwX/examples/source-shorthand.jl:
 1,3c0
 &lt; function source_shorthand()
 &lt;     return :moved
 &lt; end
 ---</code></pre><p>Combined edits are validated after the full combined result is planned. This allows intermediate states to be temporarily invalid Julia syntax.</p><p>Planning and validation are all-or-nothing, but applying a combined edit that touches multiple files is best-effort at the filesystem level. If a later filesystem operation fails, earlier operations may already have been applied. Use version control so changes can be reviewed and recovered.</p><h2 id="Applying-edits-without-display"><a class="docs-heading-anchor" href="#Applying-edits-without-display">Applying edits without display</a><a id="Applying-edits-without-display-1"></a><a class="docs-heading-anchor-permalink" href="#Applying-edits-without-display" title="Permalink"></a></h2><p>By default, <a href="../api/#CodeEdit.apply!"><code>apply!</code></a> refuses to apply an edit until it has been displayed. This is intentional.</p><p>If you intentionally need to bypass display, use <a href="../api/#CodeEdit.displayed!"><code>displayed!</code></a>:</p><pre><code class="language-julia-repl hljs" style="display:block;">julia&gt; h = Handle(&quot;examples/no-display.jl&quot;, 1)</code><code class="nohighlight hljs ansi" style="display:block;"># examples/no-display.jl 1 - 1:
-status() = :old</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; edit = Replace(h, replace(string(h), &quot;:old&quot; =&gt; &quot;:new&quot;));</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; displayed!(edit, true);</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; apply!(edit)</code><code class="nohighlight hljs ansi" style="display:block;">Success.</code></pre><p>Use this with caution.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../concepts/">« Blocks and handles</a><a class="docs-footer-nextpage" href="../searching-errors/">Finding errors from stacktraces »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Sunday 10 May 2026 18:01">Sunday 10 May 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+status() = :old</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; edit = Replace(h, replace(string(h), &quot;:old&quot; =&gt; &quot;:new&quot;));</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; displayed!(edit, true);</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; apply!(edit)</code><code class="nohighlight hljs ansi" style="display:block;">Success.</code></pre><p>Use this with caution.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../concepts/">« Blocks and handles</a><a class="docs-footer-nextpage" href="../searching-errors/">Finding errors from stacktraces »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Sunday 10 May 2026 18:24">Sunday 10 May 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
