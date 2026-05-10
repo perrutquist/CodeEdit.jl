@@ -1,17 +1,10 @@
 # CodeEdit.jl
+[![CI](https://github.com/perrutquist/CodeEdit.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/perrutquist/CodeEdit.jl/actions/workflows/CI.yml)
+[![Documentation](https://github.com/perrutquist/CodeEdit.jl/actions/workflows/Documentation.yml/badge.svg)](https://github.com/perrutquist/CodeEdit.jl/actions/workflows/Documentation.yml)
+[![Dev docs](https://img.shields.io/badge/docs-dev-blue.svg)](https://perrutquist.github.io/CodeEdit.jl/dev/)
+[![Stable docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://perrutquist.github.io/CodeEdit.jl/stable/)
 
 CodeEdit.jl is a package for locating, viewing, and editing Julia source code from the Julia command line. It has some built-in safety measures, such as requiring edit diffs to be viewed before they can be applied, but is intended to be used in conjunction with version-control software.
-
-## Documentation
-
-The full documentation is built with [Documenter.jl](https://documenter.juliadocs.org/). It includes conceptual pages for blocks, handles, edit review, and safety behavior. The documentation workflow publishes the built documentation to GitHub Pages once Pages is enabled for the repository. To build it locally, run:
-
-```shell
-julia --project=docs -e 'using Pkg; Pkg.develop(Pkg.PackageSpec(path=pwd())); Pkg.instantiate()'
-julia --project=docs docs/make.jl
-```
-
-Then open `docs/build/index.html`.
 
 ## Example
 
@@ -151,3 +144,8 @@ Invalid handles are displayed as `#invalid`.
 After files are modified outside CodeEdit.jl, existing handles may no longer match the file contents. The `reindex()` function attempts to update all handles to point to the correct block using full block spans. This may invalidate some handles and modify the contents of others.
 
 Reindexing is triggered automatically when a cached file’s modification timestamp changes, so manual calls are usually unnecessary.
+
+
+## CodeEdit is partially written by AI
+
+Most of the initial code in this package was written by AI under human supervision. The LLM used for most tasks was OpenAI's GPT-5.5 and the software used for LLM-assisted coding was aider.chat.
