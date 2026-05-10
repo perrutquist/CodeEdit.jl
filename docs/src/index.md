@@ -31,6 +31,8 @@ function foo(x)
     x + 1
 end
 """)
+
+sleep(1.1)
 ```
 
 ```@repl index

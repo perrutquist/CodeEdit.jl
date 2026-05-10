@@ -28,6 +28,8 @@ err = try
 catch e
     catch_backtrace()
 end
+
+sleep(1.1)
 ```
 
 ## Starting from a stacktrace

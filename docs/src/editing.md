@@ -71,6 +71,8 @@ end
 write(destination_shorthand_file, "")
 
 write(nodisplay_example, "status() = :old\n")
+
+sleep(1.1)
 ```
 
 ## Replacing a block

@@ -49,6 +49,8 @@ end
 
 end
 """)
+
+sleep(1.1)
 ```
 
 ## Creating a handle
