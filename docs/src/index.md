@@ -34,7 +34,8 @@ end
 ```
 
 ```@repl index
-h = Handle("examples/foo.jl", 2)
+h = Handle("examples/foo.jl", 2);
+h
 replacement = replace(string(h), "x + 1" => "x + 2");
 edit = Replace(h, replacement)
 apply!(edit)

@@ -3,7 +3,7 @@ using CodeEdit
 
 DocMeta.setdocmeta!(CodeEdit, :DocTestSetup, :(using CodeEdit); recursive=true)
 
-examples_dir = abspath("examples")
+examples_dir = joinpath(@__DIR__, "examples")
 rm(examples_dir; recursive=true, force=true)
 
 try
