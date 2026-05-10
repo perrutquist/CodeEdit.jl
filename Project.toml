@@ -1,6 +1,6 @@
 name = "CodeEdit"
 uuid = "ef324658-459a-46c1-a175-ab8d0771bbcc"
-version = "0.1.0-DEV"
+version = "0.1.0"
 authors = ["Per Rutquist <per.rutquist@gmail.com> and contributors"]
 
 [deps]
