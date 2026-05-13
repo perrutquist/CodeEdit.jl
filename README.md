@@ -59,7 +59,7 @@ julia> repo = VersionControl("."; require_view=true)
 GitVersionControl("."; require_view=true)
 
 julia> apply!(repo, edit, "Change foo increment")
-Successs
+Success
 ```
 
 Constructing an edit does not modify files. Applying it through `VersionControl` writes the change, stages the affected paths, and commits the result.
