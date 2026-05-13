@@ -190,8 +190,6 @@ Important `apply!` keyword arguments can be stored in `VersionControl(path; kwar
 
 When `require_view=true`, displaying an edit records the exact plan that was shown; `apply!` replans the edit and rejects it if the plan changed. Handles automatically adapt to changing line numbers due to edits elsewhere in the file.
 
-A successful `apply!` returns an `ApplyResult`, which displays as `Success`.
-
 Applying edits can modify or invalidate the handles that they contain. An invalidated handle no longer refers to any code.
 
 Use raw string literals, e.g. `raw"""..."""`, to avoid escaping backslashes and dollar signs when writing Julia code into a string literal.
@@ -213,8 +211,6 @@ Invalid handles are displayed as `#invalid`.
 `display(handles)` - Displays an overview of a `Set` of handles, starting with the number of handles, then grouping entries by file. Handles are sorted by canonical file path and byte span, while each file header uses the path from the first handle in that file group. Each handle is shown on one line with its line range and approximately 40 characters of code.
 
 `display(edit)` - Displays a diff of the edit, and marks it as displayed. Also displays any syntax errors that would be present in the final result of the edit. Converting an edit to a string also marks it as displayed.
-
-`displayed!(edit, true)` - Marks an edit as displayed, enabling application without actually displaying it. (Use with caution.)
 
 ## Convenience
 

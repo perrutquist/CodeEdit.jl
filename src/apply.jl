@@ -1,8 +1,8 @@
-function Base.show(io::IO, ::MIME"text/plain", ::ApplyResult)
+function Base.show(io::IO, ::MIME"text/plain", ::Success)
     print(io, "Success")
 end
 
-function Base.show(io::IO, result::ApplyResult)
+function Base.show(io::IO, result::Success)
     show(io, MIME"text/plain"(), result)
 end
 
@@ -436,7 +436,7 @@ end
 function apply_compiled_plan!(plan)
     apply_plan!(plan)
     run_after_apply_hooks!()
-    return ApplyResult()
+    return Success()
 end
 
 function format_paths!(paths::Vector{String}, formatter)
@@ -679,5 +679,5 @@ function apply!(vc::VersionControl{:git}, edit::AbstractEdit, message::AbstractS
     stage_all!(repo_root, final_rels)
     commit_staged!(repo_root, message, final_rels)
 
-    return ApplyResult()
+    return Success()
 end

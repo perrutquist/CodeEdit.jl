@@ -36,7 +36,7 @@ Combined edits are planned and validated as a unit. See [Editing code](editing.m
 - [`VersionControl`](@ref): describe a git repository and default `apply!` keyword arguments.
 - [`GitVersionControl`](@ref): convenience constructor for git-backed editing.
 - [`NoVersionControl`](@ref): explicitly apply edits without version control.
-- [`ApplyResult`](@ref): successful result returned by `apply!`.
+- [`Success`](@ref): successful result returned by `apply!`.
 
 `apply!(repo, edit, message)` applies an edit, stages affected paths, and creates a git commit with `message`.
 
@@ -77,7 +77,6 @@ DeleteFile
 Combine
 apply!
 displayed!
-ApplyResult
 VersionControl
 GitVersionControl
 NoVersionControl

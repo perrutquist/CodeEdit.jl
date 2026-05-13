@@ -12,8 +12,6 @@ The standard workflow uses [`VersionControl`](@ref) to apply the edit, stage the
 
 In REPL examples, leaving the semicolon off the `edit = ...` line displays the edit and marks it as displayed; calling `display(edit)` works too.
 
-Use [`displayed!`](@ref) only when you intentionally want to mark an edit as reviewed without printing the diff.
-
 ```@setup editing
 using CodeEdit
 
@@ -190,16 +188,3 @@ h = Handle("scratch-note.txt", 1; parse_as=:text)
 edit = Replace(h, "status = new\n")
 apply!(NoVersionControl(require_view=true), edit)
 ```
-
-## Marking an edit as displayed
-
-If you intentionally need to bypass printing the diff while `require_view=true`, use [`displayed!`](@ref):
-
-```@repl editing
-h = Handle("scratch-note.txt", 1; parse_as=:text)
-edit = Replace(h, "status = reviewed\n");
-displayed!(edit, true);
-apply!(NoVersionControl(require_view=true), edit)
-```
-
-Use this with caution.
