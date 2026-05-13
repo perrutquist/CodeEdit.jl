@@ -4,7 +4,7 @@
 [![Dev docs](https://img.shields.io/badge/docs-dev-blue.svg)](https://perrutquist.github.io/CodeEdit.jl/dev/)
 [![Stable docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://perrutquist.github.io/CodeEdit.jl/stable/)
 
-CodeEdit.jl is a package for locating, viewing, and editing Julia source code from the Julia command line. It has some built-in safety measures, such as requiring edit diffs to be viewed before they can be applied, but is intended to be used in conjunction with version-control software.
+CodeEdit.jl is a package for locating, viewing, and editing Julia source code from the Julia command line. It is intended to be used with version-control software, and its standard edit workflow applies an edit and records it as a git commit.
 
 ## Example
 
@@ -29,9 +29,19 @@ Edit modifies foo.jl:
 >    x + 2
 ```
 
-Now (after our `edit` has been displayed) we can apply it.
+Now we can apply it and create a git commit.
 ```julia-repl
-julia> apply!(edit)
+julia> repo = VersionControl(".")
+VersionControl{:git, @NamedTuple{}}(Val{:git}(), ".", NamedTuple())
+
+julia> apply!(repo, edit, "Change foo increment")
+Success. Committed edit.
+```
+
+For legacy/no-version-control workflows, pass an explicit no-version-control
+specification. To require the same visible review as older CodeEdit versions:
+```julia-repl
+julia> apply!(NoVersionControl(require_view=true), edit)
 Success.
 ```
 
@@ -95,15 +105,37 @@ Editing is performed by first creating one or more "edit" objects (`<: AbstractE
 
 `edit1 * edit2` - Shorthand for `Combine(edit1, edit2)`. Chaining `*` appends edits in left-to-right order.
 
-`apply!(edit)` - Apply an edit, updating files on disk.
+`VersionControl(path; kwargs...)` - A git-backed version-control specification for the repository at `path`.
 
-For safety, `apply!` refuses to apply an edit unless it has previously been displayed. REPL printing, calls to `Base.display(edit)`, and calls to `string(edit)` all count. Displaying an edit records the exact plan that was shown; `apply!` replans the edit and rejects it if the plan changed. Handles automatically adapt to changing line numbers due to edits elsewhere in the file.
+`NoVersionControl(; kwargs...)` - An explicit specification for applying edits without version control.
+
+`apply!(repo, edit, message)` - Apply an edit, update files on disk, stage the affected paths, and create a git commit with `message`. This is the standard workflow.
+
+`apply!(repo, edit; default_message="...")` - Apply and commit using a default message supplied either in the call or in the `VersionControl` object.
+
+`apply!(NoVersionControl(require_view=true), edit)` - Apply without version control, while requiring the edit to have been displayed. This is equivalent to the old `apply!(edit)` behavior.
+
+`apply!(edit)` - Always errors. Pass an explicit `VersionControl` or `NoVersionControl` specification.
+
+Important `apply!` keyword arguments can be stored in `VersionControl(path; kwargs...)` or passed directly to `apply!`:
+
+- `require_view=false` - If `true`, reject edits that have not been displayed. REPL printing, calls to `Base.display(edit)`, and calls to `string(edit)` all count.
+- `require_versioning=true` for git, `false` without version control - If `true`, reject edits to existing files that are not tracked by git and reject creation outside the worktree.
+- `require_clean` - If `true`, reject edits when tracked files in scope are dirty. Defaults to `true` unless `precommit_message` is supplied.
+- `atomic_repo=false` - If `true`, dirty-file checks and precommits apply to the whole repository rather than only affected files.
+- `precommit_message` - Commit message used to commit dirty tracked files before formatting or applying the edit.
+- `formatter` - Function from `AbstractString` to `AbstractString` applied to affected files before the edit.
+- `preformat=true` - If `true` and a formatter is supplied, format affected files before applying the edit.
+- `format_message` - Commit message for formatter-only changes.
+- `default_message` - Commit message used when `apply!(repo, edit)` is called without a positional message.
+
+When `require_view=true`, displaying an edit records the exact plan that was shown; `apply!` replans the edit and rejects it if the plan changed. Handles automatically adapt to changing line numbers due to edits elsewhere in the file.
 
 Applying edits can modify or invalidate the handles that they contain. An invalidated handle no longer refers to any code.
 
 Use raw string literals, e.g. `raw"""..."""`, to avoid escaping backslashes and dollar signs when writing Julia code into a string literal.
 
-There is no undo function. It is recommended to use **git** for version control.
+There is no built-in undo function. The recommended workflow is to use `apply!(VersionControl("."), edit, "message")` so each edit is recorded as a git commit.
 
 **Revise.jl** is an optional weak dependency. When Revise is loaded, CodeEdit.jl calls `Revise.revise()` after a successful `apply!`. Revise failures are reported as warnings because the filesystem edit has already been applied.
 

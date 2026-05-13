@@ -1,6 +1,6 @@
 module CodeEdit
 
-using JuliaSyntax, Glob, SHA
+using JuliaSyntax, Glob, SHA, LibGit2
 
 const _maybe_revise_callback = Ref{Function}(() -> nothing)
 
@@ -30,6 +30,7 @@ export Handle, eof_handle, handles, reindex
 export search
 export AbstractEdit, Replace, Delete, InsertBefore, InsertAfter
 export CreateFile, MoveFile, DeleteFile, Combine, apply!, displayed!
+export VersionControl, NoVersionControl, GitVersionControl
 export filepath, lines, docstring, is_valid
 
 end

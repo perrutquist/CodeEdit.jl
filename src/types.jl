@@ -1,4 +1,25 @@
 """
+Version-control specification used by `apply!`.
+
+`vc_type` is typically `Val(:git)` or `Val(:none)`. `kwargs` stores default
+keyword arguments for later `apply!` calls.
+"""
+struct VersionControl{T,S<:NamedTuple}
+    vc_type::Val{T}
+    repo_path::String
+    kwargs::S
+end
+
+VersionControl(path::AbstractString; kwargs...) = VersionControl(Val(:git), String(path), (; kwargs...))
+VersionControl(::Nothing; kwargs...) = VersionControl(Val(:none), "", (; kwargs...))
+
+const NoVersionControl{S} = VersionControl{:none,S}
+const GitVersionControl{S} = VersionControl{:git,S}
+
+NoVersionControl(; kwargs...) = VersionControl(nothing; kwargs...)
+GitVersionControl(path::AbstractString; kwargs...) = VersionControl(path; kwargs...)
+
+"""
 Current identity of an existing filesystem object.
 """
 struct FileID

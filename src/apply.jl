@@ -348,36 +348,332 @@ function apply_plan!(plan::EditPlan)
 end
 
 """
-    apply!(edit::AbstractEdit)
-
-Apply a previously displayed edit to the filesystem.
-
-The edit must have been displayed, either by printing, displaying, stringifying
-it, or by calling [`displayed!`](@ref). The edit is replanned before application
-and is rejected if the current plan no longer matches the displayed plan.
-
-Combined edits are planned and validated as a unit, but applying a combined edit
-that touches multiple files is best-effort at the filesystem level. If a later
-operation fails, earlier file operations may already have been applied.
+Return the paths affected by an executable edit plan.
 """
-function apply!(edit::AbstractEdit)
-    displayed = edit.displayed[]
-    displayed === nothing && error("edit has not been displayed")
-    displayed.valid || error("displayed edit was invalid")
+affected_paths(plan::ReplacementEditPlan) = String[absolute_path(plan.path)]
+
+function affected_paths(plan::EditPlan)
+    paths = String[]
+
+    for effect in plan.effects
+        effect.original_path !== nothing && push!(paths, absolute_path(effect.original_path))
+        push!(paths, absolute_path(effect.path))
+    end
+
+    return unique(paths)
+end
+
+function created_paths(plan::ReplacementEditPlan)
+    return String[]
+end
+
+function created_paths(plan::EditPlan)
+    return unique(String[absolute_path(effect.path) for effect in plan.effects if effect.created])
+end
+
+function existing_versioned_paths(plan::ReplacementEditPlan)
+    return String[absolute_path(plan.path)]
+end
+
+function existing_versioned_paths(plan::EditPlan)
+    paths = String[]
+
+    for effect in plan.effects
+        if effect.created
+            continue
+        elseif effect.original_path !== nothing
+            push!(paths, absolute_path(effect.original_path))
+        else
+            push!(paths, absolute_path(effect.path))
+        end
+    end
+
+    return unique(paths)
+end
+
+function assert_plan_valid(plan)
+    plan.valid && return nothing
+    message = isempty(plan.errors) ? "edit is invalid" : "edit is invalid: $(join(plan.errors, "; "))"
+    error(message)
+end
+
+function compile_checked_plan(edit::AbstractEdit; require_view::Bool)
+    if require_view
+        displayed = edit.displayed[]
+        displayed === nothing && error("edit has not been displayed")
+        displayed.valid || error("displayed edit was invalid")
+
+        plan = compile_edit_plan(edit)
+        plan.valid || error("displayed edit was invalid")
+        plan.fingerprint == displayed.fingerprint ||
+            error("file changed since edit was displayed; display the edit again")
+        return plan
+    end
 
     plan = compile_edit_plan(edit)
-    plan.valid || error("displayed edit was invalid")
-    plan.fingerprint == displayed.fingerprint ||
-        error("file changed since edit was displayed; display the edit again")
+    assert_plan_valid(plan)
+    return plan
+end
 
-    apply_plan!(plan)
-
+function run_after_apply_hooks!()
     try
         maybe_revise()
     catch err
         @warn "Revise failed after apply" exception=(err, catch_backtrace())
     end
 
+    return nothing
+end
+
+function apply_compiled_plan!(plan)
+    apply_plan!(plan)
+    run_after_apply_hooks!()
     println("Success.")
+    return nothing
+end
+
+function format_paths!(paths::Vector{String}, formatter)
+    changed = String[]
+
+    for path in unique(paths)
+        isfile(path) || continue
+        old_text = read(path, String)
+        new_text = formatter(old_text)
+        new_text isa AbstractString ||
+            throw(ArgumentError("formatter must return an AbstractString for $path"))
+
+        if old_text != new_text
+            atomic_write(path, String(new_text))
+            push!(changed, path)
+        end
+    end
+
+    if !isempty(changed)
+        try
+            reindex()
+        catch err
+            @warn "Reindexing failed after formatting; chosen formatter may be incompatible with CodeEdit handles" exception=(err, catch_backtrace())
+        end
+    end
+
+    return changed
+end
+
+function merged_apply_kwargs(vc::VersionControl, kwargs)
+    return merge(vc.kwargs, (; kwargs...))
+end
+
+function option(options::NamedTuple, name::Symbol, default)
+    return get(options, name, default)
+end
+
+function git_cmd(repo_root::AbstractString, args::Vector{String})
+    return Cmd(vcat(String["git", "-C", String(repo_root)], args))
+end
+
+function git_run(repo_root::AbstractString, args::Vector{String})
+    run(git_cmd(repo_root, args))
+    return nothing
+end
+
+function git_success(repo_root::AbstractString, args::Vector{String})
+    return success(ignorestatus(git_cmd(repo_root, args)))
+end
+
+function git_read(repo_root::AbstractString, args::Vector{String})
+    return read(git_cmd(repo_root, args), String)
+end
+
+function git_worktree_root(path::AbstractString)
+    LibGit2.GitRepo(path)
+    root = strip(git_read(path, String["rev-parse", "--show-toplevel"]))
+    isempty(root) && error("could not determine git worktree root for $path")
+    return absolute_path(root)
+end
+
+function path_in_worktree(path::AbstractString, repo_root::AbstractString)
+    rel = relpath(absolute_path(path), repo_root)
+    return rel != ".." && !startswith(rel, "..$(Base.Filesystem.path_separator)") && !isabspath(rel)
+end
+
+function repo_relative_path(path::AbstractString, repo_root::AbstractString)
+    path_in_worktree(path, repo_root) || error("path is outside git worktree: $path")
+    return relpath(absolute_path(path), repo_root)
+end
+
+function repo_relative_paths(paths::Vector{String}, repo_root::AbstractString)
+    return String[repo_relative_path(path, repo_root) for path in unique(paths)]
+end
+
+function is_tracked(repo_root::AbstractString, path::AbstractString)
+    rel = repo_relative_path(path, repo_root)
+    return git_success(repo_root, String["ls-files", "--error-unmatch", "--", rel])
+end
+
+function status_dirty(repo_root::AbstractString, rels::Vector{String}; tracked_only::Bool=true)
+    args = tracked_only ?
+        vcat(String["status", "--porcelain", "--untracked-files=no", "--"], rels) :
+        vcat(String["status", "--porcelain", "--"], rels)
+    return !isempty(strip(git_read(repo_root, args)))
+end
+
+function staged_dirty(repo_root::AbstractString, rels::Vector{String})
+    args = isempty(rels) ? String["diff", "--cached", "--quiet"] : vcat(String["diff", "--cached", "--quiet", "--"], rels)
+    return !git_success(repo_root, args)
+end
+
+function stage_all!(repo_root::AbstractString, rels::Vector{String})
+    isempty(rels) && return nothing
+    git_run(repo_root, vcat(String["add", "-A", "--"], rels))
+    return nothing
+end
+
+function stage_tracked!(repo_root::AbstractString, rels::Vector{String})
+    args = isempty(rels) ? String["add", "-u"] : vcat(String["add", "-u", "--"], rels)
+    git_run(repo_root, args)
+    return nothing
+end
+
+function commit_staged!(repo_root::AbstractString, message::AbstractString, rels::Vector{String}=String[])
+    staged_dirty(repo_root, rels) || return false
+    args = isempty(rels) ? String["commit", "-m", String(message)] : vcat(String["commit", "-m", String(message), "--"], rels)
+    git_run(repo_root, args)
+    return true
+end
+
+function assert_versioning_requirements(plan, repo_root::AbstractString; require_versioning::Bool)
+    for path in affected_paths(plan)
+        path_in_worktree(path, repo_root) || error("edit affects path outside git worktree: $path")
+    end
+
+    require_versioning || return nothing
+
+    for path in existing_versioned_paths(plan)
+        is_tracked(repo_root, path) || error("file is not under version control: $path")
+    end
+
+    for path in created_paths(plan)
+        path_in_worktree(path, repo_root) || error("created file is outside git worktree: $path")
+    end
+
+    return nothing
+end
+
+function maybe_precommit_dirty!(
+    repo_root::AbstractString,
+    rels::Vector{String};
+    require_clean::Bool,
+    atomic_repo::Bool,
+    precommit_message,
+)
+    scope_rels = atomic_repo ? String[] : rels
+    dirty = status_dirty(repo_root, scope_rels; tracked_only=true)
+    dirty || return nothing
+
+    if require_clean
+        error("tracked files have uncommitted changes")
+    end
+
+    precommit_message === nothing && error("precommit_message is required when applying over dirty tracked files")
+    stage_tracked!(repo_root, scope_rels)
+    commit_staged!(repo_root, String(precommit_message), scope_rels)
+    return nothing
+end
+
+function commit_formatting!(
+    repo_root::AbstractString,
+    changed_paths::Vector{String},
+    message::AbstractString,
+)
+    isempty(changed_paths) && return nothing
+    rels = repo_relative_paths(changed_paths, repo_root)
+    stage_all!(repo_root, rels)
+    commit_staged!(repo_root, message, rels)
+    return nothing
+end
+
+"""
+    apply!(edit::AbstractEdit)
+
+Reject edits applied without an explicit version-control specification.
+
+Use `apply!(NoVersionControl(require_view=true), edit)` for behavior equivalent
+to the old `apply!(edit)`, or `apply!(VersionControl(path), edit, message)` to
+apply and commit an edit in a git repository.
+"""
+function apply!(edit::AbstractEdit)
+    error("apply! requires a VersionControl specification; use apply!(NoVersionControl(require_view=true), edit) or apply!(VersionControl(path), edit, message)")
+end
+
+function apply!(vc::VersionControl{:none}, edit::AbstractEdit; kwargs...)
+    options = merged_apply_kwargs(vc, kwargs)
+    require_view = option(options, :require_view, false)
+    formatter = option(options, :formatter, nothing)
+    preformat = option(options, :preformat, true)
+
+    initial_plan = compile_checked_plan(edit; require_view=require_view)
+
+    if formatter !== nothing && preformat
+        format_paths!(affected_paths(initial_plan), formatter)
+    end
+
+    plan = formatter !== nothing && preformat ? compile_checked_plan(edit; require_view=false) : initial_plan
+    apply_compiled_plan!(plan)
+    return nothing
+end
+
+function apply!(vc::VersionControl{:none}, edit::AbstractEdit, message::AbstractString; kwargs...)
+    apply!(vc, edit; kwargs...)
+    return nothing
+end
+
+function apply!(vc::VersionControl{:git}, edit::AbstractEdit; kwargs...)
+    options = merged_apply_kwargs(vc, kwargs)
+    default_message = option(options, :default_message, nothing)
+    default_message === nothing && error("commit message required; pass apply!(repo, edit, message) or set default_message")
+    return apply!(vc, edit, String(default_message); kwargs...)
+end
+
+function apply!(vc::VersionControl{:git}, edit::AbstractEdit, message::AbstractString; kwargs...)
+    options = merged_apply_kwargs(vc, kwargs)
+
+    repo_root = git_worktree_root(vc.repo_path)
+    require_view = option(options, :require_view, false)
+    require_versioning = option(options, :require_versioning, true)
+    precommit_message = option(options, :precommit_message, nothing)
+    require_clean = option(options, :require_clean, precommit_message === nothing)
+    atomic_repo = option(options, :atomic_repo, false)
+    formatter = option(options, :formatter, nothing)
+    preformat = option(options, :preformat, true)
+    format_message = option(options, :format_message, "Automatic formatting by $formatter.")
+
+    initial_plan = compile_checked_plan(edit; require_view=require_view)
+    assert_versioning_requirements(initial_plan, repo_root; require_versioning=require_versioning)
+    rels = repo_relative_paths(affected_paths(initial_plan), repo_root)
+
+    maybe_precommit_dirty!(
+        repo_root,
+        rels;
+        require_clean=require_clean,
+        atomic_repo=atomic_repo,
+        precommit_message=precommit_message,
+    )
+
+    if formatter !== nothing && preformat
+        changed_paths = format_paths!(affected_paths(initial_plan), formatter)
+        commit_formatting!(repo_root, changed_paths, String(format_message))
+    end
+
+    plan = formatter !== nothing && preformat ? compile_checked_plan(edit; require_view=false) : initial_plan
+    assert_versioning_requirements(plan, repo_root; require_versioning=require_versioning)
+
+    apply_plan!(plan)
+    run_after_apply_hooks!()
+
+    final_rels = repo_relative_paths(affected_paths(plan), repo_root)
+    stage_all!(repo_root, final_rels)
+    committed = commit_staged!(repo_root, message, final_rels)
+
+    println(committed ? "Success. Committed edit." : "Success. No changes to commit.")
     return nothing
 end
