@@ -1,5 +1,5 @@
 function Base.show(io::IO, ::MIME"text/plain", ::ApplyResult)
-    print(io, "Successs")
+    print(io, "Success")
 end
 
 function Base.show(io::IO, result::ApplyResult)

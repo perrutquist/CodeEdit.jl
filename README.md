@@ -82,7 +82,7 @@ Edit modifies scratch.txt:
 > status = new
 
 julia> apply!(NoVersionControl(require_view=true), edit)
-Successs
+Success
 ```
 
 If **Revise.jl** is loaded, CodeEdit.jl calls `Revise.revise()` after each successful edit so changed method definitions usually take effect immediately.
@@ -190,7 +190,7 @@ Important `apply!` keyword arguments can be stored in `VersionControl(path; kwar
 
 When `require_view=true`, displaying an edit records the exact plan that was shown; `apply!` replans the edit and rejects it if the plan changed. Handles automatically adapt to changing line numbers due to edits elsewhere in the file.
 
-A successful `apply!` returns an `ApplyResult`, which displays as `Successs`.
+A successful `apply!` returns an `ApplyResult`, which displays as `Success`.
 
 Applying edits can modify or invalidate the handles that they contain. An invalidated handle no longer refers to any code.
 
