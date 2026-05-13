@@ -31,18 +31,17 @@ Edit modifies foo.jl:
 
 Now we can apply it and create a git commit.
 ```julia-repl
-julia> repo = VersionControl(".")
-VersionControl{:git, @NamedTuple{}}(Val{:git}(), ".", NamedTuple())
+julia> repo = VersionControl("."; require_view=true)
+VersionControl{:git, @NamedTuple{require_view::Bool}}(Val{:git}(), ".", (require_view = true,))
 
 julia> apply!(repo, edit, "Change foo increment")
-Success. Committed edit.
+Successs
 ```
 
-For legacy/no-version-control workflows, pass an explicit no-version-control
-specification. To require the same visible review as older CodeEdit versions:
+For scratch files, generated files, or other workflows that should not create a commit, pass an explicit no-version-control specification:
 ```julia-repl
 julia> apply!(NoVersionControl(require_view=true), edit)
-Success.
+Successs
 ```
 
 If **Revise.jl** is loaded, CodeEdit.jl triggers `Revise.revise()` after each successful edit so the new definition of `foo(x)` typically takes effect immediately.
@@ -107,13 +106,15 @@ Editing is performed by first creating one or more "edit" objects (`<: AbstractE
 
 `VersionControl(path; kwargs...)` - A git-backed version-control specification for the repository at `path`.
 
+`GitVersionControl(path; kwargs...)` - A convenience constructor for a git-backed version-control specification.
+
 `NoVersionControl(; kwargs...)` - An explicit specification for applying edits without version control.
 
 `apply!(repo, edit, message)` - Apply an edit, update files on disk, stage the affected paths, and create a git commit with `message`. This is the standard workflow.
 
 `apply!(repo, edit; default_message="...")` - Apply and commit using a default message supplied either in the call or in the `VersionControl` object.
 
-`apply!(NoVersionControl(require_view=true), edit)` - Apply without version control, while requiring the edit to have been displayed. This is equivalent to the old `apply!(edit)` behavior.
+`apply!(NoVersionControl(require_view=true), edit)` - Apply without version control, while requiring the edit to have been displayed.
 
 `apply!(edit)` - Always errors. Pass an explicit `VersionControl` or `NoVersionControl` specification.
 
@@ -130,6 +131,8 @@ Important `apply!` keyword arguments can be stored in `VersionControl(path; kwar
 - `default_message` - Commit message used when `apply!(repo, edit)` is called without a positional message.
 
 When `require_view=true`, displaying an edit records the exact plan that was shown; `apply!` replans the edit and rejects it if the plan changed. Handles automatically adapt to changing line numbers due to edits elsewhere in the file.
+
+A successful `apply!` returns an `ApplyResult`, which displays as `Successs`.
 
 Applying edits can modify or invalidate the handles that they contain. An invalidated handle no longer refers to any code.
 

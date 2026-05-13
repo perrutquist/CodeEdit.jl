@@ -1,8 +1,8 @@
 # Editing code
 
-Edits are represented as values that subtype [`AbstractEdit`](@ref). Construct an edit, display it to review the diff, then apply it.
+Edits are represented as values that subtype [`AbstractEdit`](@ref). Construct an edit, optionally display it to review the diff, then apply it through an explicit version-control specification.
 
-Displaying, printing, or stringifying an edit records the exact plan that was shown. [`apply!`](@ref) replans the edit and refuses to apply it if the new plan does not match the displayed plan. In REPL examples, leaving the semicolon off the `edit = ...` line displays the edit and marks it as displayed; calling `display(edit)` works too.
+The standard workflow uses [`VersionControl`](@ref) to apply the edit, stage the affected paths, and create a git commit. If you set `require_view=true`, displaying, printing, or stringifying an edit records the exact plan that was shown. [`apply!`](@ref) replans the edit and refuses to apply it if the new plan does not match the displayed plan. In REPL examples, leaving the semicolon off the `edit = ...` line displays the edit and marks it as displayed; calling `display(edit)` works too.
 
 Use [`displayed!`](@ref) only when you intentionally want to mark an edit as reviewed without printing the diff.
 
@@ -11,77 +11,56 @@ using CodeEdit
 
 rm("examples"; recursive=true, force=true)
 mkpath("examples")
-replace_example = "examples/replace.jl"
-insert_before_example = "examples/insert-before.jl"
-insert_after_example = "examples/insert-after.jl"
-delete_example = "examples/delete.jl"
-old_name = "examples/old-name.jl"
-new_name = "examples/new-name.jl"
-unused_file = "examples/unused.jl"
-new_file = "examples/new-file.jl"
-source_file = "examples/source.jl"
-destination_file = "examples/destination.jl"
-source_shorthand_file = "examples/source-shorthand.jl"
-destination_shorthand_file = "examples/destination-shorthand.jl"
-nodisplay_example = "examples/no-display.jl"
 
-write(replace_example, """
+project_file = "examples/ProjectCode.jl"
+notes_file = "examples/notes.txt"
+
+write(project_file, """
+module ProjectCode
+
+const DEFAULT_LIMIT = 10
+
 function foo(x)
-    x + 1
-end
-""")
-
-write(insert_before_example, """
-function foo(x)
-    x + 1
-end
-""")
-
-write(insert_after_example, """
-function foo(x)
-    x + 1
-end
-""")
-
-write(delete_example, """
-function helper(x)
     return x + 1
+end
+
+function helper(x)
+    return foo(x) * 2
 end
 
 function obsolete()
     return :remove_me
 end
-""")
 
-write(old_name, "old_value() = 1\n")
-write(unused_file, "unused() = true\n")
-
-write(source_file, """
-function source()
-    return :moved
 end
 """)
-write(destination_file, "")
 
-write(source_shorthand_file, """
-function source_shorthand()
-    return :moved
-end
+write(notes_file, """
+First note.
+
+Second note.
 """)
-write(destination_shorthand_file, "")
 
-write(nodisplay_example, "status() = :old\n")
+run(`git init examples`)
+run(`git -C examples config user.email docs@example.com`)
+run(`git -C examples config user.name "CodeEdit Docs"`)
+run(`git -C examples add .`)
+run(`git -C examples commit -m "Initial editing examples"`)
 
 sleep(1.1)
+```
+
+```@repl editing
+repo = VersionControl("examples"; require_view=true)
 ```
 
 ## Replacing a block
 
 ```@repl editing
-h = Handle("examples/replace.jl", 2)
+h = Handle("examples/ProjectCode.jl", 6)
 new_code = replace(string(h), "x + 1" => "x + 2");
 edit = Replace(h, new_code)
-apply!(edit)
+apply!(repo, edit, "Change foo increment")
 ```
 
 ## Inserting code
@@ -89,25 +68,25 @@ apply!(edit)
 Insert before a block:
 
 ```@repl editing
-h = Handle("examples/insert-before.jl", 1)
+h = Handle("examples/ProjectCode.jl", 6)
 edit = InsertBefore(h, raw"""
-const DEFAULT_LIMIT = 10
+const SCALE = 2
 
 """)
-apply!(edit)
+apply!(repo, edit, "Add scale constant")
 ```
 
 Insert after a block:
 
 ```@repl editing
-h = Handle("examples/insert-after.jl", 1)
+h = Handle("examples/ProjectCode.jl", 6)
 edit = InsertAfter(h, raw"""
 
-function helper(x)
-    return x + 1
+function bar(x)
+    return foo(x) + SCALE
 end
 """)
-apply!(edit)
+apply!(repo, edit, "Add bar")
 ```
 
 Use raw string literals such as `raw"""..."""` when writing Julia code as strings. They avoid accidental escaping of backslashes and dollar signs.
@@ -115,9 +94,9 @@ Use raw string literals such as `raw"""..."""` when writing Julia code as string
 ## Deleting code
 
 ```@repl editing
-h = Handle("examples/delete.jl", 5)
+h = Handle("examples/ProjectCode.jl", 14)
 edit = Delete(h)
-apply!(edit)
+apply!(repo, edit, "Remove obsolete function")
 ```
 
 EOF handles are unaffected by [`Delete`](@ref).
@@ -125,22 +104,22 @@ EOF handles are unaffected by [`Delete`](@ref).
 ## Creating, moving, and deleting files
 
 ```@repl editing
-edit = CreateFile("examples/new-file.jl", raw"""
-function new_file_function()
+edit = CreateFile("examples/generated.jl", raw"""
+function generated_value()
     return :ok
 end
 """)
-apply!(edit)
+apply!(repo, edit, "Add generated file")
 ```
 
 ```@repl editing
-edit = MoveFile("examples/old-name.jl", "examples/new-name.jl")
-apply!(edit)
+edit = MoveFile("examples/generated.jl", "examples/generated-renamed.jl")
+apply!(repo, edit, "Rename generated file")
 ```
 
 ```@repl editing
-edit = DeleteFile("examples/unused.jl")
-apply!(edit)
+edit = DeleteFile("examples/generated-renamed.jl")
+apply!(repo, edit, "Remove generated file")
 ```
 
 ## Combining edits
@@ -148,38 +127,52 @@ apply!(edit)
 Use [`Combine`](@ref), or the `*` shorthand, when multiple edits should be planned together:
 
 ```@repl editing
-source = Handle("examples/source.jl", 1)
-destination = eof_handle("examples/destination.jl")
+source = Handle("examples/ProjectCode.jl", 10)
+destination = eof_handle("examples/notes.txt")
 edit = Combine(
-    InsertBefore(destination, string(source)),
+    InsertBefore(destination, "\nMoved helper source:\n\n" * string(source)),
     Delete(source),
 )
-apply!(edit)
+apply!(repo, edit, "Move helper source to notes")
 ```
 
 Equivalent shorthand:
 
 ```@repl editing
-source = Handle("examples/source-shorthand.jl", 1)
-destination = eof_handle("examples/destination-shorthand.jl")
-edit = InsertBefore(destination, string(source)) * Delete(source)
+h = Handle("examples/ProjectCode.jl", 6)
+edit = InsertAfter(h, raw"""
+
+function baz(x)
+    return foo(x) - 1
+end
+""") * InsertBefore(eof_handle("examples/notes.txt"), "\nAdded baz to ProjectCode.jl\n")
+apply!(repo, edit, "Add baz and update notes")
 ```
 
 Combined edits are validated after the full combined result is planned. This allows intermediate states to be temporarily invalid Julia syntax.
 
 Planning and validation are all-or-nothing, but applying a combined edit that touches multiple files is best-effort at the filesystem level. If a later filesystem operation fails, earlier operations may already have been applied. Use version control so changes can be reviewed and recovered.
 
-## Applying edits without display
+## Applying edits without version control
 
-By default, [`apply!`](@ref) refuses to apply an edit until it has been displayed. This is intentional.
-
-If you intentionally need to bypass display, use [`displayed!`](@ref):
+For scratch files, generated files, or other changes that should not create a commit, pass an explicit [`NoVersionControl`](@ref) specification.
 
 ```@repl editing
-h = Handle("examples/no-display.jl", 1)
-edit = Replace(h, replace(string(h), ":old" => ":new"));
+write("scratch-note.txt", "status = old\n")
+h = Handle("scratch-note.txt", 1; parse_as=:text)
+edit = Replace(h, "status = new\n")
+apply!(NoVersionControl(require_view=true), edit)
+```
+
+## Marking an edit as displayed
+
+If you intentionally need to bypass printing the diff while `require_view=true`, use [`displayed!`](@ref):
+
+```@repl editing
+h = Handle("scratch-note.txt", 1; parse_as=:text)
+edit = Replace(h, "status = reviewed\n");
 displayed!(edit, true);
-apply!(edit)
+apply!(NoVersionControl(require_view=true), edit)
 ```
 
 Use this with caution.

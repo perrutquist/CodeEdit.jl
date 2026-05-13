@@ -1,6 +1,6 @@
 # Blocks and handles
 
-CodeEdit.jl works by splitting files into source or text *blocks* and returning stable references to those blocks.
+CodeEdit.jl works by splitting files into source or text *blocks* and returning stable references to those blocks. These handles can then be used to build edits that are applied through git or through an explicit no-version-control specification.
 
 ## Blocks
 

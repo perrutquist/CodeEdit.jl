@@ -1,6 +1,6 @@
 # Finding errors from stacktraces
 
-CodeEdit.jl can search for source blocks referenced by a stacktrace. This is useful when debugging interactively: catch the error, capture its stacktrace with `catch_backtrace()`, search project source for referenced frames, inspect the matching blocks, then edit the source.
+CodeEdit.jl can search for source blocks referenced by a stacktrace. This is useful when debugging interactively: catch the error, capture its stacktrace with `catch_backtrace()`, search project source for referenced frames, inspect the matching blocks, then edit the source and commit the fix.
 
 ```@setup searching_errors
 using CodeEdit
@@ -19,6 +19,12 @@ function outer(x)
     return inner(x + 1)
 end
 """)
+
+run(`git init $srcdir`)
+run(`git -C $srcdir config user.email docs@example.com`)
+run(`git -C $srcdir config user.name "CodeEdit Docs"`)
+run(`git -C $srcdir add .`)
+run(`git -C $srcdir commit -m "Initial error example"`)
 
 include(error_source)
 
@@ -69,7 +75,7 @@ The result contains handles for blocks whose source locations appear in the stac
 
 ## At the REPL
 
-At the Julia REPL, the caught `ExceptionStack` is in the variable `err` is a stacktrace which we can use:
+At the Julia REPL, the caught `ExceptionStack` is available in the variable `err`, and can be searched in the same way:
 
 ```@repl searching_errors
 outer(1)
@@ -90,14 +96,15 @@ A displayed handle includes the file name and line range, followed by the source
 
 ## Editing after locating the error
 
-After finding the relevant block, construct a replacement:
+After finding the relevant block, construct a replacement and apply it through git:
 
 ```@repl searching_errors
+repo = VersionControl("examples"; require_view=true)
 h = only(search(matches, "error("))
 
 fixed = replace(string(h), "error(\"bad input: \$x\")" => "throw(ArgumentError(\"bad input: \$x\"))");
 edit = Replace(h, fixed)
-apply!(edit)
+apply!(repo, edit, "Throw ArgumentError for bad input")
 ```
 
 After a successful edit, existing handles are updated or invalidated as needed. If Revise.jl is loaded, CodeEdit.jl also asks Revise to revise loaded definitions.
