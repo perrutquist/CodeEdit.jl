@@ -4,32 +4,56 @@
 [![Dev docs](https://img.shields.io/badge/docs-dev-blue.svg)](https://perrutquist.github.io/CodeEdit.jl/dev/)
 [![Stable docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://perrutquist.github.io/CodeEdit.jl/stable/)
 
-CodeEdit.jl is a package for locating, viewing, and editing Julia source code from the Julia command line. It is intended to be used with version-control software, and its standard edit workflow applies an edit and records it as a git commit.
+CodeEdit.jl is a Julia package for making small, reviewable source edits from the Julia command line. Instead of manipulating raw line ranges, you work with handles to parsed source blocks, build edit objects, inspect the planned diff, and apply the change through git or an explicit no-version-control mode.
 
-## Example
+It is designed for workflows where source changes should be easy to review, easy to commit, and safe to apply incrementally.
 
-Let's say we want to look at the code in "foo.jl" on line 2.
+## Why CodeEdit?
+
+CodeEdit.jl is useful when you want to:
+
+- locate the function, type, constant, or text paragraph that contains a source location;
+- inspect that block directly at the REPL;
+- build edits as Julia values before touching the filesystem;
+- require a reviewed diff before applying a change;
+- record normal source edits as git commits;
+- update loaded definitions with Revise.jl when Revise is available.
+
+## Quick example
+
+Suppose `foo.jl` contains this function:
+
+```julia
+function foo(x)
+    x + 1
+end
+```
+
+Create a handle to the block containing line 2:
 
 ```julia-repl
 julia> h = Handle("foo.jl", 2)
 # foo.jl 1 - 3:
 function foo(x)
-   x + 1
+    x + 1
 end
 ```
-Because line 2 is part of a block that spans lines 1 - 3, those lines are all displayed. A handle to this code is returned.
 
-We can use the handle to create a code edit.
+Because line 2 is inside the function, the handle points to the whole function block.
+
+Now build an edit and review the planned diff:
+
 ```julia-repl
 julia> edit = Replace(h, replace(string(h), "x + 1" => "x + 2"))
 Edit modifies foo.jl:
 2c2
-<    x + 1
+<     x + 1
 ---
->    x + 2
+>     x + 2
 ```
 
-Now we can apply it and create a git commit.
+Apply the edit through git:
+
 ```julia-repl
 julia> repo = VersionControl("."; require_view=true)
 GitVersionControl("."; require_view=true)
@@ -38,27 +62,61 @@ julia> apply!(repo, edit, "Change foo increment")
 Successs
 ```
 
-For scratch files, generated files, or other workflows that should not create a commit, pass an explicit no-version-control specification:
+Constructing an edit does not modify files. Applying it through `VersionControl` writes the change, stages the affected paths, and commits the result.
+
+For scratch files, generated files, or other changes that should not create a commit, use an explicit no-version-control specification:
+
 ```julia-repl
+julia> write("scratch.txt", "status = old\n")
+11
+
+julia> h = Handle("scratch.txt", 1; parse_as=:text)
+# scratch.txt 1 - 1:
+status = old
+
+julia> edit = Replace(h, "status = new\n")
+Edit modifies scratch.txt:
+1c1
+< status = old
+---
+> status = new
+
 julia> apply!(NoVersionControl(require_view=true), edit)
 Successs
 ```
 
-If **Revise.jl** is loaded, CodeEdit.jl triggers `Revise.revise()` after each successful edit so the new definition of `foo(x)` typically takes effect immediately.
+If **Revise.jl** is loaded, CodeEdit.jl calls `Revise.revise()` after each successful edit so changed method definitions usually take effect immediately.
 
-## Blocks
+## Core ideas
 
-The basis for many commands is that the code is automatically divided into *blocks*. For Julia files, blocks are top-level syntactic units such as function, type, macro, constant, assignment, import, export, and include statements, optionally with attached docstrings. Top-level expressions terminated by semicolons are treated as separate blocks where possible. Blocks never overlap.
+The basic workflow is:
 
-A Julia `module` is not treated as one large block. Instead, the `module ...` line and its matching `end` line are separate blocks, while the contents are subdivided normally.
+```text
+Handle -> Edit -> Displayed plan -> Apply -> Commit
+```
 
-At the end of each file, there is a special EOF block.
+- A [`Handle`](@ref) points to one parsed block of source or text.
+- An edit such as `Replace`, `InsertBefore`, or `Delete` describes an intended change.
+- Displaying or stringifying an edit shows the exact plan.
+- With `require_view=true`, `apply!` checks that the plan has not changed before writing files.
+- Git-backed edits stage affected paths and create a commit.
 
-For non-Julia files, the division into *blocks* is determined by blank lines, and a block is roughly equivalent to a paragraph of text.
+## Safety at a glance
 
-Most commands interpret `.jl` files as Julia code and any other file extension as text. The keyword argument `parse_as=:julia` or `parse_as=:text` can be used to override this, but if the parsing type for a file changes then all existing handles to that file are invalidated. A cached file can only have one parse mode at a time, so changing file extension or reloading it with a different parse mode forces invalidation and reload.
+CodeEdit.jl separates planning from applying. It reparses Julia files before applying edits, can require affected files to be versioned, can reject dirty files, and can require that the exact displayed plan is still current.
 
-Under the hood, the package keeps a cache of all files that it has already parsed into blocks.
+For details, see the manual sections on editing and safety.
+
+## Manual
+
+The README is only a short introduction. The full documentation is organized as a guide:
+
+- [Getting started](https://perrutquist.github.io/CodeEdit.jl/dev/getting-started/): make a first reviewed edit.
+- [Blocks and handles](https://perrutquist.github.io/CodeEdit.jl/dev/concepts/): understand how CodeEdit.jl sees source files.
+- [Editing code](https://perrutquist.github.io/CodeEdit.jl/dev/editing/): replace, insert, delete, combine, and apply edits.
+- [Safety and version control](https://perrutquist.github.io/CodeEdit.jl/dev/safety/): understand review checks, git integration, and failure modes.
+- [Finding errors from stacktraces](https://perrutquist.github.io/CodeEdit.jl/dev/searching-errors/): locate code from captured stacktraces.
+- [API reference](https://perrutquist.github.io/CodeEdit.jl/dev/api/): look up exported names.
 
 ## Getting block handles
 
@@ -181,6 +239,6 @@ After files are modified outside CodeEdit.jl, existing handles may no longer mat
 Reindexing is triggered automatically when a cached file’s modification timestamp changes, so manual calls are usually unnecessary.
 
 
-## CodeEdit is partially written by AI
+## Development note
 
-Most of the initial code in this package was written by AI under human supervision. The LLM used for most tasks was OpenAI's GPT-5.5 and the software used for LLM-assisted coding was aider.chat.
+Parts of CodeEdit.jl were developed with assistance from large language models under human review.

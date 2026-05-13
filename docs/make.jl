@@ -5,9 +5,9 @@ DocMeta.setdocmeta!(CodeEdit, :DocTestSetup, :(using CodeEdit); recursive=true)
 
 basedir = mktempdir()
 
-# In the examples, let the display_path be relative to the workdir
-# (This is needed because display is rendered from the wrong directory during docs build.
-function CodeEdit.display_path(path::AbstractString) 
+# In the examples, let the display_path be relative to the workdir.
+# This is needed because display is rendered from the wrong directory during docs build.
+function CodeEdit.display_path(path::AbstractString)
     relpath(realpath(path), realpath(basedir))
 end
 
@@ -22,6 +22,7 @@ makedocs(
         "Getting started" => "getting-started.md",
         "Blocks and handles" => "concepts.md",
         "Editing code" => "editing.md",
+        "Safety and version control" => "safety.md",
         "Finding errors from stacktraces" => "searching-errors.md",
         "API reference" => "api.md",
     ],

@@ -1,5 +1,7 @@
 # Getting started
 
+This page walks through a first CodeEdit.jl edit from start to finish. The goal is not to show every feature, but to show the shape of the workflow: find a block, build an edit, review the plan, and apply it deliberately.
+
 ## Installation
 
 Install CodeEdit.jl from the Julia package manager. If the package is not yet registered, add it from its repository URL:
@@ -56,7 +58,7 @@ sleep(1.1)
 
 ## Creating a handle
 
-Use [`Handle`](@ref) to point at the block containing a source location:
+CodeEdit.jl starts from source locations, but it does not make you edit individual line ranges. Use [`Handle`](@ref) to point at the block containing a location:
 
 ```@repl getting_started
 h = Handle("examples/MyPackage.jl", 10)
@@ -110,13 +112,15 @@ The search result is a `Set` of handles, so you can inspect or edit each matchin
 
 ## Applying an edit with git
 
-Create a git-backed version-control specification for the repository:
+So far, we have only inspected source. To change it, create an edit value and choose how it should be applied.
+
+For normal source code, use a git-backed version-control specification:
 
 ```@repl getting_started
 repo = VersionControl("examples"; require_view=true)
 ```
 
-With `require_view=true`, displaying the edit records the exact plan that will be checked again before application:
+With `require_view=true`, displaying the edit records the exact plan. When [`apply!`](@ref) runs, CodeEdit.jl plans the edit again and refuses to apply it if the plan has changed:
 
 ```@repl getting_started
 h = only(search(hs, "old_function_name"))
@@ -124,7 +128,7 @@ edit = Replace(h, replace(string(h), "old_function_name" => "new_function_name")
 apply!(repo, edit, "Rename old_function_name")
 ```
 
-The edit was applied to disk and committed to git.
+The edit was applied to disk and committed to git. This is the normal CodeEdit.jl workflow: source changes become small, named commits.
 
 ## Inserting at the end of a file
 

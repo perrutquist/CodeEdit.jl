@@ -1,6 +1,6 @@
 # Finding errors from stacktraces
 
-CodeEdit.jl can search for source blocks referenced by a stacktrace. This is useful when debugging interactively: catch the error, capture its stacktrace with `catch_backtrace()`, search project source for referenced frames, inspect the matching blocks, then edit the source and commit the fix.
+CodeEdit.jl can search for source blocks referenced by a stacktrace. This turns a common debugging session into a source-editing workflow: catch the error, capture its stacktrace with `catch_backtrace()`, search project source for referenced frames, inspect the matching blocks, then edit the source and commit the fix.
 
 ```@setup searching_errors
 using CodeEdit

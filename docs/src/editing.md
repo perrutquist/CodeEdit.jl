@@ -1,8 +1,16 @@
 # Editing code
 
-Edits are represented as values that subtype [`AbstractEdit`](@ref). Construct an edit, optionally display it to review the diff, then apply it through an explicit version-control specification.
+Editing in CodeEdit.jl is a two-step process: first describe the change, then choose how to apply it.
 
-The standard workflow uses [`VersionControl`](@ref) to apply the edit, stage the affected paths, and create a git commit. If you set `require_view=true`, displaying, printing, or stringifying an edit records the exact plan that was shown. [`apply!`](@ref) replans the edit and refuses to apply it if the new plan does not match the displayed plan. In REPL examples, leaving the semicolon off the `edit = ...` line displays the edit and marks it as displayed; calling `display(edit)` works too.
+```text
+Handle -> Edit -> Displayed plan -> Apply -> Commit
+```
+
+Edits are represented as values that subtype [`AbstractEdit`](@ref). Constructing an edit does not modify files. It only describes an intended change to one or more handles or paths.
+
+The standard workflow uses [`VersionControl`](@ref) to apply the edit, stage the affected paths, and create a git commit. If you set `require_view=true`, displaying, printing, or stringifying an edit records the exact plan that was shown. [`apply!`](@ref) replans the edit and refuses to apply it if the new plan does not match the displayed plan.
+
+In REPL examples, leaving the semicolon off the `edit = ...` line displays the edit and marks it as displayed; calling `display(edit)` works too.
 
 Use [`displayed!`](@ref) only when you intentionally want to mark an edit as reviewed without printing the diff.
 
@@ -54,7 +62,22 @@ sleep(1.1)
 repo = VersionControl("examples"; require_view=true)
 ```
 
+## Choosing the right edit
+
+Most edits fall into one of a few intentions:
+
+- change an existing block with [`Replace`](@ref);
+- add code near an existing block with [`InsertBefore`](@ref) or [`InsertAfter`](@ref);
+- add code at the end of a file with [`eof_handle`](@ref) and [`InsertBefore`](@ref);
+- remove a block with [`Delete`](@ref);
+- create, move, or delete whole files;
+- group related changes with [`Combine`](@ref).
+
+The sections below follow that progression.
+
 ## Replacing a block
+
+A replacement edit changes exactly the block referenced by a handle. This is usually the safest way to update a function, because the planned diff is limited to the block you selected.
 
 ```@repl editing
 h = Handle("examples/ProjectCode.jl", 6)
@@ -64,6 +87,8 @@ apply!(repo, edit, "Change foo increment")
 ```
 
 ## Inserting code
+
+Insertion edits are useful when a nearby block gives you a stable anchor point.
 
 Insert before a block:
 
@@ -124,7 +149,7 @@ apply!(repo, edit, "Remove generated file")
 
 ## Combining edits
 
-Use [`Combine`](@ref), or the `*` shorthand, when multiple edits should be planned together:
+Use [`Combine`](@ref), or the `*` shorthand, when multiple edits are part of one logical change and should be planned together:
 
 ```@repl editing
 source = Handle("examples/ProjectCode.jl", 10)
@@ -156,6 +181,8 @@ Planning and validation are all-or-nothing, but applying a combined edit that to
 ## Applying edits without version control
 
 For scratch files, generated files, or other changes that should not create a commit, pass an explicit [`NoVersionControl`](@ref) specification.
+
+This mode is explicit so that the call site clearly says the edit will not be committed by CodeEdit.jl.
 
 ```@repl editing
 write("scratch-note.txt", "status = old\n")

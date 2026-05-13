@@ -1,6 +1,6 @@
 # API reference
 
-This page summarizes the public API exported by CodeEdit.jl.
+This page is a compact reference for the public API exported by CodeEdit.jl. For a guided introduction, start with [Getting started](getting-started.md) and [Editing code](editing.md).
 
 ## Handles
 
@@ -29,7 +29,7 @@ This page summarizes the public API exported by CodeEdit.jl.
 
 The `edit1 * edit2` operator is shorthand for `Combine(edit1, edit2)`. Chaining `*` appends edits to a combined edit.
 
-Combined edits are planned and validated as a unit, but applying a combined edit that touches multiple files is best-effort at the filesystem level and can partially apply if a later filesystem operation fails.
+Combined edits are planned and validated as a unit. See [Editing code](editing.md) and [Safety and version control](safety.md) for workflow details and failure modes.
 
 ## Version control
 

@@ -1,12 +1,13 @@
 # CodeEdit.jl
 
-CodeEdit.jl locates, displays, searches, and edits Julia source code from the Julia command line.
+CodeEdit.jl helps you make small, reviewable source edits from the Julia command line.
 
-It is designed for interactive source navigation and small, reviewable source edits. The standard workflow applies an edit through git and records the result as a commit.
+Instead of editing raw line ranges directly, you work with handles to parsed source blocks. You can inspect a block, build an edit value, review the planned diff, and then apply the change through git or an explicit no-version-control mode.
 
 - [Getting started](getting-started.md)
 - [Blocks and handles](concepts.md)
 - [Editing code](editing.md)
+- [Safety and version control](safety.md)
 - [Finding errors from stacktraces](searching-errors.md)
 - [API reference](api.md)
 
@@ -18,7 +19,15 @@ For Julia files, blocks are top-level syntactic units such as functions, types, 
 
 For non-Julia files, blocks are split like paragraphs using blank lines.
 
-## Basic example
+## Basic workflow
+
+The central workflow is:
+
+```text
+Handle -> Edit -> Displayed plan -> Apply -> Commit
+```
+
+The example below creates a tiny git repository, changes one function, applies the edit, and reads the file back from disk.
 
 ```@setup index
 using CodeEdit
@@ -54,14 +63,6 @@ If Revise.jl is loaded, CodeEdit.jl asks Revise to revise after a successful edi
 
 ## Safety model
 
-CodeEdit.jl includes several safety checks:
+CodeEdit.jl separates planning from applying. Creating an edit does not modify files. Displaying an edit shows the planned change, and `require_view=true` makes [`apply!`](@ref) verify that the displayed plan is still current before writing anything.
 
-- the standard workflow stages affected paths and records the edit as a git commit;
-- git-backed edits require affected files to be versioned by default;
-- `require_view=true` records the exact displayed plan and rejects application if replanning changes it;
-- Julia files are reparsed before an edit is applied;
-- handles track line-number changes caused by other edits where possible;
-- file moves and deletions reject symlink paths;
-- combined edits are planned and validated as a unit.
-
-Applying a combined edit that touches multiple files is best-effort at the filesystem level, so a later filesystem failure can still leave earlier file operations applied. Use git or another version-control system so changes can be reviewed and recovered.
+The standard workflow applies edits through git and records each successful change as a commit. See [Safety and version control](safety.md) for the full model.

@@ -6,6 +6,21 @@ CodeEdit.jl works by splitting files into source or text *blocks* and returning 
 
 For Julia files, blocks are top-level syntactic units such as functions, types, macros, constants, assignments, imports, exports, and includes. Attached docstrings are kept with the following block.
 
+For example, CodeEdit.jl sees a file like this as several separate blocks:
+
+```julia
+module Inventory              # block
+
+const DEFAULT_TAX = 0.25       # block
+
+function price_with_tax(x)     # block
+    return x * (1 + DEFAULT_TAX)
+end
+
+end                           # block
+                              # EOF block
+```
+
 A Julia `module` is not treated as one large block. Instead, the `module ...` line and its matching `end` line are separate blocks, while the module contents are subdivided normally.
 
 At the end of each file, CodeEdit.jl also creates a special EOF block. EOF handles are useful when inserting code at the end of a file.
@@ -14,7 +29,7 @@ For non-Julia files, blocks are split like paragraphs using blank lines.
 
 ## Handles
 
-A [`Handle`](@ref) points to one parsed block.
+A [`Handle`](@ref) points to one parsed block. The handle is the object you pass to search, display, and edit operations.
 
 ```@repl concepts
 using CodeEdit
