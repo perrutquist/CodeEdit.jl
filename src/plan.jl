@@ -66,14 +66,11 @@ end
 sha1_hex(text::AbstractString) = bytes2hex(sha1(Vector{UInt8}(codeunits(text))))
 
 function display_path(path::AbstractString)
-    try
-        absolute = abspath(path)
-        relative = relpath(absolute, abspath(pwd()))
-        (!startswith(relative, "..") && !isabspath(relative)) && return relative
-    catch
+    relative = relpath(path)
+    if (!startswith(relative, "..") && !isabspath(relative)) 
+        return relative
     end
-
-    return String(path)
+    return path
 end
 
 function replacement_text(text::AbstractString, span::Span, code::AbstractString)
