@@ -16,7 +16,14 @@ VersionControl(::Nothing; kwargs...) = VersionControl(Val(:none), "", (; kwargs.
 const NoVersionControl{S} = VersionControl{:none,S}
 const GitVersionControl{S} = VersionControl{:git,S}
 
+"""
+A "version control" specification that uses no version control.
+""" 
 NoVersionControl(; kwargs...) = VersionControl(nothing; kwargs...)
+
+"""
+A git version control specification.
+"""
 GitVersionControl(path::AbstractString; kwargs...) = VersionControl(path; kwargs...)
 
 """
