@@ -117,8 +117,7 @@ end
         try
             CodeEdit._maybe_revise_callback[] = () -> (calls[] += 1; nothing)
             callback_edit = Replace(Handle(callback_path, 1), "z = 2\n")
-            displayed!(callback_edit)
-            apply!(callback_edit)
+            apply!(NoVersionControl(), callback_edit)
 
             @test calls[] == 1
         finally
@@ -146,44 +145,38 @@ end
         create_existing = CreateFile(existing, "replacement = 1\n")
         displayed!(create_existing)
         @test !is_valid(create_existing)
-        @test_throws ErrorException apply!(create_existing)
+        @test_throws ErrorException apply!(NoVersionControl(), create_existing)
 
         create_invalid = CreateFile(joinpath(dir, "invalid_created.jl"), "function broken(\n"; parse_as=:julia)
         shown = sprint(show, MIME"text/plain"(), create_invalid)
         @test occursin("Validation errors:", shown)
         @test !is_valid(create_invalid)
-        @test_throws ErrorException apply!(create_invalid)
+        @test_throws ErrorException apply!(NoVersionControl(), create_invalid)
 
         create_text = CreateFile(text_file, "function broken(\n"; parse_as=:text)
-        displayed!(create_text)
         @test is_valid(create_text)
-        apply!(create_text)
+        apply!(NoVersionControl(), create_text)
         @test read(text_file, String) == "function broken(\n"
 
         move_to_existing = MoveFile(source, destination)
-        displayed!(move_to_existing)
         @test !is_valid(move_to_existing)
-        @test_throws ErrorException apply!(move_to_existing)
+        @test_throws ErrorException apply!(NoVersionControl(), move_to_existing)
 
         move_missing = MoveFile(missing, joinpath(dir, "moved_missing.jl"))
-        displayed!(move_missing)
         @test !is_valid(move_missing)
-        @test_throws ErrorException apply!(move_missing)
+        @test_throws ErrorException apply!(NoVersionControl(), move_missing)
 
         delete_missing = DeleteFile(missing)
-        displayed!(delete_missing)
         @test !is_valid(delete_missing)
-        @test_throws ErrorException apply!(delete_missing)
+        @test_throws ErrorException apply!(NoVersionControl(), delete_missing)
 
         move_symlink = MoveFile(link, joinpath(dir, "moved_link.jl"))
-        displayed!(move_symlink)
         @test !is_valid(move_symlink)
-        @test_throws ErrorException apply!(move_symlink)
+        @test_throws ErrorException apply!(NoVersionControl(), move_symlink)
 
         delete_symlink = DeleteFile(link)
-        displayed!(delete_symlink)
         @test !is_valid(delete_symlink)
-        @test_throws ErrorException apply!(delete_symlink)
+        @test_throws ErrorException apply!(NoVersionControl(), delete_symlink)
         @test ispath(link)
         @test ispath(source)
     end
@@ -204,8 +197,7 @@ end
             Replace(first, "first_value = 10\n"),
             Replace(second, "second_value = 20\n"),
         )
-        displayed!(edit)
-        apply!(edit)
+        apply!(NoVersionControl(), edit)
 
         @test read(first_path, String) == "first_value = 10\n"
         @test read(second_path, String) == "second_value = 20\n"
@@ -221,7 +213,7 @@ end
         shown = sprint(show, MIME"text/plain"(), invalid)
         @test occursin("Validation errors:", shown)
         @test !is_valid(invalid)
-        @test_throws ErrorException apply!(invalid)
+        @test_throws ErrorException apply!(NoVersionControl(), invalid)
         @test read(first_path, String) == "first_value = 10\n"
         @test read(second_path, String) == "second_value = 20\n"
     end

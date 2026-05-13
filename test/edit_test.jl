@@ -62,7 +62,7 @@ end
         @test edit.displayed[] !== nothing
         @test is_valid(edit)
 
-        apply!(edit)
+        apply!(NoVersionControl(), edit)
 
         @test read(path, String) == """
         function first()
@@ -95,8 +95,7 @@ end
 
         second = Handle(path, 5)
         edit = InsertBefore(second, "const inserted = 1\n\n")
-        displayed!(edit)
-        apply!(edit)
+        apply!(NoVersionControl(), edit)
 
         @test read(path, String) == """
         function first()
@@ -128,8 +127,7 @@ end
         y = Handle(path, 3)
         @test lines(y) == 3:3
         edit = Delete(x)
-        displayed!(edit)
-        apply!(edit)
+        apply!(NoVersionControl(), edit)
 
         @test !is_valid(x)
         @test is_valid(y)
@@ -155,7 +153,7 @@ end
         @test occursin("Validation errors:", shown)
         @test !is_valid(edit)
         @test edit.displayed[] !== nothing
-        @test_throws ErrorException apply!(edit)
+        @test_throws ErrorException apply!(NoVersionControl(), edit)
         @test read(path, String) == "x = 1\n"
     end
 
@@ -171,7 +169,7 @@ end
         displayed!(edit)
         write(path, "x = 3\n")
 
-        @test_throws ErrorException apply!(edit)
+        @test_throws ErrorException apply!(NoVersionControl(require_view=true), edit)
         @test read(path, String) == "x = 3\n"
     end
 
@@ -184,7 +182,7 @@ end
         h = Handle(path, 1)
         edit = Replace(h, "x = 2\n")
 
-        @test_throws ErrorException apply!(edit)
+        @test_throws ErrorException apply!(NoVersionControl(require_view=true), edit)
         @test read(path, String) == "x = 1\n"
     end
 end
@@ -243,7 +241,7 @@ end
         y = Handle(path, 3)
         edit = Combine(InsertBefore(y, "z = 3\n\n"), Replace(y, "y = 20\n"))
         displayed!(edit)
-        apply!(edit)
+        apply!(NoVersionControl(require_view=true), edit)
 
         @test read(path, String) == """
         x = 1
@@ -272,7 +270,7 @@ end
         b = Handle(path, 3)
         edit = Combine(InsertBefore(b, string(a) * "\n"), Delete(a))
         displayed!(edit)
-        apply!(edit)
+        apply!(NoVersionControl(), edit)
 
         @test read(path, String) == """
         

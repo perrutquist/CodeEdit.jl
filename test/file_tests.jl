@@ -6,16 +6,14 @@
         moved = joinpath(dir, "moved.jl")
 
         create = CreateFile(created, "created_value = 1\n")
-        displayed!(create)
-        apply!(create)
+        apply!(NoVersionControl(), create)
 
         @test read(created, String) == "created_value = 1\n"
         @test length(search(created, "created_value")) == 1
 
         h = Handle(created, 1)
         edit = Combine(MoveFile(created, moved), Replace(h, "created_value = 2\n"))
-        displayed!(edit)
-        apply!(edit)
+        apply!(NoVersionControl(), edit)
 
         @test !ispath(created)
         @test read(moved, String) == "created_value = 2\n"
@@ -23,8 +21,7 @@
         @test filepath(h) == moved
 
         delete = DeleteFile(moved)
-        displayed!(delete)
-        apply!(delete)
+        apply!(NoVersionControl(), delete)
 
         @test !ispath(moved)
         @test !is_valid(h)
