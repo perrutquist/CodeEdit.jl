@@ -62,12 +62,170 @@ function handle_sort_key(handle::Handle)
 end
 
 """
+Return a preview truncated to the display width.
+"""
+function truncate_preview(preview::AbstractString)
+    preview = String(preview)
+    ncodeunits(preview) > 40 && (preview = first(preview, 40) * "…")
+    return preview
+end
+
+"""
+Return the parse mode for a handle record, falling back to text behavior.
+"""
+function handle_preview_parse_as(record::HandleRecord)
+    file = record.file
+
+    if file !== nothing
+        cache = get(STATE[].files, file, nothing)
+        cache !== nothing && return cache.parse_as
+    end
+
+    return :text
+end
+
+"""
+Render a triple-quoted Julia string as an approximate single-line string.
+"""
+function compact_julia_triple_quoted_string(match::AbstractString)
+    content = chop(String(match); head=3, tail=3)
+    content = replace(content, '\\' => "\\\\", '"' => "\\\"", r"\s+" => " ")
+    return "\"" * strip(content) * "\""
+end
+
+"""
+Compact triple-quoted Julia strings before line-oriented preview formatting.
+"""
+function compact_julia_triple_quoted_strings(text::AbstractString)
+    return replace(String(text), r"(?s)\"\"\".*?\"\"\"" => compact_julia_triple_quoted_string)
+end
+
+"""
+Remove a Julia line comment unless it appears inside a simple string or char literal.
+"""
+function strip_julia_preview_comment(line::AbstractString)
+    in_string = false
+    in_char = false
+    escaped = false
+
+    for index in eachindex(line)
+        char = line[index]
+
+        if in_string
+            if escaped
+                escaped = false
+            elseif char == '\\'
+                escaped = true
+            elseif char == '"'
+                in_string = false
+            end
+        elseif in_char
+            if escaped
+                escaped = false
+            elseif char == '\\'
+                escaped = true
+            elseif char == '\''
+                in_char = false
+            end
+        elseif char == '#'
+            return index == firstindex(line) ? "" : String(line[firstindex(line):prevind(line, index)])
+        elseif char == '"'
+            in_string = true
+        elseif char == '\''
+            in_char = true
+        end
+    end
+
+    return String(line)
+end
+
+"""
+Update delimiter depth for deciding whether a newline separates statements.
+"""
+function update_julia_preview_depth(line::AbstractString, depth::Integer)
+    next_depth = Int(depth)
+    in_string = false
+    in_char = false
+    escaped = false
+
+    for char in line
+        if in_string
+            if escaped
+                escaped = false
+            elseif char == '\\'
+                escaped = true
+            elseif char == '"'
+                in_string = false
+            end
+        elseif in_char
+            if escaped
+                escaped = false
+            elseif char == '\\'
+                escaped = true
+            elseif char == '\''
+                in_char = false
+            end
+        elseif char == '"'
+            in_string = true
+        elseif char == '\''
+            in_char = true
+        elseif char in ('(', '[', '{')
+            next_depth += 1
+        elseif char in (')', ']', '}')
+            next_depth = max(next_depth - 1, 0)
+        end
+    end
+
+    return next_depth
+end
+
+"""
+Return an approximate one-line Julia representation of source code.
+"""
+function julia_oneline_preview(text::AbstractString)
+    source = compact_julia_triple_quoted_strings(text)
+    io = IOBuffer()
+    separator = ""
+    depth = 0
+
+    for raw_line in split(source, '\n'; keepempty=true)
+        line = strip(strip_julia_preview_comment(raw_line))
+        isempty(line) && continue
+
+        print(io, separator, line)
+        depth = update_julia_preview_depth(line, depth)
+        separator = depth > 0 ? " " : "; "
+    end
+
+    preview = String(take!(io))
+    preview = replace(preview, r"[ \t]+" => " ")
+    preview = replace(
+        preview,
+        "( " => "(",
+        " )" => ")",
+        "[ " => "[",
+        " ]" => "]",
+        "{ " => "{",
+        " }" => "}",
+        " ," => ",",
+    )
+
+    return strip(preview)
+end
+
+"""
+Return the old single-line text preview of handle contents.
+"""
+function text_handle_preview(record::HandleRecord)
+    return replace(strip(record.text), r"\n[ \t]*" => " ")
+end
+
+"""
 Return a single-line preview of handle contents.
 """
 function handle_preview(record::HandleRecord)
-    preview = replace(strip(record.text), r"\n[ \t]*" => " ")
-    ncodeunits(preview) > 40 && (preview = first(preview, 40) * "…")
-    return preview
+    preview = handle_preview_parse_as(record) == :julia ? julia_oneline_preview(record.text) : text_handle_preview(record)
+    return truncate_preview(preview)
 end
 
 """
