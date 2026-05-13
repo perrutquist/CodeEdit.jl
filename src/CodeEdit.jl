@@ -30,7 +30,7 @@ export Handle, eof_handle, handles, reindex
 export search
 export AbstractEdit, Replace, Delete, InsertBefore, InsertAfter
 export CreateFile, MoveFile, DeleteFile, Combine, apply!, displayed!
-export VersionControl, NoVersionControl, GitVersionControl
+export ApplyResult, VersionControl, NoVersionControl, GitVersionControl
 export filepath, lines, docstring, is_valid
 
 end

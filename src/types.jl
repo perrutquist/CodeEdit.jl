@@ -20,6 +20,11 @@ NoVersionControl(; kwargs...) = VersionControl(nothing; kwargs...)
 GitVersionControl(path::AbstractString; kwargs...) = VersionControl(path; kwargs...)
 
 """
+Successful result returned by `apply!`.
+"""
+struct ApplyResult end
+
+"""
 Current identity of an existing filesystem object.
 """
 struct FileID

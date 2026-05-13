@@ -1,3 +1,11 @@
+function Base.show(io::IO, ::MIME"text/plain", ::ApplyResult)
+    print(io, "Successs")
+end
+
+function Base.show(io::IO, result::ApplyResult)
+    show(io, MIME"text/plain"(), result)
+end
+
 function store_displayed_plan!(edit::AbstractEdit, plan)
     edit.displayed[] = DisplayedPlan(plan.fingerprint, plan.valid, plan.display_text)
     return edit
@@ -428,8 +436,7 @@ end
 function apply_compiled_plan!(plan)
     apply_plan!(plan)
     run_after_apply_hooks!()
-    println("Success.")
-    return nothing
+    return ApplyResult()
 end
 
 function format_paths!(paths::Vector{String}, formatter)
@@ -618,13 +625,11 @@ function apply!(vc::VersionControl{:none}, edit::AbstractEdit; kwargs...)
     end
 
     plan = formatter !== nothing && preformat ? compile_checked_plan(edit; require_view=false) : initial_plan
-    apply_compiled_plan!(plan)
-    return nothing
+    return apply_compiled_plan!(plan)
 end
 
 function apply!(vc::VersionControl{:none}, edit::AbstractEdit, message::AbstractString; kwargs...)
-    apply!(vc, edit; kwargs...)
-    return nothing
+    return apply!(vc, edit; kwargs...)
 end
 
 function apply!(vc::VersionControl{:git}, edit::AbstractEdit; kwargs...)
@@ -672,8 +677,7 @@ function apply!(vc::VersionControl{:git}, edit::AbstractEdit, message::AbstractS
 
     final_rels = repo_relative_paths(affected_paths(plan), repo_root)
     stage_all!(repo_root, final_rels)
-    committed = commit_staged!(repo_root, message, final_rels)
+    commit_staged!(repo_root, message, final_rels)
 
-    println(committed ? "Success. Committed edit." : "Success. No changes to commit.")
-    return nothing
+    return ApplyResult()
 end
