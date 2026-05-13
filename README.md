@@ -32,7 +32,7 @@ Edit modifies foo.jl:
 Now we can apply it and create a git commit.
 ```julia-repl
 julia> repo = VersionControl("."; require_view=true)
-VersionControl{:git, @NamedTuple{require_view::Bool}}(Val{:git}(), ".", (require_view = true,))
+GitVersionControl("."; require_view=true)
 
 julia> apply!(repo, edit, "Change foo increment")
 Successs

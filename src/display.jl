@@ -37,6 +37,39 @@ function Base.show(io::IO, handle::Handle)
 end
 
 """
+Write version-control keyword arguments in constructor-call form.
+"""
+function show_version_control_kwargs(io::IO, kwargs::NamedTuple)
+    isempty(keys(kwargs)) && return
+
+    print(io, "; ")
+
+    for (index, key) in enumerate(keys(kwargs))
+        index > 1 && print(io, ", ")
+        print(io, key, "=")
+        show(io, getfield(kwargs, key))
+    end
+end
+
+function Base.show(io::IO, vc::VersionControl{T}) where {T}
+    if T === :git
+        print(io, "GitVersionControl(")
+        show(io, vc.repo_path)
+        show_version_control_kwargs(io, vc.kwargs)
+        print(io, ")")
+    elseif T === :none
+        print(io, "NoVersionControl(")
+        show_version_control_kwargs(io, vc.kwargs)
+        print(io, ")")
+    else
+        print(io, "VersionControl(")
+        show(io, vc.repo_path)
+        show_version_control_kwargs(io, vc.kwargs)
+        print(io, ")")
+    end
+end
+
+"""
 Return the canonical cache path used when ordering a handle.
 """
 function handle_primary_path(record::HandleRecord)
