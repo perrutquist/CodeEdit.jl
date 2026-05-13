@@ -6,6 +6,42 @@ Return an absolute normalized string path.
 absolute_path(path::AbstractString) = abspath(String(path))
 
 """
+Return a canonical path suitable for comparing filesystem locations.
+
+For paths that do not exist yet, canonicalize the nearest existing parent and
+append the remaining path components. This keeps CreateFile paths comparable to
+their git worktree root.
+"""
+function canonical_path(path::AbstractString)
+    abs_path = absolute_path(path)
+
+    if ispath(abs_path)
+        return realpath(abs_path)
+    end
+
+    parts = String[]
+    current = abs_path
+
+    while !ispath(current)
+        parent = dirname(current)
+        parent == current && break
+        pushfirst!(parts, basename(current))
+        current = parent
+    end
+
+    base = ispath(current) ? realpath(current) : absolute_path(current)
+    return normpath(joinpath(base, parts...))
+end
+
+"""
+Return a canonical path normalized for case-insensitive filesystem comparison.
+"""
+function comparable_path(path::AbstractString)
+    path = canonical_path(path)
+    return Sys.iswindows() ? lowercase(path) : path
+end
+
+"""
 Infer or validate a parse mode for `path`.
 """
 function parse_mode_for_path(path::AbstractString; parse_as::Symbol=:auto)

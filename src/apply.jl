@@ -495,17 +495,17 @@ function git_worktree_root(path::AbstractString)
     LibGit2.GitRepo(path)
     root = strip(git_read(path, String["rev-parse", "--show-toplevel"]))
     isempty(root) && error("could not determine git worktree root for $path")
-    return absolute_path(root)
+    return canonical_path(root)
 end
 
 function path_in_worktree(path::AbstractString, repo_root::AbstractString)
-    rel = relpath(absolute_path(path), repo_root)
+    rel = relpath(comparable_path(path), comparable_path(repo_root))
     return rel != ".." && !startswith(rel, "..$(Base.Filesystem.path_separator)") && !isabspath(rel)
 end
 
 function repo_relative_path(path::AbstractString, repo_root::AbstractString)
     path_in_worktree(path, repo_root) || error("path is outside git worktree: $path")
-    return relpath(absolute_path(path), repo_root)
+    return relpath(canonical_path(path), canonical_path(repo_root))
 end
 
 function repo_relative_paths(paths::Vector{String}, repo_root::AbstractString)
