@@ -1,8 +1,8 @@
 # A first careful edit
 
-The first thing Lena notices about `TrailBlazer` is not a crash. It is a number that feels wrong.
+Imagine you're maintaining `TrailBlazer` and the first thing you notice is not a crash. It is a number that feels wrong.
 
-A route with a long climb is estimated too optimistically. The formula is probably in `walk_time`, but she does not need to open a file and count lines. She asks CodeEdit.jl for the block.
+A route with a long climb is estimated too optimistically. The formula is probably in `walk_time`, but you do not need to open a file and count lines. Ask CodeEdit.jl for the block.
 
 ```@setup first_edit
 using CodeEdit
@@ -83,18 +83,19 @@ sleep(1.1)
 h = Handle("trailblazer/src/routes.jl", 7)
 ```
 
-The display is intentionally useful: a header tells you the file and line range, then you see the source block itself.
+A header shows the file and line range, followed by the source block itself.
 
 You can also collect handles and search them. The result is a `Set` of handles, because a search may find several blocks.
 
 ```@repl first_edit
-matches = search(handles("trailblazer/src", "*.jl"), "walk_time")
+repo = VersionControl("trailblazer")
+matches = search(repo, "walk_time")
 ```
 
 Here there is only one definition we want:
 
 ```@repl first_edit
-h = only(search(handles("trailblazer/src", "*.jl"), "function walk_time"))
+h = only(search(repo, "function walk_time"))
 ```
 
 ## Turn the handle into an edit

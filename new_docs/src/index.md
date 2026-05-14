@@ -2,11 +2,9 @@
 
 CodeEdit.jl is a Julia package for making small, deliberate source edits from the REPL.
 
-The easiest way to understand it is to follow a working day.
+Imagine you're maintaining a small package called `TrailBlazer`. It plans weekend hikes, estimates walking time, and formats little route summaries. A bug report arrives. Then a feature request. Then a failing stacktrace. You could jump between editor tabs, copy line numbers by hand, and hope your worktree still looks the same when you save.
 
-You are maintaining a small package called `TrailBlazer`. It plans weekend hikes, estimates walking time, and formats little route summaries. A bug report arrives. Then a feature request. Then a failing stacktrace. You could jump between editor tabs, copy line numbers by hand, and hope your worktree still looks the same when you save.
-
-Or you can let CodeEdit.jl turn source locations into handles, handles into reviewed edits, and reviewed edits into git commits.
+CodeEdit.jl lets you turn source locations into handles, handles into reviewed edits, and reviewed edits into git commits.
 
 ## The shape of the workflow
 
@@ -109,13 +107,13 @@ That one value is the boundary between "I am thinking about a change" and "write
 
 ## A tiny edit, end to end
 
-A bug report says walking time is too optimistic for steep routes. The `walk_time` function lives somewhere in the project. We can search the tracked source files and ask for the matching block:
+A bug report says walking time is too optimistic for steep routes. The `walk_time` function lives somewhere in the project. Search the repository and ask for the matching block:
 
 ```@repl index
-h = only(search(handles("trailblazer/src", "*.jl"), "function walk_time"))
+h = only(search(repo, "function walk_time"))
 ```
 
-Because the line above does not end in a semicolon, Documenter shows the handle. At the REPL, this is one of the nicest parts of CodeEdit.jl: locating code also displays the block you are about to change.
+Because the line above does not end in a semicolon, Documenter shows the handle. At the REPL, locating code also displays the block you are about to change.
 
 Now build an edit. Constructing the edit still does not touch the file. Leaving off the semicolon displays the diff and records that this is the plan you reviewed.
 

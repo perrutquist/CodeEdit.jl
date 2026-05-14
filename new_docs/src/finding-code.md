@@ -2,7 +2,7 @@
 
 Real projects rarely fail in the file you already have open.
 
-This page follows Lena as she tries to answer three ordinary questions:
+This page follows the kind of questions you run into while maintaining a project:
 
 - "Where is this behavior implemented?"
 - "What else is related to this name?"
@@ -197,4 +197,4 @@ repo = VersionControl("trailblazer")
 filter(is_versioned(repo), all_handles)
 ```
 
-Together, these small tools make source navigation feel less like "find a line number" and more like "ask for the thing I mean".
+Together, these small tools let you navigate source in terms of blocks, methods, files, and names rather than raw line numbers.

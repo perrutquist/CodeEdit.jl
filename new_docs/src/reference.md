@@ -1,6 +1,6 @@
 # API reference
 
-The story pages show the usual workflow. This page is the compact map.
+The guide pages show the usual workflow. This page is the compact map.
 
 ## Handles
 

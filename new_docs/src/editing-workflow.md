@@ -1,8 +1,8 @@
 # Changing more than one thing
 
-A feature request arrives: route summaries should include a packing suggestion, and the release notes should mention it.
+Imagine you're handling a feature request: route summaries should include a packing suggestion, and the release notes should mention it.
 
-This is small, but it touches more than one place. CodeEdit.jl is comfortable with that. You can build separate edits, review their combined plan, and apply them as one commit.
+This is small, but it touches more than one place. You can build separate edits, review their combined plan, and apply them as one commit.
 
 ```@setup editing_workflow
 using CodeEdit
@@ -206,7 +206,7 @@ Source or destination symlink paths are rejected for move and delete file operat
 
 The [`Delete`](@ref) edit removes the block referenced by a handle. EOF handles are unaffected.
 
-Here Lena decides the release note has done its job and removes the paragraph she just added.
+Here you decide the release note has done its job and remove the paragraph you just added.
 
 ```@repl editing_workflow
 note_handle = only(search(handles("trailblazer/notes/release-notes.txt"), "Packing suggestions"))

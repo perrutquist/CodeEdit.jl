@@ -2,7 +2,7 @@
 
 The next bug report includes a stacktrace.
 
-A hiker entered a route with zero distance while testing import code, and the program crashed. The stacktrace points somewhere inside the project. Lena wants the source block, not a pile of frames.
+A hiker entered a route with zero distance while testing import code, and the program crashed. The stacktrace points somewhere inside the project. You want the source block, not a pile of frames.
 
 ```@setup debugging
 using CodeEdit
@@ -114,7 +114,7 @@ When there are several matches, combine stacktrace search with text search:
 search(matches, "average_speed")
 ```
 
-That block divides distance by walking time. A zero-length route gives zero walking time, so the result is not useful. Lena decides the function should reject non-positive walking times with a clear error.
+That block divides distance by walking time. A zero-length route gives zero walking time, so the result is not useful. Change the function so it rejects non-positive walking times with a clear error.
 
 ## Patch the function
 
