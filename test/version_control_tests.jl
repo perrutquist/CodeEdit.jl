@@ -1,5 +1,3 @@
-using LibGit2
-
 @testset "version control apply API" begin
     mktempdir() do dir
         cd(dir) do
