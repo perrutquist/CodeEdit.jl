@@ -661,18 +661,10 @@ function commit_formatting!(
 end
 
 """
-    apply!(edit::AbstractEdit)
+    apply!(vc::VersionControl, edit::AbstractEdit)
 
-Reject edits applied without an explicit version-control specification.
-
-Use `apply!(NoVersionControl(require_view=true), edit)` for behavior equivalent
-to the old `apply!(edit)`, or `apply!(VersionControl(path), edit, message)` to
-apply and commit an edit in a git repository.
+Applies an edit using the provided version control schema.
 """
-function apply!(edit::AbstractEdit)
-    error("apply! requires a VersionControl specification; use apply!(NoVersionControl(require_view=true), edit) or apply!(VersionControl(path), edit, message)")
-end
-
 function apply!(vc::VersionControl{:none}, edit::AbstractEdit; kwargs...)
     options = merged_apply_kwargs(vc, kwargs)
     require_view = option(options, :require_view, false)
@@ -700,6 +692,10 @@ function apply!(vc::VersionControl{:git}, edit::AbstractEdit; kwargs...)
     default_message = option(options, :default_message, nothing)
     default_message === nothing && error("commit message required; pass apply!(repo, edit, message) or set default_message")
     return apply!(vc, edit, String(default_message); kwargs...)
+end
+
+function apply!(::AbstractEdit)
+    error("apply! requires a VersionControl specification; use apply!(NoVersionControl(), edit) or apply!(VersionControl(path), edit, message)")
 end
 
 function apply!(vc::VersionControl{:git}, edit::AbstractEdit, message::AbstractString; kwargs...)
