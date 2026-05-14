@@ -20,8 +20,12 @@ function git_commit_id(repo_root::AbstractString)
 end
 
 function git_worktree_root(path::AbstractString)
-    LibGit2.GitRepo(path)
-    root = strip(git_read(path, String["rev-parse", "--show-toplevel"]))
+    root = try
+        strip(git_read(path, String["rev-parse", "--show-toplevel"]))
+    catch
+        error("could not determine git worktree root for $path")
+    end
+
     isempty(root) && error("could not determine git worktree root for $path")
     return canonical_path(root)
 end

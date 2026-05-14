@@ -1,6 +1,6 @@
 module CodeEdit
 
-using JuliaSyntax, Glob, SHA, LibGit2
+using JuliaSyntax, Glob, SHA
 
 const _maybe_revise_callback = Ref{Function}(() -> nothing)
 
