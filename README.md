@@ -128,6 +128,8 @@ The README is only a short introduction. The full documentation is organized as 
 
 `handles(path)` / `handles(paths)` / `handles(root, glob)` - Returns a `Set` of `Handle`s to all blocks in a file, or in a set of files (including EOF blocks). If the keyword argument `includes` is `true`, then `include` statements are followed recursively. Recursive include traversal uses cycle detection so include loops are visited at most once.
 
+`handles(vc::VersionControl)` - Returns handles for files tracked by the git repository. Files that cannot be read as valid UTF-8 are skipped.
+
 The functions throw an `ArgumentError` if a Julia file cannot be parsed, if a file contains invalid UTF-8, or if `Handle(path, line, pos)` is asked for a location outside the file.
 
 Paths that currently refer to the same file are detected by comparing device and inode information. Internally, cached files are accessed via an absolute path, while handles retain the user-supplied path for display.
@@ -136,7 +138,7 @@ Handles referring to the same code block are interned: they compare as identical
 
 ## Searching
 
-`search(handles, needle)` - Returns a `Set` of blocks that contain `needle`. This is a convenience wrapper for `filter(h -> occursin(needle, string(h)), handles)`
+`search(handles, needle)` - Returns a `Set` of blocks that contain `needle`. This is a convenience wrapper for `filter(h -> occursin(needle, string(h)), handles)`. `needle` may be a string or a regular expression.
 
 `search(handles, trace)` - Returns handles to code referenced by a stacktrace or backtrace-like object, such as a backtrace from `catch_backtrace()` or a collection of stack frames. To search for an error location, pass the captured stacktrace/backtrace rather than the thrown error value.
 
@@ -225,6 +227,12 @@ Invalid handles are displayed as `#invalid`.
 `docstring(handle)` - Returns the docstring as a string (not as Julia code), or `nothing` if the block has no docstring. Docstrings are extracted by reparsing the block source when needed rather than by storing separate docstring spans.
 
 `is_valid(handle)` - Returns true if the handle is valid, i.e. the block that it points to still exists.
+
+`is_julia(handle)` / `is_text(handle)` - Returns whether the handle was parsed as Julia source or plain text.
+
+`is_versioned(vc, handle)` - Returns whether the handle's file is tracked by the git repository described by `vc`. `is_versioned(vc)` returns a predicate suitable for `filter`.
+
+`filepath_matches(handle, regex)` - Returns whether the handle's filepath matches `regex`. `filepath_matches(regex)` returns a predicate suitable for `filter`.
 
 `is_valid(edit)` - Returns true if an edit could be applied without introducing any syntax errors in the final file contents.
 

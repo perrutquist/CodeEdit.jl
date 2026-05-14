@@ -79,6 +79,46 @@ function lines(handle::Handle)
 end
 
 """
+Return the parse mode associated with a valid handle, or `nothing` for an
+invalid handle.
+"""
+function handle_parse_as(handle::Handle)
+    record = refresh_handle!(handle)
+
+    if record === nothing || !record.valid || record.file === nothing
+        return nothing
+    end
+
+    cache = get(STATE[].files, record.file, nothing)
+    cache === nothing && return nothing
+    return cache.parse_as
+end
+
+"""
+Return whether a handle was parsed as Julia source.
+"""
+function is_julia(handle::Handle)
+    return handle_parse_as(handle) == :julia
+end
+
+"""
+Return whether a handle was parsed as plain text.
+"""
+function is_text(handle::Handle)
+    return handle_parse_as(handle) == :text
+end
+
+"""
+Return whether a handle's filepath matches `regex`.
+"""
+function filepath_matches(handle::Handle, regex::Regex)
+    is_valid(handle) || return false
+    return occursin(regex, filepath(handle))
+end
+
+filepath_matches(regex::Regex) = Base.Fix2(filepath_matches, regex)
+
+"""
 Return whether `text` begins with a Julia string literal docstring prefix.
 """
 function leading_julia_string_literal(text::AbstractString)
