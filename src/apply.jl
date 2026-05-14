@@ -1,8 +1,35 @@
-function Base.show(io::IO, ::MIME"text/plain", ::Success)
-    print(io, "Success")
+function short_commit_id(id::AbstractString)
+    return first(id, min(7, length(id)))
 end
 
-function Base.show(io::IO, result::Success)
+function commit_display_summary(commits::Vector{CommitInfo})
+    isempty(commits) && return ""
+
+    if length(commits) == 1
+        return "commit $(short_commit_id(only(commits).id))"
+    end
+
+    entries = String["$(commit.kind) $(short_commit_id(commit.id))" for commit in commits]
+    return "commits $(join(entries, ", "))"
+end
+
+function changed_file_count(changes::Vector{FileChange})
+    return length(unique(String[change.path for change in changes]))
+end
+
+function Base.show(io::IO, ::MIME"text/plain", result::ApplyResult)
+    count = changed_file_count(result.changes)
+    file_summary = count == 1 ? "1 file changed" : "$count files changed"
+    commit_summary = commit_display_summary(result.commits)
+
+    if isempty(commit_summary)
+        print(io, "Applied: $file_summary")
+    else
+        print(io, "Applied: $file_summary, $commit_summary")
+    end
+end
+
+function Base.show(io::IO, result::ApplyResult)
     show(io, MIME"text/plain"(), result)
 end
 
@@ -399,6 +426,35 @@ function existing_versioned_paths(plan::EditPlan)
     return unique(paths)
 end
 
+function applied_file_changes(plan::ReplacementEditPlan)
+    return FileChange[FileChange(absolute_path(plan.path), nothing, :modified)]
+end
+
+function effect_action(effect::FileEditEffect)
+    if effect.created
+        return :created
+    elseif effect.deleted
+        return :deleted
+    elseif effect.original_path !== nothing && effect.original_path != effect.path
+        return effect.new_text !== nothing && effect.old_text != effect.new_text ? :moved_modified : :moved
+    elseif effect.new_text !== nothing && effect.old_text != effect.new_text
+        return :modified
+    end
+
+    return :unchanged
+end
+
+function applied_file_changes(plan::EditPlan)
+    changes = FileChange[]
+
+    for effect in plan.effects
+        original_path = effect.original_path === nothing ? nothing : absolute_path(effect.original_path)
+        push!(changes, FileChange(absolute_path(effect.path), original_path, effect_action(effect)))
+    end
+
+    return changes
+end
+
 function assert_plan_valid(plan)
     plan.valid && return nothing
     message = isempty(plan.errors) ? "edit is invalid" : "edit is invalid: $(join(plan.errors, "; "))"
@@ -436,7 +492,7 @@ end
 function apply_compiled_plan!(plan)
     apply_plan!(plan)
     run_after_apply_hooks!()
-    return Success()
+    return nothing
 end
 
 function format_paths!(paths::Vector{String}, formatter)
@@ -491,6 +547,10 @@ function git_read(repo_root::AbstractString, args::Vector{String})
     return read(git_cmd(repo_root, args), String)
 end
 
+function git_commit_id(repo_root::AbstractString)
+    return strip(git_read(repo_root, String["rev-parse", "HEAD"]))
+end
+
 function git_worktree_root(path::AbstractString)
     LibGit2.GitRepo(path)
     root = strip(git_read(path, String["rev-parse", "--show-toplevel"]))
@@ -542,10 +602,10 @@ function stage_tracked!(repo_root::AbstractString, rels::Vector{String})
 end
 
 function commit_staged!(repo_root::AbstractString, message::AbstractString, rels::Vector{String}=String[])
-    staged_dirty(repo_root, rels) || return false
+    staged_dirty(repo_root, rels) || return nothing
     args = isempty(rels) ? String["commit", "-m", String(message)] : vcat(String["commit", "-m", String(message), "--"], rels)
     git_run(repo_root, args)
-    return true
+    return git_commit_id(repo_root)
 end
 
 function assert_versioning_requirements(plan, repo_root::AbstractString; require_versioning::Bool)
@@ -582,9 +642,10 @@ function maybe_precommit_dirty!(
     end
 
     precommit_message === nothing && error("precommit_message is required when applying over dirty tracked files")
+    message = String(precommit_message)
     stage_tracked!(repo_root, scope_rels)
-    commit_staged!(repo_root, String(precommit_message), scope_rels)
-    return nothing
+    commit_id = commit_staged!(repo_root, message, scope_rels)
+    return commit_id === nothing ? nothing : CommitInfo(:precommit, commit_id, message)
 end
 
 function commit_formatting!(
@@ -595,8 +656,8 @@ function commit_formatting!(
     isempty(changed_paths) && return nothing
     rels = repo_relative_paths(changed_paths, repo_root)
     stage_all!(repo_root, rels)
-    commit_staged!(repo_root, message, rels)
-    return nothing
+    commit_id = commit_staged!(repo_root, message, rels)
+    return commit_id === nothing ? nothing : CommitInfo(:format, commit_id, message)
 end
 
 """
@@ -619,13 +680,15 @@ function apply!(vc::VersionControl{:none}, edit::AbstractEdit; kwargs...)
     preformat = option(options, :preformat, true)
 
     initial_plan = compile_checked_plan(edit; require_view=require_view)
+    formatted_paths = String[]
 
     if formatter !== nothing && preformat
-        format_paths!(affected_paths(initial_plan), formatter)
+        formatted_paths = format_paths!(affected_paths(initial_plan), formatter)
     end
 
     plan = formatter !== nothing && preformat ? compile_checked_plan(edit; require_view=false) : initial_plan
-    return apply_compiled_plan!(plan)
+    apply_compiled_plan!(plan)
+    return ApplyResult(:none, applied_file_changes(plan), CommitInfo[], plan.display_text, formatted_paths)
 end
 
 function apply!(vc::VersionControl{:none}, edit::AbstractEdit, message::AbstractString; kwargs...)
@@ -656,7 +719,7 @@ function apply!(vc::VersionControl{:git}, edit::AbstractEdit, message::AbstractS
     assert_versioning_requirements(initial_plan, repo_root; require_versioning=require_versioning)
     rels = repo_relative_paths(affected_paths(initial_plan), repo_root)
 
-    maybe_precommit_dirty!(
+    precommit = maybe_precommit_dirty!(
         repo_root,
         rels;
         require_clean=require_clean,
@@ -664,9 +727,12 @@ function apply!(vc::VersionControl{:git}, edit::AbstractEdit, message::AbstractS
         precommit_message=precommit_message,
     )
 
+    formatted_paths = String[]
+    format_commit = nothing
+
     if formatter !== nothing && preformat
-        changed_paths = format_paths!(affected_paths(initial_plan), formatter)
-        commit_formatting!(repo_root, changed_paths, String(format_message))
+        formatted_paths = format_paths!(affected_paths(initial_plan), formatter)
+        format_commit = commit_formatting!(repo_root, formatted_paths, String(format_message))
     end
 
     plan = formatter !== nothing && preformat ? compile_checked_plan(edit; require_view=false) : initial_plan
@@ -677,7 +743,12 @@ function apply!(vc::VersionControl{:git}, edit::AbstractEdit, message::AbstractS
 
     final_rels = repo_relative_paths(affected_paths(plan), repo_root)
     stage_all!(repo_root, final_rels)
-    commit_staged!(repo_root, message, final_rels)
+    edit_commit_id = commit_staged!(repo_root, message, final_rels)
 
-    return Success()
+    commits = CommitInfo[]
+    precommit !== nothing && push!(commits, precommit)
+    format_commit !== nothing && push!(commits, format_commit)
+    edit_commit_id !== nothing && push!(commits, CommitInfo(:edit, edit_commit_id, message))
+
+    return ApplyResult(:git, applied_file_changes(plan), commits, plan.display_text, formatted_paths)
 end

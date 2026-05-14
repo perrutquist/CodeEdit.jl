@@ -27,9 +27,33 @@ A git version control specification.
 GitVersionControl(path::AbstractString; kwargs...) = VersionControl(path; kwargs...)
 
 """
-Successful result returned by `apply!`.
+Information about a git commit created while applying an edit.
 """
-struct Success end
+struct CommitInfo
+    kind::Symbol
+    id::String
+    message::String
+end
+
+"""
+Information about a file affected while applying an edit.
+"""
+struct FileChange
+    path::String
+    original_path::Union{Nothing,String}
+    action::Symbol
+end
+
+"""
+Result returned by `apply!`.
+"""
+struct ApplyResult
+    vc::Symbol
+    changes::Vector{FileChange}
+    commits::Vector{CommitInfo}
+    diff::String
+    formatted_paths::Vector{String}
+end
 
 """
 Current identity of an existing filesystem object.

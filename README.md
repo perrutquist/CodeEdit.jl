@@ -59,10 +59,10 @@ julia> repo = VersionControl("."; require_view=true)
 GitVersionControl("."; require_view=true)
 
 julia> apply!(repo, edit, "Change foo increment")
-Success
+Applied: 1 file changed, commit a1b2c3d
 ```
 
-Constructing an edit does not modify files. Applying it through `VersionControl` writes the change, stages the affected paths, and commits the result.
+Constructing an edit does not modify files. Applying it through `VersionControl` writes the change, stages the affected paths, commits the result, and returns an `ApplyResult` with the affected files, commit information, and applied diff text.
 
 For scratch files, generated files, or other changes that should not create a commit, use an explicit no-version-control specification:
 
@@ -82,7 +82,7 @@ Edit modifies scratch.txt:
 > status = new
 
 julia> apply!(NoVersionControl(require_view=true), edit)
-Success
+Applied: 1 file changed
 ```
 
 If **Revise.jl** is loaded, CodeEdit.jl calls `Revise.revise()` after each successful edit so changed method definitions usually take effect immediately.
@@ -175,6 +175,8 @@ Editing is performed by first creating one or more "edit" objects (`<: AbstractE
 `apply!(NoVersionControl(require_view=true), edit)` - Apply without version control, while requiring the edit to have been displayed.
 
 `apply!(edit)` - Always errors. Pass an explicit `VersionControl` or `NoVersionControl` specification.
+
+`apply!` returns an `ApplyResult` with `changes`, `commits`, `diff`, and `formatted_paths` fields. Its default display is brief, for example `Applied: 1 file changed` or `Applied: 2 files changed, commit a1b2c3d`.
 
 Important `apply!` keyword arguments can be stored in `VersionControl(path; kwargs...)` or passed directly to `apply!`:
 
