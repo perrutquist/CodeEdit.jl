@@ -185,3 +185,31 @@ function search(
 )
     return search(handles(root, pattern; includes=includes, parse_as=parse_as), needle)
 end
+
+"""
+    search(repo::VersionControl, needle::AbstractString)
+
+Search all handles returned by `handles(repo)`.
+"""
+function search(repo::VersionControl, needle::AbstractString)
+    return search(handles(repo), needle)
+end
+
+"""
+    search(repo::VersionControl, needle::Regex)
+
+Search all handles returned by `handles(repo)`.
+"""
+function search(repo::VersionControl, needle::Regex)
+    return search(handles(repo), needle)
+end
+
+"""
+    search(repo::VersionControl, trace)
+
+Search all handles returned by `handles(repo)` for blocks referenced by a
+stacktrace or backtrace-like object.
+"""
+function search(repo::VersionControl, trace)
+    return search(handles(repo), trace)
+end

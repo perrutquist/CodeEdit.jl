@@ -142,7 +142,7 @@ Handles referring to the same code block are interned: they compare as identical
 
 `search(handles, trace)` - Returns handles to code referenced by a stacktrace or backtrace-like object, such as a backtrace from `catch_backtrace()` or a collection of stack frames. To search for an error location, pass the captured stacktrace/backtrace rather than the thrown error value.
 
-The `search` functions also accept a file path, a vector of file paths, or a directory path and a glob pattern in place of `handles`.
+The `search` functions also accept a file path, a vector of file paths, a directory path and glob pattern, or a `VersionControl` object in place of `handles`. `search(repo, needle)` searches the same handle set returned by `handles(repo)`.
 
 ## Editing
 
