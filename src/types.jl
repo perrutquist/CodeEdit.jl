@@ -37,6 +37,10 @@ end
 
 """
 Information about a file affected while applying an edit.
+
+`path` is the resulting path. `original_path` is set for moves or renames.
+`action` describes the filesystem effect, such as `:created`, `:modified`,
+`:deleted`, `:moved`, or `:moved_modified`.
 """
 struct FileChange
     path::String
@@ -46,6 +50,9 @@ end
 
 """
 Result returned by `apply!`.
+
+Contains the version-control mode used, affected files, commits created, the
+applied diff text, and any paths changed by pre-apply formatting.
 """
 struct ApplyResult
     vc::Symbol

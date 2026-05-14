@@ -154,6 +154,25 @@ function update_record_from_block!(
     return record
 end
 
+function handle_record_from_block(
+    key::FileKey,
+    path::AbstractString,
+    block_index::Integer,
+    block::Block,
+    text::AbstractString,
+)
+    return HandleRecord(
+        key,
+        String(path),
+        Int(block_index),
+        block.span,
+        block.lines,
+        span_text(text, block.span),
+        nothing,
+        true,
+    )
+end
+
 function update_cache_after_replacement_plan!(plan::ReplacementEditPlan)
     state = STATE[]
     old_cache = state.files[plan.key]
@@ -211,16 +230,7 @@ function update_cache_after_replacement_plan!(plan::ReplacementEditPlan)
     for (index, block) in pairs(blocks)
         assigned[index] && continue
 
-        record = HandleRecord(
-            plan.key,
-            plan.path,
-            index,
-            block.span,
-            block.lines,
-            span_text(info.text, block.span),
-            nothing,
-            true,
-        )
+        record = handle_record_from_block(plan.key, plan.path, index, block, info.text)
         handle = register_handle!(record)
         cache.handles[index] = handle.id
     end
@@ -318,16 +328,7 @@ function update_cache_after_effect!(effect::FileEditEffect)
     for (index, block) in pairs(blocks)
         assigned[index] && continue
 
-        record = HandleRecord(
-            key,
-            effect.path,
-            index,
-            block.span,
-            block.lines,
-            span_text(info.text, block.span),
-            nothing,
-            true,
-        )
+        record = handle_record_from_block(key, effect.path, index, block, info.text)
         handle = register_handle!(record)
         cache.handles[index] = handle.id
     end

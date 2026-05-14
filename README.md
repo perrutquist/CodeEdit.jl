@@ -132,7 +132,7 @@ The functions throw an `ArgumentError` if a Julia file cannot be parsed, if a fi
 
 Paths that currently refer to the same file are detected by comparing device and inode information. Internally, cached files are accessed via an absolute path, while handles retain the user-supplied path for display.
 
-Handles referring to the same code block are interned: they compare as identical  with `===`.
+Handles referring to the same code block are interned: they compare as identical with `===`.
 
 ## Searching
 
@@ -156,7 +156,7 @@ Editing is performed by first creating one or more "edit" objects (`<: AbstractE
 
 `MoveFile(old_path, new_path)` - An edit which renames or moves a file. Source or destination symlink paths are rejected.
 
-`DeleteFile(path)` -  An edit which deletes a file. Symlink paths are rejected.
+`DeleteFile(path)` - An edit which deletes a file. Symlink paths are rejected.
 
 `Combine(edit1, edit2, ...)` - An edit that combines a set of other edits to be applied in the given order.  For example `Combine(InsertBefore(destination, string(source)), Delete(source))` creates an edit that will move a block of code. Within a combined edit, later child edits track the block locations produced by earlier child edits without reparsing in between, so intermediate states do not need to be syntactically valid. The affected files are reparsed and validated only after the entire combined edit has been planned. Planning and validation are all-or-nothing, but applying a multi-file combined edit is still best-effort at the filesystem level, so a later filesystem failure can still cause a partial apply.
 
