@@ -230,7 +230,7 @@ Invalid handles are displayed as `#invalid`.
 
 `is_julia(handle)` / `is_text(handle)` - Returns whether the handle was parsed as Julia source or plain text.
 
-`is_versioned(vc, handle)` - Returns whether the handle's file is tracked by the git repository described by `vc`. `is_versioned(vc)` returns a predicate suitable for `filter`.
+`is_versioned(handle, vc)` - Returns whether the handle's file is tracked by the git repository described by `vc`. `is_versioned(vc)` returns a predicate suitable for `filter`.
 
 `filepath_matches(handle, regex)` - Returns whether the handle's filepath matches `regex`. `filepath_matches(regex)` returns a predicate suitable for `filter`.
 

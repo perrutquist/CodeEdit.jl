@@ -150,7 +150,7 @@ end
 Return whether a handle's file is tracked by the given version-control
 specification.
 """
-function is_versioned(vc::VersionControl{:git}, handle::Handle)
+function is_versioned(handle::Handle, vc::VersionControl{:git})
     is_valid(handle) || return false
 
     try
@@ -161,11 +161,13 @@ function is_versioned(vc::VersionControl{:git}, handle::Handle)
     end
 end
 
-function is_versioned(::VersionControl{:none}, ::Handle)
+function is_versioned(::Handle, ::VersionControl{:none})
     return false
 end
 
-is_versioned(vc::VersionControl) = Base.Fix1(is_versioned, vc)
+is_versioned(vc::VersionControl, handle::Handle) = is_versioned(handle, vc)
+
+is_versioned(vc::VersionControl) = Base.Fix2(is_versioned, vc)
 
 function handles(vc::VersionControl{:git}; includes::Bool=false, parse_as::Symbol=:auto)
     repo_root = git_worktree_root(vc.repo_path)

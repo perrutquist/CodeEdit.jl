@@ -116,6 +116,8 @@ function filepath_matches(handle::Handle, regex::Regex)
     return occursin(regex, filepath(handle))
 end
 
+filepath_matches(regex::Regex, handle::Handle) = filepath_matches(handle, regex)
+
 filepath_matches(regex::Regex) = Base.Fix2(filepath_matches, regex)
 
 """
