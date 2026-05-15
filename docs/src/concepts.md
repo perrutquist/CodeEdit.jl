@@ -1,10 +1,12 @@
 # Blocks and handles
 
-CodeEdit.jl works by splitting files into source or text *blocks* and returning stable references to those blocks. These handles can then be used to build edits that are applied through git or through an explicit no-version-control specification.
+CodeEdit.jl edits files by first splitting them into source or text *blocks*. A [`Handle`](@ref) is a stable reference to one such block and is the object passed to search and edit operations.
+
+Edits built from handles can be applied through git or through an explicit no-version-control specification.
 
 ## Blocks
 
-For Julia files, blocks are top-level syntactic units such as functions, types, macros, constants, assignments, imports, exports, and includes. Attached docstrings are kept with the following block.
+For Julia files, blocks are top-level syntactic units such as functions, types, macros, constants, assignments, imports, exports, and includes. Attached docstrings are kept with the block they document.
 
 For example, CodeEdit.jl sees a file like this as several separate blocks:
 
@@ -21,15 +23,15 @@ end                           # block
                               # EOF block
 ```
 
-A Julia `module` is not treated as one large block. Instead, the `module ...` line and its matching `end` line are separate blocks, while the module contents are subdivided normally.
+A Julia `module` is not treated as one large block. The `module ...` line and its matching `end` line are separate blocks, while the module body is subdivided normally.
 
-At the end of each file, CodeEdit.jl also creates a special EOF block. EOF handles are useful when inserting code at the end of a file.
+At the end of each file, CodeEdit.jl creates a special EOF block. EOF handles are useful when inserting code at the end of a file.
 
-For non-Julia files, blocks are split like paragraphs using blank lines.
+For non-Julia files, blocks are paragraphs separated by blank lines.
 
 ## Handles
 
-A [`Handle`](@ref) points to one parsed block. The handle is the object you pass to search, display, and edit operations.
+A [`Handle`](@ref) points to one parsed block. It is the object passed to search, display, and edit operations.
 
 ```@repl concepts
 using CodeEdit
@@ -50,7 +52,7 @@ end
 h = Handle("examples/concepts.jl", 2)
 ```
 
-Because line 2 is inside `foo`, the handle points to the whole `foo` block.
+Because line 2 is inside `foo`, the handle refers to the whole `foo` block.
 
 Handles are interned for a parsed file: requesting the same block again returns the same handle object.
 
@@ -60,7 +62,7 @@ h === Handle("examples/concepts.jl", 1)
 
 ## Julia and text parsing
 
-By default, `.jl` files are parsed as Julia source and other files are parsed as text. Use `parse_as=:julia` or `parse_as=:text` to override this when constructing handles or collecting handles.
+By default, `.jl` files are parsed as Julia source and other files are parsed as text. Use `parse_as=:julia` or `parse_as=:text` to override this behavior when constructing or collecting handles.
 
 ```@repl concepts
 write("examples/notes.txt", """
@@ -76,12 +78,12 @@ A cached file has one parse mode at a time. Reloading the same file with a diffe
 
 ## Handle validity
 
-Edits can update handles when their referenced block can still be matched after the edit. Handles are invalidated when their block is deleted or can no longer be matched unambiguously.
+Edits update handles when their referenced block can still be matched after the edit. Handles are invalidated when their block is deleted or can no longer be matched unambiguously.
 
-Use [`is_valid`](@ref) to check whether a handle still points to a valid block.
+Use [`is_valid`](@ref) to test whether a handle still refers to a valid block.
 
 ```@repl concepts
 is_valid(h)
 ```
 
-Files modified outside CodeEdit.jl are reparsed automatically when a cached timestamp changes. You can also call [`reindex`](@ref) to update cached handles explicitly.
+Files modified outside CodeEdit.jl are reparsed automatically when a cached timestamp changes. Call [`reindex`](@ref) to update cached handles explicitly.

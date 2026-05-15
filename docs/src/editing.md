@@ -1,16 +1,16 @@
 # Editing code
 
-Editing in CodeEdit.jl is a two-step process: first describe the change, then choose how to apply it.
+Editing in CodeEdit.jl separates description from execution: first construct an edit value, then choose how to apply it.
 
 ```text
 Handle -> Edit -> Displayed plan -> Apply -> Commit
 ```
 
-Edits are represented as values that subtype [`AbstractEdit`](@ref). Constructing an edit does not modify files. It only describes an intended change to one or more handles or paths.
+Edits are values that subtype [`AbstractEdit`](@ref). Constructing an edit does not modify files; it only describes an intended change to one or more handles or paths.
 
-The standard workflow uses [`VersionControl`](@ref) to apply the edit, stage the affected paths, and create a git commit. If you set `require_view=true`, displaying, printing, or stringifying an edit records the exact plan that was shown. [`apply!`](@ref) replans the edit and refuses to apply it if the new plan does not match the displayed plan.
+The standard workflow uses [`VersionControl`](@ref) to apply the edit, stage the affected paths, and create a git commit. If `require_view=true`, displaying, printing, or stringifying an edit records the exact plan that was shown. [`apply!`](@ref) replans the edit and refuses to apply it if the current plan differs from the displayed plan.
 
-In REPL examples, leaving the semicolon off the `edit = ...` line displays the edit and marks it as displayed; calling `display(edit)` works too.
+In REPL examples, omitting the semicolon from the `edit = ...` line displays the edit and marks it as displayed. Calling `display(edit)` has the same effect.
 
 ```@setup editing
 using CodeEdit
@@ -60,22 +60,22 @@ sleep(1.1)
 repo = VersionControl("examples"; require_view=true)
 ```
 
-## Choosing the right edit
+## Choosing an edit operation
 
-Most edits fall into one of a few intentions:
+Most edits correspond to one of the following operations:
 
-- change an existing block with [`Replace`](@ref);
-- add code near an existing block with [`InsertBefore`](@ref) or [`InsertAfter`](@ref);
-- add code at the end of a file with [`eof_handle`](@ref) and [`InsertBefore`](@ref);
-- remove a block with [`Delete`](@ref);
+- replace an existing block with [`Replace`](@ref);
+- insert code near an existing block with [`InsertBefore`](@ref) or [`InsertAfter`](@ref);
+- insert code at the end of a file with [`eof_handle`](@ref) and [`InsertBefore`](@ref);
+- delete a block with [`Delete`](@ref);
 - create, move, or delete whole files;
-- group related changes with [`Combine`](@ref).
+- group related edits with [`Combine`](@ref).
 
 The sections below follow that progression.
 
 ## Replacing a block
 
-A replacement edit changes exactly the block referenced by a handle. This is usually the safest way to update a function, because the planned diff is limited to the block you selected.
+A replacement edit changes exactly the block referenced by a handle. This is usually the safest way to update a function, because the planned diff is limited to the selected block.
 
 ```@repl editing
 h = Handle("examples/ProjectCode.jl", 6)
@@ -86,7 +86,7 @@ apply!(repo, edit, "Change foo increment")
 
 ## Inserting code
 
-Insertion edits are useful when a nearby block gives you a stable anchor point.
+Insertion edits are useful when a nearby block provides a stable anchor point.
 
 Insert before a block:
 
@@ -172,15 +172,15 @@ end
 apply!(repo, edit, "Add baz and update notes")
 ```
 
-Combined edits are validated after the full combined result is planned. This allows intermediate states to be temporarily invalid Julia syntax.
+Combined edits are validated after the full combined result is planned. Intermediate states may therefore be invalid Julia syntax, provided the final result is valid.
 
-Planning and validation are all-or-nothing, but applying a combined edit that touches multiple files is best-effort at the filesystem level. If a later filesystem operation fails, earlier operations may already have been applied. Use version control so changes can be reviewed and recovered.
+Planning and validation are all-or-nothing. Applying a combined edit that touches multiple files is still best-effort at the filesystem level: if a later filesystem operation fails, earlier operations may already have been applied. Use version control so changes can be reviewed and recovered.
 
 ## Applying edits without version control
 
 For scratch files, generated files, or other changes that should not create a commit, pass an explicit [`NoVersionControl`](@ref) specification.
 
-This mode is explicit so that the call site clearly says the edit will not be committed by CodeEdit.jl.
+This mode is explicit so that the call site states that the edit will not be committed by CodeEdit.jl.
 
 ```@repl editing
 write("scratch-note.txt", "status = old\n")

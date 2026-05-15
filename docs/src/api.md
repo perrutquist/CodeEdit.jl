@@ -1,8 +1,12 @@
 # API reference
 
-This page is a compact reference for the public API exported by CodeEdit.jl. For a guided introduction, start with [Getting started](getting-started.md) and [Editing code](editing.md).
+This page summarizes the public API exported by CodeEdit.jl. For a guided introduction, see [Getting started](getting-started.md) and [Editing code](editing.md).
+
+The detailed docstrings for exported names are listed at the end of this page.
 
 ## Handles
+
+Handles identify parsed blocks and are the primary objects used for searching and editing.
 
 - [`Handle`](@ref): create a handle to the block containing a file location or method.
 - [`eof_handle`](@ref): create a handle to the end of a file.
@@ -12,8 +16,11 @@ This page is a compact reference for the public API exported by CodeEdit.jl. For
 ## Searching
 
 - [`search`](@ref): search handles, files, stacktraces, or exceptions.
+- `occursin(handle, trace)`: test whether a handle's source location occurs in a stacktrace-like object.
 
 ## Edits
+
+Edits are immutable descriptions of changes. Constructing an edit does not modify the filesystem.
 
 - [`AbstractEdit`](@ref): abstract supertype for edit values.
 - [`Replace`](@ref): replace a block.
@@ -32,6 +39,8 @@ The `edit1 * edit2` operator is shorthand for `Combine(edit1, edit2)`. Chaining 
 Combined edits are planned and validated as a unit. See [Editing code](editing.md) and [Safety and version control](safety.md) for workflow details and failure modes.
 
 ## Version control
+
+Version-control specifications determine how an edit is applied.
 
 - [`VersionControl`](@ref): describe a git repository and default `apply!` keyword arguments.
 - [`GitVersionControl`](@ref): convenience constructor for git-backed editing.
@@ -55,7 +64,6 @@ Display, printing, and `string(edit)` store the exact plan that was shown. When 
 - `string(edit)`: return the displayed edit plan and mark the edit as displayed.
 - `display(handle)`: show a handle header and source block.
 - `display(edit)`: show the edit plan and mark the edit as displayed.
-- `occursin(handle, trace)`: test whether a handle's source location occurs in a stacktrace-like object.
 
 ## Exported names
 

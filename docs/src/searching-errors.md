@@ -1,6 +1,6 @@
 # Finding errors from stacktraces
 
-CodeEdit.jl can search for source blocks referenced by a stacktrace. This turns a common debugging session into a source-editing workflow: catch the error, capture its stacktrace with `catch_backtrace()`, search project source for referenced frames, inspect the matching blocks, then edit the source and commit the fix.
+CodeEdit.jl can search for source blocks referenced by a stacktrace. This makes a debugging session into an editing workflow: catch the error, capture the stacktrace with `catch_backtrace()`, search project source for referenced frames, inspect the matching blocks, then edit the source and commit the fix.
 
 ```@setup searching_errors
 using CodeEdit
@@ -40,7 +40,7 @@ sleep(1.1)
 
 ## Starting from a stacktrace
 
-Suppose a function throws:
+Suppose the following call throws an exception:
 
 ```julia
 function inner(x)
@@ -64,18 +64,18 @@ catch caught
 end;
 ```
 
-Collect source handles and search for stacktrace frames:
+Collect source handles and search for frames from the captured stacktrace:
 
 ```@repl searching_errors
 hs = handles("examples", "*.jl")
 matches = search(hs, trace)
 ```
 
-The result contains handles for blocks whose source locations appear in the stacktrace.
+The result contains handles for blocks whose source locations occur in the stacktrace.
 
 ## At the REPL
 
-At the Julia REPL, the caught `ExceptionStack` is available in the variable `err`, and can be searched in the same way:
+At the Julia REPL, the caught `ExceptionStack` is available as `err` and can be searched in the same way:
 
 ```@repl searching_errors
 outer(1)
@@ -84,7 +84,7 @@ matches = search(hs, err)
 
 ## Inspecting the most relevant block
 
-If the result has only a few matches, display each block:
+If the result contains only a few matches, display each block:
 
 ```@repl searching_errors
 for h in matches
@@ -107,7 +107,7 @@ edit = Replace(h, fixed)
 apply!(repo, edit, "Throw ArgumentError for bad input")
 ```
 
-After a successful edit, existing handles are updated or invalidated as needed. If Revise.jl is loaded, CodeEdit.jl also asks Revise to revise loaded definitions.
+After a successful edit, existing handles are updated or invalidated as needed. If Revise.jl is loaded, CodeEdit.jl asks Revise to revise loaded definitions.
 
 ## Searching included files
 
