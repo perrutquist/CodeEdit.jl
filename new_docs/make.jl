@@ -13,18 +13,21 @@ function clean_generated_html_paths(builddir::AbstractString, basedir::AbstractS
         push!(prefixes, real_basedir)
     end
 
-    for path in readdir(builddir; join=true, recursive=true)
-        endswith(path, ".html") || continue
+    for (root, _, files) in walkdir(builddir)
+        for file in files
+            endswith(file, ".html") || continue
 
-        contents = read(path, String)
-        cleaned = contents
+            path = joinpath(root, file)
+            contents = read(path, String)
+            cleaned = contents
 
-        for prefix in prefixes
-            cleaned = replace(cleaned, prefix * "/" => "")
-        end
+            for prefix in prefixes
+                cleaned = replace(cleaned, prefix * "/" => "")
+            end
 
-        if cleaned != contents
-            write(path, cleaned)
+            if cleaned != contents
+                write(path, cleaned)
+            end
         end
     end
 end
