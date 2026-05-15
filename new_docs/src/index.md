@@ -15,6 +15,7 @@ find a handle -> construct an edit -> review the plan -> apply -> commit
 Most examples use git-backed editing, which is the recommended workflow for source files.
 
 ```@setup index
+# Note: the @setup block is not shown in the rendered documentation.
 using CodeEdit
 
 rm("trailblazer"; recursive=true, force=true)
@@ -83,28 +84,19 @@ run(`git -C trailblazer add .`)
 run(`git -C trailblazer commit -m "Initial TrailBlazer project"`)
 ```
 
-The setup above creates a small project used by the examples:
-
-```@repl index
-println.(readlines("trailblazer/src/TrailBlazer.jl"));
-println.(readlines("trailblazer/src/routes.jl"));
-println.(readlines("trailblazer/src/formatting.jl"));
-```
-
-Create a repository specification before applying source edits. The `require_view=true` option requires an edit plan to be displayed before it can be applied, and the displayed plan must still match the current files.
+For our examples, we'll use a fictional `trailblazer` package. We access it by first creating a `VersionControl` object with the path to its git repository.
 
 ```@repl index
 repo = VersionControl("trailblazer"; require_view=true)
 ```
 
-This value records the version-control policy used by later calls to [`apply!`](@ref).
+The `require_view=true` option will require each edit plan to be displayed before it can be applied. This is a relatively weak safety feature, but it can prevent some simple mistakes.
 
 ## A complete edit
 
-Suppose the climb component of `walk_time` needs to be adjusted. Search the repository and select the matching source block:
+Suppose we know that our package has a function `walk_time` that needs to be adjusted. Search the repository and select the matching source block:
 
 ```@repl index
-pwd()
 h = only(search(repo, "function walk_time"))
 ```
 
