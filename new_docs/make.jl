@@ -3,15 +3,7 @@ using CodeEdit
 
 DocMeta.setdocmeta!(CodeEdit, :DocTestSetup, :(using CodeEdit); recursive=true)
 
-basedir = mktempdir()
-
-# Keep paths readable in rendered examples even though Documenter runs them
-# from a temporary work directory.
-function CodeEdit.display_path(path::AbstractString)
-    d, f = splitdir(path)
-    isempty(d) && return f
-    return joinpath(relpath(realpath(d), realpath(basedir)), f)
-end
+const basedir = mktempdir()
 
 makedocs(
     sitename = "CodeEdit.jl",
