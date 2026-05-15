@@ -70,7 +70,7 @@ end
 write("trailblazer/test/runtests.jl", raw"""
 using Test
 
-include("../src/TrailBlazer.jl")
+include(joinpath(@__DIR__, "../src/TrailBlazer.jl"))
 using .TrailBlazer
 
 @testset "TrailBlazer" begin
@@ -85,8 +85,6 @@ run(`git -C trailblazer config user.email docs@example.com`)
 run(`git -C trailblazer config user.name "CodeEdit Docs"`)
 run(`git -C trailblazer add .`)
 run(`git -C trailblazer commit -m "Initial TrailBlazer project"`)
-
-sleep(1.1)
 ```
 
 Here is the tiny package we will work on:
@@ -110,6 +108,7 @@ That one value is the boundary between "I am thinking about a change" and "write
 A bug report says walking time is too optimistic for steep routes. The `walk_time` function lives somewhere in the project. Search the repository and ask for the matching block:
 
 ```@repl index
+pwd()
 h = only(search(repo, "function walk_time"))
 ```
 

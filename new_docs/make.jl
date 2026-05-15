@@ -12,6 +12,7 @@ function clean_generated_html_paths(builddir::AbstractString, basedir::AbstractS
     if real_basedir != basedir
         push!(prefixes, real_basedir)
     end
+    sort!(prefixes, by=length, rev=true)
 
     for (root, _, files) in walkdir(builddir)
         for file in files

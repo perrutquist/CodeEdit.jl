@@ -1,8 +1,6 @@
 # A first careful edit
 
-Imagine you're maintaining `TrailBlazer` and the first thing you notice is not a crash. It is a number that feels wrong.
-
-A route with a long climb is estimated too optimistically. The formula is probably in `walk_time`, but you do not need to open a file and count lines. Ask CodeEdit.jl for the block.
+Imagine you're maintaining `TrailBlazer` and you've noticed a problem with its time estimates. A route with a long climb is estimated too optimistically. The formula is probably in `walk_time`. Ask CodeEdit.jl for the block.
 
 ```@setup first_edit
 using CodeEdit
@@ -56,13 +54,13 @@ end
 write("trailblazer/test/runtests.jl", raw"""
 using Test
 
-include("../src/TrailBlazer.jl")
+include(joinpath(@__DIR__, "../src/TrailBlazer.jl"))
 using .TrailBlazer
 
 @testset "TrailBlazer" begin
     route = Route("Ridge Loop", 12.0, 300)
-    @test walk_time(route) ≈ 2.9
-    @test route_summary(route) == "Ridge Loop: 12.0 km, about 2.9 hours"
+    @test walk_time(route) ≈ 3.0
+    @test route_summary(route) == "Ridge Loop: 12.0 km, about 3.0 hours"
 end
 """)
 
@@ -71,11 +69,16 @@ run(`git -C trailblazer config user.email docs@example.com`)
 run(`git -C trailblazer config user.name "CodeEdit Docs"`)
 run(`git -C trailblazer add .`)
 run(`git -C trailblazer commit -m "Initial TrailBlazer project"`)
-
-sleep(1.1)
 ```
 
-## Start with a handle
+## Search for a handle
+
+You can collect handles and search them. The result is a `Set` of handles, because a search may find several blocks.
+
+```@repl first_edit
+repo = VersionControl("trailblazer")
+matches = search(repo, "walk_time")
+```
 
 [`Handle`](@ref) creates a handle to the block containing a file location. If the location is inside a function, the handle points to the whole function.
 
@@ -85,14 +88,7 @@ h = Handle("trailblazer/src/routes.jl", 7)
 
 A header shows the file and line range, followed by the source block itself.
 
-You can also collect handles and search them. The result is a `Set` of handles, because a search may find several blocks.
-
-```@repl first_edit
-repo = VersionControl("trailblazer")
-matches = search(repo, "walk_time")
-```
-
-Here there is only one definition we want:
+Another way is to write a search that returns only the one definition we want:
 
 ```@repl first_edit
 h = only(search(repo, "function walk_time"))
@@ -129,7 +125,7 @@ println.(readlines("trailblazer/src/routes.jl"));
 And you can run the project test file like any other Julia code:
 
 ```@repl first_edit
-include("trailblazer/test/runtests.jl")
+include("trailblazer/test/runtests.jl");
 ```
 
 ## What just happened?

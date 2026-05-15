@@ -51,7 +51,7 @@ end
 write("trailblazer/test/runtests.jl", raw"""
 using Test
 
-include("../src/TrailBlazer.jl")
+include(joinpath(@__DIR__, "../src/TrailBlazer.jl"))
 using .TrailBlazer
 
 @testset "TrailBlazer" begin

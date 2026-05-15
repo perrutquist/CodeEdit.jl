@@ -64,7 +64,7 @@ The next release should mention the improved climb estimate.
 write("trailblazer/test/runtests.jl", raw"""
 using Test
 
-include("../src/TrailBlazer.jl")
+include(joinpath(@__DIR__, "../src/TrailBlazer.jl"))
 using .TrailBlazer
 
 @testset "TrailBlazer" begin
@@ -79,8 +79,6 @@ run(`git -C trailblazer config user.email docs@example.com`)
 run(`git -C trailblazer config user.name "CodeEdit Docs"`)
 run(`git -C trailblazer add .`)
 run(`git -C trailblazer commit -m "Initial TrailBlazer workflow project"`)
-
-sleep(1.1)
 ```
 
 ## Insert code near a stable anchor

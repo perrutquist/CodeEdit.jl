@@ -85,8 +85,6 @@ run(`git -C trailblazer config user.email docs@example.com`)
 run(`git -C trailblazer config user.name "CodeEdit Docs"`)
 run(`git -C trailblazer add .`)
 run(`git -C trailblazer commit -m "Initial searchable TrailBlazer project"`)
-
-sleep(1.1)
 ```
 
 ## Listing blocks in a file
