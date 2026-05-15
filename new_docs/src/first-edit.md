@@ -1,6 +1,8 @@
-# A first careful edit
+# A first edit
 
-Imagine you're maintaining `TrailBlazer` and you've noticed a problem with its time estimates. A route with a long climb is estimated too optimistically. The formula is probably in `walk_time`. Ask CodeEdit.jl for the block.
+This section demonstrates the smallest complete workflow: locate a function, construct a replacement, review the resulting diff, and apply it through git.
+
+The example project estimates walking time for hiking routes. The climb component is too optimistic, and the formula is in `walk_time`.
 
 ```@setup first_edit
 using CodeEdit
@@ -73,41 +75,41 @@ run(`git -C trailblazer commit -m "Initial TrailBlazer project"`)
 
 ## Search for a handle
 
-You can collect handles and search them. The result is a `Set` of handles, because a search may find several blocks.
+Search returns handles for blocks whose contents or source locations match the query. A search may find more than one block, so the result is a set.
 
 ```@repl first_edit
 repo = VersionControl("trailblazer")
 matches = search(repo, "walk_time")
 ```
 
-[`Handle`](@ref) creates a handle to the block containing a file location. If the location is inside a function, the handle points to the whole function.
+[`Handle`](@ref) can also be constructed from a file and line number. If the location lies inside a function, the handle refers to the whole function block.
 
 ```@repl first_edit
 h = Handle("trailblazer/src/routes.jl", 7)
 ```
 
-A header shows the file and line range, followed by the source block itself.
+Displayed handles show the file, line range, and source block.
 
-Another way is to write a search that returns only the one definition we want:
+For this example, select the single matching definition directly:
 
 ```@repl first_edit
 h = only(search(repo, "function walk_time"))
 ```
 
-## Turn the handle into an edit
+## Construct an edit
 
-`string(h)` gives the source code for the block. That makes small programmatic edits pleasant: use normal Julia string tools, then wrap the result in an edit value.
+`string(h)` returns the source text for the block. Ordinary Julia string operations can be used to build the replacement text before wrapping it in an edit value.
 
 ```@repl first_edit
 replacement = replace(string(h), "route.ascent_m / 600" => "route.ascent_m / 500");
 edit = Replace(h, replacement)
 ```
 
-That displayed diff is the review step. No file has been changed yet.
+The displayed diff is the review step. No file is changed until [`apply!`](@ref) is called.
 
 ## Apply through git
 
-For normal source code, use [`VersionControl`](@ref). With `require_view=true`, CodeEdit.jl refuses to apply an edit unless the exact plan has been displayed.
+For source files, use [`VersionControl`](@ref). With `require_view=true`, CodeEdit refuses to apply an edit unless the exact plan has been displayed.
 
 ```@repl first_edit
 repo = VersionControl("trailblazer"; require_view=true)
@@ -128,12 +130,12 @@ And you can run the project test file like any other Julia code:
 include("trailblazer/test/runtests.jl");
 ```
 
-## What just happened?
+## Summary
 
-The important distinction is that CodeEdit.jl separates describing an edit from applying it.
+CodeEdit separates edit construction from edit application.
 
-- `Handle(...)` found the relevant block.
+- `Handle(...)` identified the source block.
 - `Replace(h, replacement)` described the change and displayed the diff.
-- `apply!(repo, edit, "...")` replanned the edit, checked the displayed plan, wrote the file, and committed it.
+- `apply!(repo, edit, "...")` replanned the edit, verified the displayed plan, wrote the file, and committed it.
 
-This is the rhythm the rest of the guide builds on.
+The same pattern applies to larger edits.

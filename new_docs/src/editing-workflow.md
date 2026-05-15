@@ -1,8 +1,8 @@
-# Changing more than one thing
+# Editing workflows
 
-Imagine you're handling a feature request: route summaries should include a packing suggestion, and the release notes should mention it.
+Edits are ordinary Julia values. They can be constructed independently, combined, displayed as one plan, and applied as one change.
 
-This is small, but it touches more than one place. You can build separate edits, review their combined plan, and apply them as one commit.
+This section demonstrates multi-block and multi-file edits: insertion, replacement, file creation, file movement, deletion, and combined application.
 
 ```@setup editing_workflow
 using CodeEdit
@@ -83,9 +83,9 @@ run(`git -C trailblazer commit -m "Initial TrailBlazer workflow project"`)
 
 ## Insert code near a stable anchor
 
-A new helper belongs near `difficulty`, because both functions classify a route.
+Insertion edits are anchored to existing handles. This makes the edit independent of absolute line numbers as long as the anchor block can still be matched.
 
-[`InsertAfter`](@ref) inserts code after a block. [`InsertBefore`](@ref) inserts before a block. Use raw string literals for Julia code so `$` and backslashes are not accidentally escaped.
+[`InsertAfter`](@ref) inserts code after a block. [`InsertBefore`](@ref) inserts before a block. Raw string literals are useful for Julia source because `$` and backslashes are not interpolated or escaped.
 
 ```@repl editing_workflow
 difficulty_handle = only(search(handles("trailblazer/src/routes.jl"), "function difficulty"))
@@ -103,7 +103,7 @@ end
 
 ## Replace an existing block
 
-Now include the new note in `route_summary`.
+Use [`Replace`](@ref) when the whole referenced block should be rewritten.
 
 ```@repl editing_workflow
 summary_handle = only(search(handles("trailblazer/src/formatting.jl"), "function route_summary"))
@@ -140,15 +140,15 @@ Packing suggestions are now included in route summaries.
 
 ## Combine related edits
 
-[`Combine`](@ref) plans child edits together. The `*` operator is shorthand for combining edits left-to-right.
+[`Combine`](@ref) plans child edits together. The `*` operator is shorthand for combining edits in left-to-right order.
 
 ```@repl editing_workflow
 edit = packing_edit * summary_edit * export_edit * notes_edit
 ```
 
-Combined edits are validated after the complete planned result, so intermediate states can be temporarily invalid as long as the final files are valid.
+Combined edits are validated against the complete planned result. Intermediate states may be invalid as long as the final file contents are valid.
 
-Apply the whole feature as one commit:
+Apply the combined edit as one commit:
 
 ```@repl editing_workflow
 repo = VersionControl("trailblazer"; require_view=true)
@@ -164,9 +164,9 @@ println.(readlines("trailblazer/src/TrailBlazer.jl"));
 println.(readlines("trailblazer/notes/release-notes.txt"));
 ```
 
-## Create, move, and delete whole files
+## Create, move, and delete files
 
-CodeEdit.jl can also describe file-level changes.
+File operations are edit values too, so they can be displayed, combined, and applied through the same API as block edits.
 
 [`CreateFile`](@ref) creates a new file:
 
@@ -198,7 +198,7 @@ delete_edit
 apply!(repo, delete_edit, "Remove temporary release checklist")
 ```
 
-Source or destination symlink paths are rejected for move and delete file operations.
+Move and delete operations reject source or destination paths that are symlinks.
 
 ## Delete a block
 
@@ -215,7 +215,7 @@ apply!(repo, delete_note, "Remove temporary packing note")
 
 ## Moving code between files
 
-Moving a block is just a combined insert and delete. The order matters: insert the old source at the destination, then delete the original handle.
+Moving a block can be expressed as a combined insertion and deletion. Insert the old source at the destination first, then delete the original handle.
 
 ```@repl editing_workflow
 source = only(search(handles("trailblazer/src/routes.jl"), "function packing_note"))
@@ -225,11 +225,11 @@ move_packing
 apply!(repo, move_packing, "Move packing note to formatting helpers")
 ```
 
-If a combined edit touches several files, planning and validation are all-or-nothing. The filesystem apply is still best-effort, so use git-backed editing for important work.
+Planning and validation for a combined edit are all-or-nothing. The filesystem writes themselves are not transactional, so git-backed editing is recommended for important changes.
 
-## Existing handles adapt
+## Existing handles after edits
 
-After edits, CodeEdit.jl updates handles when it can still match their blocks. Deleted blocks become invalid.
+After an edit is applied, CodeEdit updates existing handles when their blocks can still be matched. Handles whose blocks were deleted become invalid.
 
 ```@repl editing_workflow
 is_valid(source)

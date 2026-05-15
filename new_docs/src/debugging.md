@@ -1,8 +1,6 @@
-# Following an error home
+# Debugging
 
-The next bug report includes a stacktrace.
-
-A hiker entered a route with zero distance while testing import code, and the program crashed. The stacktrace points somewhere inside the project. You want the source block, not a pile of frames.
+Stacktraces contain source locations. CodeEdit can search handles for blocks whose locations occur in a captured trace, which makes it possible to move from an error to the corresponding source block.
 
 ```@setup debugging
 using CodeEdit
@@ -81,7 +79,7 @@ sleep(1.1)
 
 ## Capture the trace
 
-At the REPL, capture the backtrace when you catch an exception:
+At the REPL, capture the backtrace when handling an exception:
 
 ```julia
 trace = try
@@ -91,7 +89,7 @@ catch
 end
 ```
 
-Documenter has already captured one for this page. Now search project handles for source locations that occur in the trace:
+The setup for this page has already captured such a trace. Search project handles for source locations that occur in it:
 
 ```@repl debugging
 hs = handles("trailblazer/src", "*.jl")
@@ -100,23 +98,23 @@ matches = search(hs, trace)
 
 The result contains blocks whose source locations appear in the stacktrace.
 
-If you just triggered an error at the Julia REPL, the caught `ExceptionStack` is available as `err`, and you can search it in the same way:
+If an error was just caught at the Julia REPL, the caught `ExceptionStack` is available as `err` and can be searched in the same way:
 
 ```julia
 matches = search(hs, err)
 ```
 
-## Inspect the likely culprit
+## Inspect the relevant block
 
-When there are several matches, combine stacktrace search with text search:
+When several blocks occur in the trace, refine the result with a text search:
 
 ```@repl debugging
 search(matches, "average_speed")
 ```
 
-That block divides distance by walking time. A zero-length route gives zero walking time, so the result is not useful. Change the function so it rejects non-positive walking times with a clear error.
+The selected block divides distance by walking time. For a zero-length route, reject non-positive walking times explicitly.
 
-## Patch the function
+## Replace the function
 
 ```@repl debugging
 h = only(search(matches, "function average_speed"))
@@ -147,7 +145,7 @@ println.(readlines("trailblazer/src/routes.jl"));
 
 ## Add a regression test
 
-A bug fix without a test feels unfinished. Insert a test after the existing average speed assertion.
+Insert a test after the existing average speed assertion.
 
 ```@repl debugging
 test_handle = Handle("trailblazer/test/runtests.jl", 8)
@@ -172,4 +170,4 @@ all_project_handles = handles("trailblazer/src/TrailBlazer.jl"; includes=true)
 search(all_project_handles, "average_speed")
 ```
 
-That is often the most convenient way to search a package: begin where Julia begins.
+This is often the most convenient way to search a package: begin at the same entry point Julia loads.

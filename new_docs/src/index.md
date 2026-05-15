@@ -1,22 +1,18 @@
 # CodeEdit.jl
 
-CodeEdit.jl is a Julia package for making small, deliberate source edits from the REPL.
+CodeEdit provides a small API for locating source blocks, constructing edits, reviewing planned changes, and applying them to a working tree. It is intended for REPL-driven maintenance of Julia projects, where changes should be explicit and recoverable.
 
-Imagine you're maintaining a small package called `TrailBlazer`. It plans weekend hikes, estimates walking time, and formats little route summaries. A bug report arrives. Then a feature request. Then a failing stacktrace. You could jump between editor tabs, copy line numbers by hand, and hope your worktree still looks the same when you save.
+The main objects are handles and edits. A [`Handle`](@ref) identifies a block of source code or text. Edit values such as [`Replace`](@ref), [`InsertBefore`](@ref), [`InsertAfter`](@ref), and [`Delete`](@ref) describe changes to those blocks. Applying an edit writes the result to disk; applying through [`VersionControl`](@ref) also stages and commits the affected files.
 
-CodeEdit.jl lets you turn source locations into handles, handles into reviewed edits, and reviewed edits into git commits.
+## Basic workflow
 
-## The shape of the workflow
-
-CodeEdit.jl keeps editing explicit:
+The usual workflow is:
 
 ```text
-Handle -> Edit -> Displayed plan -> Apply -> Commit
+find a handle -> construct an edit -> review the plan -> apply -> commit
 ```
 
-A [`Handle`](@ref) points to one block of source code or text. An edit such as [`Replace`](@ref), [`InsertBefore`](@ref), [`InsertAfter`](@ref), or [`Delete`](@ref) describes a change without touching the filesystem. Displaying the edit shows the exact plan. Applying through [`VersionControl`](@ref) writes the files, stages them, and commits the result.
-
-Most examples in this guide use git-backed editing, because that is the intended everyday workflow.
+Most examples use git-backed editing, which is the recommended workflow for source files.
 
 ```@setup index
 using CodeEdit
@@ -87,7 +83,7 @@ run(`git -C trailblazer add .`)
 run(`git -C trailblazer commit -m "Initial TrailBlazer project"`)
 ```
 
-Here is the tiny package we will work on:
+The setup above creates a small project used by the examples:
 
 ```@repl index
 println.(readlines("trailblazer/src/TrailBlazer.jl"));
@@ -95,26 +91,26 @@ println.(readlines("trailblazer/src/routes.jl"));
 println.(readlines("trailblazer/src/formatting.jl"));
 ```
 
-Now create a repository specification. The `require_view=true` option means an edit must be displayed before it can be applied, and the plan shown to you must still be current when you apply it.
+Create a repository specification before applying source edits. The `require_view=true` option requires an edit plan to be displayed before it can be applied, and the displayed plan must still match the current files.
 
 ```@repl index
 repo = VersionControl("trailblazer"; require_view=true)
 ```
 
-That one value is the boundary between "I am thinking about a change" and "write this change and commit it".
+This value records the version-control policy used by later calls to [`apply!`](@ref).
 
-## A tiny edit, end to end
+## A complete edit
 
-A bug report says walking time is too optimistic for steep routes. The `walk_time` function lives somewhere in the project. Search the repository and ask for the matching block:
+Suppose the climb component of `walk_time` needs to be adjusted. Search the repository and select the matching source block:
 
 ```@repl index
 pwd()
 h = only(search(repo, "function walk_time"))
 ```
 
-Because the line above does not end in a semicolon, Documenter shows the handle. At the REPL, locating code also displays the block you are about to change.
+The returned handle displays its file, line range, and source block.
 
-Now build an edit. Constructing the edit still does not touch the file. Leaving off the semicolon displays the diff and records that this is the plan you reviewed.
+Construct an edit from the handle. This records the requested change, but does not modify the filesystem. Displaying the edit shows the planned diff and records the reviewed plan.
 
 ```@repl index
 updated = replace(string(h), "route.ascent_m / 600" => "route.ascent_m / 500");
@@ -133,15 +129,15 @@ And the file on disk now says what the commit says it says:
 println.(readlines("trailblazer/src/routes.jl"));
 ```
 
-## Where to go next
+## Manual outline
 
-Read the guide as a story:
+The remaining manual pages introduce the API by task:
 
-- [A first careful edit](first-edit.md) starts with a bug report and follows one reviewed change to a commit.
-- [Finding your way around](finding-code.md) shows how handles, search, includes, methods, and docstrings help you orient yourself.
-- [Changing more than one thing](editing-workflow.md) covers inserting, deleting, creating, moving, and combining edits.
-- [Following an error home](debugging.md) starts from a stacktrace and lands on the function that needs fixing.
-- [Working safely](safety.md) explains the review checks, git integration, no-version-control mode, and failure modes.
-- [API reference](reference.md) gathers the public API in one place.
+- [A first edit](first-edit.md) shows one reviewed replacement applied through git.
+- [Finding code](finding-code.md) describes handles, search, includes, methods, and docstrings.
+- [Editing workflows](editing-workflow.md) covers insertion, deletion, file operations, and combined edits.
+- [Debugging](debugging.md) shows how to move from a stacktrace to the source block that should be changed.
+- [Safety](safety.md) documents review requirements, git integration, no-version-control mode, and failure modes.
+- [API reference](reference.md) lists the exported names.
 
-The rest of the manual uses small examples, but the goal is the same as real work: find the code, understand it, change it, review the plan, and leave a useful commit behind.
+The common pattern is to find the relevant block, construct an edit, review the plan, and apply it under an explicit version-control policy.

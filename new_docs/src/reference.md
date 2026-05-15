@@ -1,19 +1,23 @@
 # API reference
 
-The guide pages show the usual workflow. This page is the compact map.
+This page summarizes the exported API. See the manual for task-oriented examples.
 
 ## Handles
+
+Handles identify source or text blocks.
 
 - [`Handle`](@ref): create a handle to the block containing a file location or method.
 - [`eof_handle`](@ref): create a handle to the end of a file.
 - [`handles`](@ref): collect handles for blocks in files.
-- [`reindex`](@ref): update existing handles after files changed outside CodeEdit.jl.
+- [`reindex`](@ref): update existing handles after files changed outside CodeEdit.
 
 ## Searching
 
 - [`search`](@ref): search handles, files, stacktraces, or exceptions.
 
 ## Edits
+
+Edits describe changes without applying them.
 
 - [`AbstractEdit`](@ref): abstract supertype for edit values.
 - [`Replace`](@ref): replace a block.
@@ -29,9 +33,11 @@ The guide pages show the usual workflow. This page is the compact map.
 
 The `edit1 * edit2` operator is shorthand for `Combine(edit1, edit2)`. Chaining `*` appends edits in left-to-right order.
 
-Combined edits are planned and validated as a unit. This lets intermediate states be temporarily invalid Julia syntax, as long as the final result is valid.
+Combined edits are planned and validated as a unit. Intermediate states may be invalid Julia syntax if the final result is valid.
 
 ## Version control
+
+Version-control specifications make the application policy explicit.
 
 - [`VersionControl`](@ref): describe a git repository and default `apply!` keyword arguments.
 - [`GitVersionControl`](@ref): convenience constructor for git-backed editing.
@@ -49,7 +55,7 @@ apply!(NoVersionControl(require_view=true), edit)
 
 `apply!(NoVersionControl(require_view=true), edit)` applies without git while still requiring a displayed review.
 
-When `require_view=true`, display, printing, and `string(edit)` store the exact plan that was shown. `apply!` replans the edit and rejects it if the current plan differs from the displayed plan.
+When `require_view=true`, display, printing, and `string(edit)` store the exact plan that was shown. [`apply!`](@ref) replans the edit and rejects it if the current plan differs from the displayed plan.
 
 ## Convenience functions
 

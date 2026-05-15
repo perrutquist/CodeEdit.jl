@@ -1,10 +1,9 @@
-# Working safely
+# Safety
 
-CodeEdit.jl is intentionally conservative. It is not trying to be a clever text editor. It is trying to make small source changes reviewable, reproducible, and easy to recover from.
+CodeEdit is conservative by design. It separates edit construction from filesystem mutation, and it encourages applying source changes through an explicit version-control policy.
 
-The central rule is simple:
-
-> Building an edit does not modify files. Applying an edit does.
+!!! note
+    Constructing an edit does not modify files. Only [`apply!`](@ref) writes changes to disk.
 
 ```@setup safety
 using CodeEdit
@@ -48,7 +47,7 @@ sleep(1.1)
 
 ## Require review before apply
 
-When you create a git-backed repository specification with `require_view=true`, an edit must be displayed, printed, or converted to a string before it can be applied.
+When a git-backed repository specification is created with `require_view=true`, an edit must be displayed, printed, or converted to a string before it can be applied.
 
 ```@repl safety
 repo = VersionControl("trailblazer"; require_view=true)
@@ -57,19 +56,17 @@ replacement = replace(string(h), "route.ascent_m / 500" => "route.ascent_m / 550
 edit = Replace(h, replacement)
 ```
 
-The displayed diff is remembered. When [`apply!`](@ref) runs, CodeEdit.jl replans the edit and rejects it if the current plan differs from the displayed one. This protects you from applying a stale edit after the file changed.
+The displayed diff is remembered. When [`apply!`](@ref) runs, CodeEdit replans the edit and rejects it if the current plan differs from the displayed one. This prevents a stale reviewed plan from being applied after the file has changed.
 
 ```@repl safety
 apply!(repo, edit, "Tune climb estimate")
 ```
 
-Calling `display(edit)` or `string(edit)` also marks an edit as displayed.
-
-If you need to mark an edit as displayed explicitly, use [`displayed!`](@ref).
+Calling `display(edit)` or `string(edit)` also marks an edit as displayed. Use [`displayed!`](@ref) only when an edit should be marked explicitly.
 
 ## Git-backed editing
 
-[`VersionControl`](@ref) and [`GitVersionControl`](@ref) describe a git repository and default apply options.
+[`VersionControl`](@ref) and [`GitVersionControl`](@ref) describe a git repository together with default options for [`apply!`](@ref).
 
 ```@repl safety
 VersionControl("trailblazer"; require_view=true)
@@ -85,7 +82,7 @@ A normal git-backed apply:
 5. creates a commit;
 6. returns an `ApplyResult`.
 
-The displayed result is brief, but the object contains details such as changed paths, commits, and diff text.
+The displayed result is brief; the returned object contains details such as changed paths, commits, and diff text.
 
 ```@repl safety
 h = only(search(handles("trailblazer/src/routes.jl"), "function walk_time"))
@@ -97,11 +94,11 @@ You can provide the commit message at apply time, or store a default message in 
 
 ## Dirty files and precommits
 
-By default, CodeEdit.jl can reject edits when relevant tracked files are dirty. This keeps the reviewed diff focused on the edit you are applying.
+By default, CodeEdit can reject edits when relevant tracked files are dirty. This keeps the reviewed diff focused on the edit being applied.
 
-For workflows where you intentionally have dirty tracked work, pass a `precommit_message`. CodeEdit.jl will commit the existing dirty tracked files before formatting or applying the requested edit.
+If dirty tracked work is intentional, pass a `precommit_message`. CodeEdit will commit the existing dirty tracked files before formatting or applying the requested edit.
 
-Important options can be stored in `VersionControl(path; kwargs...)` or passed to `apply!`:
+Common options can be stored in `VersionControl(path; kwargs...)` or passed to `apply!`:
 
 - `require_view`: require the edit plan to have been displayed;
 - `require_versioning`: reject edits to existing untracked files and reject creation outside the worktree;
@@ -115,15 +112,13 @@ Important options can be stored in `VersionControl(path; kwargs...)` or passed t
 
 ## Validation
 
-Julia files are reparsed before edits are applied. If the final result would introduce syntax errors, the edit is rejected.
+Julia files are reparsed before edits are applied. If the final result would introduce a syntax error, the edit is rejected.
 
-Combined edits are planned and validated as a unit, so intermediate states can be temporarily invalid as long as the final result is valid.
+Combined edits are planned and validated as a unit. Intermediate states may be invalid Julia syntax as long as the final result is valid.
 
 ## Applying without version control
 
-Most source edits should go through git. But sometimes you are changing a scratch file, generated output, or a temporary note.
-
-For those cases, use [`NoVersionControl`](@ref) explicitly.
+Most source edits should go through git. For scratch files, generated output, or temporary notes, use [`NoVersionControl`](@ref) explicitly.
 
 ```@repl safety
 write("trailblazer/tmp/session-note.txt", "status = old\n")
@@ -133,13 +128,13 @@ apply!(NoVersionControl(require_view=true), scratch_edit)
 println.(readlines("trailblazer/tmp/session-note.txt"));
 ```
 
-The explicit `NoVersionControl(...)` at the call site is intentional. It makes the lack of a git commit visible in code review and in your own REPL history.
+The explicit `NoVersionControl(...)` at the call site is intentional. It makes the absence of a git commit visible in code review and in REPL history.
 
 Calling `apply!(edit)` without either `VersionControl` or `NoVersionControl` always errors.
 
-## What is not guaranteed
+## Limitations
 
-CodeEdit.jl gives you careful planning and validation, but it is not a transactional filesystem.
+CodeEdit provides planning and validation, but it is not a transactional filesystem.
 
 In particular:
 
@@ -158,7 +153,7 @@ The safest everyday pattern is:
 
 ## Revise integration
 
-Revise.jl is an optional weak dependency. When Revise is loaded, CodeEdit.jl calls `Revise.revise()` after a successful edit. Revise failures are reported as warnings because the filesystem edit has already happened.
+Revise.jl is an optional weak dependency. When Revise is loaded, CodeEdit calls `Revise.revise()` after a successful edit. Revise failures are reported as warnings because the filesystem edit has already happened.
 
 That means a REPL-driven workflow can often look like this:
 

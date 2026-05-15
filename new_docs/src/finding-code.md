@@ -1,14 +1,8 @@
-# Finding your way around
+# Finding code
 
-Real projects rarely fail in the file you already have open.
+CodeEdit represents source locations as handles. Handles can be collected from files, directories, include graphs, methods, stacktraces, and search results.
 
-This page follows the kind of questions you run into while maintaining a project:
-
-- "Where is this behavior implemented?"
-- "What else is related to this name?"
-- "Can I get from a loaded method back to its source?"
-
-CodeEdit.jl answers those questions with handles.
+This section covers the main ways to move from a name or location to the block of source that should be inspected or edited.
 
 ```@setup finding_code
 using CodeEdit
@@ -89,7 +83,7 @@ run(`git -C trailblazer commit -m "Initial searchable TrailBlazer project"`)
 
 ## Listing blocks in a file
 
-[`handles`](@ref) returns handles for the blocks CodeEdit.jl sees in a file. Julia files are split into top-level source blocks: functions, structs, constants, includes, imports, exports, module boundary lines, and similar forms. A special EOF handle is also included.
+[`handles`](@ref) returns the blocks CodeEdit sees in a file. Julia files are split into top-level forms such as functions, structs, constants, includes, imports, exports, and module boundaries. A special EOF handle is included for insertions at the end of the file.
 
 ```@repl finding_code
 hs = handles("trailblazer/src/routes.jl")
@@ -101,7 +95,7 @@ A set of handles is displayed as an overview. Display one handle to see the full
 first(search(hs, "function difficulty"))
 ```
 
-For non-Julia files, CodeEdit.jl can work with text blocks too. By default, non-`.jl` files are parsed as text paragraphs.
+For non-Julia files, CodeEdit works with text blocks. By default, non-`.jl` files are parsed as text paragraphs.
 
 ```@repl finding_code
 handles("trailblazer/notes/release-notes.txt")
@@ -111,7 +105,7 @@ You can override parsing with `parse_as=:julia` or `parse_as=:text` when needed.
 
 ## Searching source
 
-The simplest search is text search over handles:
+The simplest search is a text query over a collection of handles:
 
 ```@repl finding_code
 search(handles("trailblazer/src", "*.jl"), "difficulty")
@@ -137,7 +131,7 @@ search("trailblazer/src", "*.jl", "route_summary")
 
 ## Following includes
 
-The package entry point contains `include` statements. If you start from that file, `includes=true` follows them recursively.
+When a file contains `include` statements, pass `includes=true` to follow them recursively from the starting file.
 
 ```@repl finding_code
 hs = handles("trailblazer/src/TrailBlazer.jl"; includes=true)
@@ -146,9 +140,9 @@ search(hs, "packing_note")
 
 Recursive include traversal uses cycle detection, so include loops are visited at most once.
 
-## Asking about a handle
+## Inspecting a handle
 
-A handle carries useful facts about its block:
+A handle records the file, line range, parse mode, and source text for a block:
 
 ```@repl finding_code
 h = only(search(hs, "struct Route"))
@@ -177,11 +171,11 @@ using .TrailBlazer
 Handle(first(methods(walk_time)))
 ```
 
-That is a natural REPL move: inspect behavior, find the method, turn it into editable source.
+This is useful when the relevant object is already loaded in the current Julia session.
 
 ## Matching paths and versioned files
 
-When a search gets noisy, filter the handles. `filepath_matches` is useful with regular expressions:
+Search results can be filtered by path or by version-control status. [`filepath_matches`](@ref) builds a predicate from a regular expression:
 
 ```@repl finding_code
 all_handles = handles("trailblazer/src", "*.jl")
@@ -195,4 +189,4 @@ repo = VersionControl("trailblazer")
 filter(is_versioned(repo), all_handles)
 ```
 
-Together, these small tools let you navigate source in terms of blocks, methods, files, and names rather than raw line numbers.
+These predicates are ordinary Julia functions and can be combined with `filter`, comprehensions, or other collection operations.
