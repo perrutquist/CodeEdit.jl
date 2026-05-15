@@ -5,6 +5,30 @@ DocMeta.setdocmeta!(CodeEdit, :DocTestSetup, :(using CodeEdit); recursive=true)
 
 const basedir = mktempdir()
 
+function clean_generated_html_paths(builddir::AbstractString, basedir::AbstractString)
+    prefixes = [basedir]
+    real_basedir = realpath(basedir)
+
+    if real_basedir != basedir
+        push!(prefixes, real_basedir)
+    end
+
+    for path in readdir(builddir; join=true, recursive=true)
+        endswith(path, ".html") || continue
+
+        contents = read(path, String)
+        cleaned = contents
+
+        for prefix in prefixes
+            cleaned = replace(cleaned, prefix * "/" => "")
+        end
+
+        if cleaned != contents
+            write(path, cleaned)
+        end
+    end
+end
+
 makedocs(
     sitename = "CodeEdit.jl",
     modules = [CodeEdit],
@@ -23,6 +47,8 @@ makedocs(
     checkdocs = :none,
     workdir = basedir,
 )
+
+clean_generated_html_paths(joinpath(@__DIR__, "build"), basedir)
 
 if get(ENV, "CI", "false") == "true" && haskey(ENV, "GITHUB_REPOSITORY")
     deploydocs(
