@@ -58,8 +58,9 @@ DocTestSetup = quote
 end
 ```
 
-```@repl editing
-repo = VersionControl("examples"; require_view=true)
+```jldoctest
+julia> repo = VersionControl("examples"; require_view=true)
+
 ```
 
 ## Choosing an edit operation
@@ -79,11 +80,15 @@ The sections below follow that progression.
 
 A replacement edit changes exactly the block referenced by a handle. This is usually the safest way to update a function, because the planned diff is limited to the selected block.
 
-```@repl editing
-h = Handle("examples/ProjectCode.jl", 6)
-new_code = replace(string(h), "x + 1" => "x + 2");
-edit = Replace(h, new_code)
-apply!(repo, edit, "Change foo increment")
+```jldoctest
+julia> h = Handle("examples/ProjectCode.jl", 6)
+
+julia> new_code = replace(string(h), "x + 1" => "x + 2");
+
+julia> edit = Replace(h, new_code)
+
+julia> apply!(repo, edit, "Change foo increment")
+
 ```
 
 ## Inserting code
@@ -92,86 +97,108 @@ Insertion edits are useful when a nearby block provides a stable anchor point.
 
 Insert before a block:
 
-```@repl editing
-h = Handle("examples/ProjectCode.jl", 6)
-edit = InsertBefore(h, raw"""
-const SCALE = 2
+```jldoctest
+julia> h = Handle("examples/ProjectCode.jl", 6)
 
-""")
-apply!(repo, edit, "Add scale constant")
+julia> edit = InsertBefore(h, raw"""
+       const SCALE = 2
+       
+       """)
+
+julia> apply!(repo, edit, "Add scale constant")
+
 ```
 
 Insert after a block:
 
-```@repl editing
-h = Handle("examples/ProjectCode.jl", 6)
-edit = InsertAfter(h, raw"""
+```jldoctest
+julia> h = Handle("examples/ProjectCode.jl", 6)
 
-function bar(x)
-    return foo(x) + SCALE
-end
-""")
-apply!(repo, edit, "Add bar")
+julia> edit = InsertAfter(h, raw"""
+       
+       function bar(x)
+           return foo(x) + SCALE
+       end
+       """)
+
+julia> apply!(repo, edit, "Add bar")
+
 ```
 
 Use raw string literals such as `raw"""..."""` when writing Julia code as strings. They avoid accidental escaping of backslashes and dollar signs.
 
 ## Deleting code
 
-```@repl editing
-h = Handle("examples/ProjectCode.jl", 14)
-edit = Delete(h)
-apply!(repo, edit, "Remove obsolete function")
+```jldoctest
+julia> h = Handle("examples/ProjectCode.jl", 14)
+
+julia> edit = Delete(h)
+
+julia> apply!(repo, edit, "Remove obsolete function")
+
 ```
 
 EOF handles are unaffected by [`Delete`](@ref).
 
 ## Creating, moving, and deleting files
 
-```@repl editing
-edit = CreateFile("examples/generated.jl", raw"""
-function generated_value()
-    return :ok
-end
-""")
-apply!(repo, edit, "Add generated file")
+```jldoctest
+julia> edit = CreateFile("examples/generated.jl", raw"""
+       function generated_value()
+           return :ok
+       end
+       """)
+
+julia> apply!(repo, edit, "Add generated file")
+
 ```
 
-```@repl editing
-edit = MoveFile("examples/generated.jl", "examples/generated-renamed.jl")
-apply!(repo, edit, "Rename generated file")
+```jldoctest
+julia> edit = MoveFile("examples/generated.jl", "examples/generated-renamed.jl")
+
+julia> apply!(repo, edit, "Rename generated file")
+
 ```
 
-```@repl editing
-edit = DeleteFile("examples/generated-renamed.jl")
-apply!(repo, edit, "Remove generated file")
+```jldoctest
+julia> edit = DeleteFile("examples/generated-renamed.jl")
+
+julia> apply!(repo, edit, "Remove generated file")
+
 ```
 
 ## Combining edits
 
 Use [`Combine`](@ref), or the `*` shorthand, when multiple edits are part of one logical change and should be planned together:
 
-```@repl editing
-source = Handle("examples/ProjectCode.jl", 10)
-destination = eof_handle("examples/notes.txt")
-edit = Combine(
-    InsertBefore(destination, "\nMoved helper source:\n\n" * string(source)),
-    Delete(source),
-)
-apply!(repo, edit, "Move helper source to notes")
+```jldoctest
+julia> source = Handle("examples/ProjectCode.jl", 10)
+
+julia> destination = eof_handle("examples/notes.txt")
+
+julia> edit = Combine(
+           InsertBefore(destination, "\nMoved helper source:\n\n" * string(source)),
+           Delete(source),
+       )
+
+julia> apply!(repo, edit, "Move helper source to notes")
+
 ```
 
 Equivalent shorthand:
 
-```@repl editing
-h = Handle("examples/ProjectCode.jl", 6)
-edit = InsertAfter(h, raw"""
+```jldoctest
+julia> h = Handle("examples/ProjectCode.jl", 6)
 
-function baz(x)
-    return foo(x) - 1
-end
-""") * InsertBefore(eof_handle("examples/notes.txt"), "\nAdded baz to ProjectCode.jl\n")
-apply!(repo, edit, "Add baz and update notes")
+julia> edit = InsertAfter(h, raw"""
+       
+       function baz(x)
+           return foo(x) - 1
+       end
+       """) * InsertBefore(eof_handle("examples/notes.txt"), "\nAdded baz to ProjectCode.jl\n")
+
+julia> apply!(repo, edit, "Add baz and update notes")
+
 ```
 
 Combined edits are validated after the full combined result is planned. Intermediate states may therefore be invalid Julia syntax, provided the final result is valid.
@@ -184,9 +211,13 @@ For scratch files, generated files, or other changes that should not create a co
 
 This mode is explicit so that the call site states that the edit will not be committed by CodeEdit.jl.
 
-```@repl editing
-write("scratch-note.txt", "status = old\n")
-h = Handle("scratch-note.txt", 1; parse_as=:text)
-edit = Replace(h, "status = new\n")
-apply!(NoVersionControl(require_view=true), edit)
+```jldoctest
+julia> write("scratch-note.txt", "status = old\n")
+
+julia> h = Handle("scratch-note.txt", 1; parse_as=:text)
+
+julia> edit = Replace(h, "status = new\n")
+
+julia> apply!(NoVersionControl(require_view=true), edit)
+
 ```
