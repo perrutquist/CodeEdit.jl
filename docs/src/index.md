@@ -1,3 +1,9 @@
+```@meta
+DocTestSetup = quote
+    include(joinpath($(@__DIR__), "meta_setup.jl"))
+end
+```
+
 # CodeEdit.jl
 
 CodeEdit.jl provides tools for making source edits from Julia. Edits are described as ordinary Julia values, displayed as diffs, and applied explicitly.
@@ -52,9 +58,9 @@ Edit modifies examples/foo.jl:
 >     x + 2
 
 julia> apply!(repo, edit, "Change foo increment")
-[main f30e117] Change foo increment
+[main fd4796f] Change foo increment
  1 file changed, 1 insertion(+), 1 deletion(-)
-Applied: 1 file changed, commit f30e117
+Applied: 1 file changed, commit fd4796f
 
 julia> println(read("examples/foo.jl", String));
 function foo(x)

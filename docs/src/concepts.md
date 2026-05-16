@@ -1,3 +1,9 @@
+```@meta
+DocTestSetup = quote
+    include(joinpath($(@__DIR__), "meta_setup.jl"))
+end
+```
+
 # Blocks and handles
 
 CodeEdit.jl edits files by first splitting them into source or text *blocks*. A [`Handle`](@ref) is a stable reference to one such block and is the object passed to search and edit operations.
@@ -35,6 +41,10 @@ A [`Handle`](@ref) points to one parsed block. It is the object passed to search
 
 ```jldoctest concepts
 julia> h = Handle("examples/concepts.jl", 2)
+# examples/concepts.jl 1 - 3:
+function foo(x)
+    return x + 1
+end
 ```
 
 Because line 2 is inside `foo`, the handle refers to the whole `foo` block.
@@ -43,6 +53,7 @@ Handles are interned for a parsed file: requesting the same block again returns 
 
 ```jldoctest concepts
 julia> h === Handle("examples/concepts.jl", 1)
+true
 ```
 
 ## Julia and text parsing
@@ -51,6 +62,11 @@ By default, `.jl` files are parsed as Julia source and other files are parsed as
 
 ```jldoctest concepts
 julia> handles("examples/concepts-notes.txt"; parse_as=:text)
+3 handles
+# examples/concepts-notes.txt:
+  1 - 1: First paragraph.
+  3 - 3: Second paragraph.
+  EOF:
 ```
 
 A cached file has one parse mode at a time. Reloading the same file with a different parse mode invalidates existing handles for that file.
@@ -63,6 +79,7 @@ Use [`is_valid`](@ref) to test whether a handle still refers to a valid block.
 
 ```jldoctest concepts
 julia> is_valid(h)
+true
 ```
 
 Files modified outside CodeEdit.jl are reparsed automatically when a cached timestamp changes. Call [`reindex`](@ref) to update cached handles explicitly.

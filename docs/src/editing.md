@@ -1,3 +1,9 @@
+```@meta
+DocTestSetup = quote
+    include(joinpath($(@__DIR__), "meta_setup.jl"))
+end
+```
+
 # Editing code
 
 Editing in CodeEdit.jl separates description from execution: first construct an edit value, then choose how to apply it.
@@ -37,6 +43,9 @@ The sections below follow that progression.
 A replacement edit changes exactly the block referenced by a handle. This is usually the safest way to update a function, because the planned diff is limited to the selected block.
 
 ```jldoctest editing
+julia> pwd()
+"/Users/rutquist/Documents/Julia/CodeEdit/docs"
+
 julia> h = Handle("examples/ProjectCode.jl", 6)
 # examples/ProjectCode.jl 5 - 7:
 function foo(x)
@@ -53,9 +62,9 @@ Edit modifies examples/ProjectCode.jl:
 >     return x + 2
 
 julia> apply!(repo, edit, "Change foo increment")
-[main 96880f1] Change foo increment
+[main b37882a] Change foo increment
  1 file changed, 1 insertion(+), 1 deletion(-)
-Applied: 1 file changed, commit 96880f1
+Applied: 1 file changed, commit b37882a
 
 ```
 
@@ -83,9 +92,9 @@ Edit modifies examples/ProjectCode.jl:
 >
 
 julia> apply!(repo, edit, "Add scale constant")
-[main 46bd4e8] Add scale constant
+[main 09ac13f] Add scale constant
  1 file changed, 2 insertions(+)
-Applied: 1 file changed, commit 46bd4e8
+Applied: 1 file changed, commit 09ac13f
 
 ```
 
@@ -113,9 +122,9 @@ Edit modifies examples/ProjectCode.jl:
 >
 
 julia> apply!(repo, edit, "Add bar")
-[main b1d84cc] Add bar
+[main 69155ec] Add bar
  1 file changed, 4 insertions(+)
-Applied: 1 file changed, commit b1d84cc
+Applied: 1 file changed, commit 69155ec
 
 ```
 
@@ -139,9 +148,9 @@ Edit modifies examples/ProjectCode.jl:
 ---
 
 julia> apply!(repo, edit, "Remove obsolete function")
-[main f12b975] Remove obsolete function
+[main 8e0993f] Remove obsolete function
  1 file changed, 3 deletions(-)
-Applied: 1 file changed, commit f12b975
+Applied: 1 file changed, commit 8e0993f
 
 ```
 
@@ -163,10 +172,10 @@ Edit creates examples/generated.jl:
 > end
 
 julia> apply!(repo, edit, "Add generated file")
-[main bbb6671] Add generated file
+[main 39f5219] Add generated file
  1 file changed, 3 insertions(+)
  create mode 100644 generated.jl
-Applied: 1 file changed, commit bbb6671
+Applied: 1 file changed, commit 39f5219
 
 ```
 
@@ -175,10 +184,10 @@ julia> edit = MoveFile("examples/generated.jl", "examples/generated-renamed.jl")
 Edit moves examples/generated.jl -> examples/generated-renamed.jl
 
 julia> apply!(repo, edit, "Rename generated file")
-[main 42b6093] Rename generated file
+[main 405aeaf] Rename generated file
  1 file changed, 0 insertions(+), 0 deletions(-)
  rename generated.jl => generated-renamed.jl (100%)
-Applied: 1 file changed, commit 42b6093
+Applied: 1 file changed, commit 405aeaf
 
 ```
 
@@ -187,10 +196,10 @@ julia> edit = DeleteFile("examples/generated-renamed.jl")
 Edit deletes examples/generated-renamed.jl
 
 julia> apply!(repo, edit, "Remove generated file")
-[main ef88bc4] Remove generated file
+[main 8594d0a] Remove generated file
  1 file changed, 3 deletions(-)
  delete mode 100644 generated-renamed.jl
-Applied: 1 file changed, commit ef88bc4
+Applied: 1 file changed, commit 8594d0a
 
 ```
 
@@ -200,7 +209,7 @@ Use [`Combine`](@ref), or the `*` shorthand, when multiple edits are part of one
 
 ```jldoctest editing
 julia> source = Handle("examples/ProjectCode.jl", 10)
-# examples/ProjectCode.jl 11 - 13:
+# /Users/rutquist/Documents/Julia/CodeEdit/docs/examples/ProjectCode.jl 11 - 13:
 function bar(x)
     return foo(x) + SCALE
 end
@@ -229,9 +238,9 @@ Edit modifies examples/notes.txt:
 > end
 
 julia> apply!(repo, edit, "Move helper source to notes")
-[main 85a68c7] Move helper source to notes
+[main 6667766] Move helper source to notes
  2 files changed, 6 insertions(+), 3 deletions(-)
-Applied: 2 files changed, commit 85a68c7
+Applied: 2 files changed, commit 6667766
 
 ```
 
@@ -239,7 +248,7 @@ Equivalent shorthand:
 
 ```jldoctest editing
 julia> h = Handle("examples/ProjectCode.jl", 6)
-# examples/ProjectCode.jl 7 - 9:
+# /Users/rutquist/Documents/Julia/CodeEdit/docs/examples/ProjectCode.jl 7 - 9:
 function foo(x)
     return x + 2
 end
@@ -264,9 +273,9 @@ Edit modifies examples/notes.txt:
 > Added baz to ProjectCode.jl
 
 julia> apply!(repo, edit, "Add baz and update notes")
-[main 2a27115] Add baz and update notes
+[main 03c737d] Add baz and update notes
  2 files changed, 6 insertions(+)
-Applied: 2 files changed, commit 2a27115
+Applied: 2 files changed, commit 03c737d
 
 ```
 

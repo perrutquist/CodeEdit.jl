@@ -1,10 +1,6 @@
 using Documenter
 using CodeEdit
 
-include("setup.jl")
-
-basedir = mktempdir()
-
 makedocs(
     sitename = "CodeEdit.jl",
     modules = [CodeEdit],
@@ -21,12 +17,12 @@ makedocs(
         "API reference" => "api.md",
     ],
     checkdocs = :none,
-    workdir = basedir,
     doctestfilters = [
         r"/[0-9a-zA-Z/]*/examples",
         r"main [0-9a-f]*",
         r"commit [0-9a-f]*",
         ],
+    #doctest = :fix,
 )
 
 function clean_generated_html_paths(builddir::AbstractString, basedir::AbstractString)
@@ -57,7 +53,12 @@ function clean_generated_html_paths(builddir::AbstractString, basedir::AbstractS
     end
 end
 
-clean_generated_html_paths(joinpath(@__DIR__, "build"), basedir)
+clean_generated_html_paths(joinpath(@__DIR__, "build"), pwd())
+
+rm(joinpath(@__DIR__, "examples"), recursive=true)
+for f in ("scratch-note.txt", "scratch-safety.txt", "scratch.txt")
+    rm(joinpath(@__DIR__, f))
+end
 
 if get(ENV, "CI", "false") == "true" && haskey(ENV, "GITHUB_REPOSITORY")
     deploydocs(
