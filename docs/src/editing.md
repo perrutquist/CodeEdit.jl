@@ -10,57 +10,8 @@ Edits are values that subtype [`AbstractEdit`](@ref). Constructing an edit does 
 
 The standard workflow uses [`VersionControl`](@ref) to apply the edit, stage the affected paths, and create a git commit. If `require_view=true`, displaying, printing, or stringifying an edit records the exact plan that was shown. [`apply!`](@ref) replans the edit and refuses to apply it if the current plan differs from the displayed plan.
 
-In REPL examples, omitting the semicolon from the `edit = ...` line displays the edit and marks it as displayed. Calling `display(edit)` has the same effect.
+In doctest examples, omitting the semicolon from the `edit = ...` line displays the edit and marks it as displayed. Calling `display(edit)` has the same effect.
 
-```@meta
-DocTestFilters = [r"/[0-9a-zA-Z/]*/examples", r"main [0-9a-f]*", r"commit [0-9a-f]*"]
-
-DocTestSetup = quote
-    using CodeEdit
-
-    if !@isdefined(created_examples)
-        rm("examples"; recursive=true, force=true)
-        mkpath("examples")
-
-        project_file = "examples/ProjectCode.jl"
-        notes_file = "examples/notes.txt"
-
-        write(project_file, """
-        module ProjectCode
-
-        const DEFAULT_LIMIT = 10
-
-        function foo(x)
-            return x + 1
-        end
-
-        function helper(x)
-            return foo(x) * 2
-        end
-
-        function obsolete()
-            return :remove_me
-        end
-
-        end
-        """)
-
-        write(notes_file, """
-        First note.
-
-        Second note.
-        """)
-
-        run(`git init examples`)
-        run(`git -C examples config user.email docs@example.com`)
-        run(`git -C examples config user.name "CodeEdit Docs"`)
-        run(`git -C examples add .`)
-        run(`git -C examples commit -m "Initial editing examples"`)
-
-        created_examples = true
-    end
-end
-```
 
 ```jldoctest editing
 julia> repo = VersionControl("examples"; require_view=true)

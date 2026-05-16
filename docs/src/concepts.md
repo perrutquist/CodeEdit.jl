@@ -33,45 +33,24 @@ For non-Julia files, blocks are paragraphs separated by blank lines.
 
 A [`Handle`](@ref) points to one parsed block. It is the object passed to search, display, and edit operations.
 
-```@repl concepts
-using CodeEdit
-
-rm("examples"; recursive=true, force=true)
-mkpath("examples")
-
-write("examples/concepts.jl", """
-function foo(x)
-    return x + 1
-end
-
-function bar(x)
-    return foo(x)
-end
-""")
-
-h = Handle("examples/concepts.jl", 2)
+```jldoctest concepts
+julia> h = Handle("examples/concepts.jl", 2)
 ```
 
 Because line 2 is inside `foo`, the handle refers to the whole `foo` block.
 
 Handles are interned for a parsed file: requesting the same block again returns the same handle object.
 
-```@repl concepts
-h === Handle("examples/concepts.jl", 1)
+```jldoctest concepts
+julia> h === Handle("examples/concepts.jl", 1)
 ```
 
 ## Julia and text parsing
 
 By default, `.jl` files are parsed as Julia source and other files are parsed as text. Use `parse_as=:julia` or `parse_as=:text` to override this behavior when constructing or collecting handles.
 
-```@repl concepts
-write("examples/notes.txt", """
-First paragraph.
-
-Second paragraph.
-""")
-
-handles("examples/notes.txt"; parse_as=:text)
+```jldoctest concepts
+julia> handles("examples/concepts-notes.txt"; parse_as=:text)
 ```
 
 A cached file has one parse mode at a time. Reloading the same file with a different parse mode invalidates existing handles for that file.
@@ -82,8 +61,8 @@ Edits update handles when their referenced block can still be matched after the 
 
 Use [`is_valid`](@ref) to test whether a handle still refers to a valid block.
 
-```@repl concepts
-is_valid(h)
+```jldoctest concepts
+julia> is_valid(h)
 ```
 
 Files modified outside CodeEdit.jl are reparsed automatically when a cached timestamp changes. Call [`reindex`](@ref) to update cached handles explicitly.

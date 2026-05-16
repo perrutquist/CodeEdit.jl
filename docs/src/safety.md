@@ -8,9 +8,14 @@ Displaying an edit shows the planned change. Applying the edit replans it, check
 
 An edit such as [`Replace`](@ref), [`InsertBefore`](@ref), or [`Delete`](@ref) describes an intended change. It can be inspected before it is applied:
 
-```julia
-edit = Replace(handle, new_source)
-display(edit)
+```jldoctest safety
+julia> handle = Handle("examples/safety.jl", 1);
+
+julia> new_source = replace(string(handle), "1" => "2");
+
+julia> edit = Replace(handle, new_source);
+
+julia> display(edit)
 ```
 
 When `require_view=true`, CodeEdit.jl stores the exact plan that was displayed. Later, [`apply!`](@ref) plans the edit again and refuses to apply it if the current plan differs from the displayed plan.
@@ -21,9 +26,14 @@ This protects against applying a stale edit after the surrounding file has chang
 
 The standard workflow uses [`VersionControl`](@ref):
 
-```julia
-repo = VersionControl("."; require_view=true)
-apply!(repo, edit, "Describe the change")
+```jldoctest safety
+julia> repo = VersionControl("examples"; require_view=true);
+
+julia> handle = Handle("examples/safety.jl", 1);
+
+julia> edit = Replace(handle, replace(string(handle), "1" => "2"))
+
+julia> apply!(repo, edit, "Update safety example")
 ```
 
 A git-backed apply writes the edited files, stages the affected paths, and creates a commit. By default, CodeEdit.jl expects edited files to be tracked by git and rejects creation outside the worktree.
@@ -43,8 +53,14 @@ This supports two common workflows:
 
 For scratch files, generated files, or temporary changes, use [`NoVersionControl`](@ref):
 
-```julia
-apply!(NoVersionControl(require_view=true), edit)
+```jldoctest safety
+julia> write("scratch-safety.txt", "temporary = false\n");
+
+julia> handle = Handle("scratch-safety.txt", 1; parse_as=:text);
+
+julia> edit = Replace(handle, "temporary = true\n")
+
+julia> apply!(NoVersionControl(require_view=true), edit)
 ```
 
 This mode is explicit by design: the call site states that the edit will not be recorded as a git commit.

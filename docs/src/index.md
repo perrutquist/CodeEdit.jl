@@ -29,30 +29,8 @@ The usual workflow is explicit at each step:
 Handle -> Edit -> Displayed plan -> Apply -> Commit
 ```
 
-The following example creates a small git repository, changes one function, applies the edit, and reads the file back from disk.
+The following example uses the shared documentation repository, changes one function, applies the edit, and reads the file back from disk.
 
-```@meta
-DocTestFilters = [r"/[0-9a-zA-Z/]*/examples", r"main [0-9a-f]*", r"commit [0-9a-f]*"]
-
-DocTestSetup = quote
-    using CodeEdit
-
-    rm("examples"; recursive=true, force=true)
-    mkpath("examples")
-
-    write("examples/foo.jl", """
-    function foo(x)
-        x + 1
-    end
-    """)
-
-    run(`git init examples`)
-    run(`git -C examples config user.email docs@example.com`)
-    run(`git -C examples config user.name "CodeEdit Docs"`)
-    run(`git -C examples add .`)
-    run(`git -C examples commit -m "Initial example files"`)
-end
-```
 
 ```jldoctest index
 julia> repo = VersionControl("examples"; require_view=true)
