@@ -12,48 +12,50 @@ The standard workflow uses [`VersionControl`](@ref) to apply the edit, stage the
 
 In REPL examples, omitting the semicolon from the `edit = ...` line displays the edit and marks it as displayed. Calling `display(edit)` has the same effect.
 
-```@setup editing
-using CodeEdit
+```@meta
+DocTestFilters = [r"/[0-9a-zA-Z/]*/examples", r"main [0-9a-f]*", r"commit [0-9a-f]*"]
 
-rm("examples"; recursive=true, force=true)
-mkpath("examples")
+DocTestSetup = quote
+    using CodeEdit
 
-project_file = "examples/ProjectCode.jl"
-notes_file = "examples/notes.txt"
+    rm("examples"; recursive=true, force=true)
+    mkpath("examples")
 
-write(project_file, """
-module ProjectCode
+    project_file = "examples/ProjectCode.jl"
+    notes_file = "examples/notes.txt"
 
-const DEFAULT_LIMIT = 10
+    write(project_file, """
+    module ProjectCode
 
-function foo(x)
-    return x + 1
+    const DEFAULT_LIMIT = 10
+
+    function foo(x)
+        return x + 1
+    end
+
+    function helper(x)
+        return foo(x) * 2
+    end
+
+    function obsolete()
+        return :remove_me
+    end
+
+    end
+    """)
+
+    write(notes_file, """
+    First note.
+
+    Second note.
+    """)
+
+    run(`git init examples`)
+    run(`git -C examples config user.email docs@example.com`)
+    run(`git -C examples config user.name "CodeEdit Docs"`)
+    run(`git -C examples add .`)
+    run(`git -C examples commit -m "Initial editing examples"`)
 end
-
-function helper(x)
-    return foo(x) * 2
-end
-
-function obsolete()
-    return :remove_me
-end
-
-end
-""")
-
-write(notes_file, """
-First note.
-
-Second note.
-""")
-
-run(`git init examples`)
-run(`git -C examples config user.email docs@example.com`)
-run(`git -C examples config user.name "CodeEdit Docs"`)
-run(`git -C examples add .`)
-run(`git -C examples commit -m "Initial editing examples"`)
-
-sleep(1.1)
 ```
 
 ```@repl editing

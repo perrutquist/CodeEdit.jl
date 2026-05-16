@@ -31,34 +31,57 @@ Handle -> Edit -> Displayed plan -> Apply -> Commit
 
 The following example creates a small git repository, changes one function, applies the edit, and reads the file back from disk.
 
-```@setup index
-using CodeEdit
+```@meta
+DocTestFilters = [r"/[0-9a-zA-Z/]*/examples", r"main [0-9a-f]*", r"commit [0-9a-f]*"]
 
-rm("examples"; recursive=true, force=true)
-mkpath("examples")
+DocTestSetup = quote
+    using CodeEdit
 
-write("examples/foo.jl", """
+    rm("examples"; recursive=true, force=true)
+    mkpath("examples")
+
+    write("examples/foo.jl", """
+    function foo(x)
+        x + 1
+    end
+    """)
+
+    run(`git init examples`)
+    run(`git -C examples config user.email docs@example.com`)
+    run(`git -C examples config user.name "CodeEdit Docs"`)
+    run(`git -C examples add .`)
+    run(`git -C examples commit -m "Initial example files"`)
+end
+```
+
+```jldoctest index
+julia> repo = VersionControl("examples"; require_view=true)
+GitVersionControl("examples"; require_view=true)
+
+julia> h = Handle("examples/foo.jl", 2)
+# examples/foo.jl 1 - 3:
 function foo(x)
     x + 1
 end
-""")
 
-run(`git init examples`)
-run(`git -C examples config user.email docs@example.com`)
-run(`git -C examples config user.name "CodeEdit Docs"`)
-run(`git -C examples add .`)
-run(`git -C examples commit -m "Initial example files"`)
+julia> replacement = replace(string(h), "x + 1" => "x + 2");
 
-sleep(1.1)
-```
+julia> edit = Replace(h, replacement)
+Edit modifies examples/foo.jl:
+2c2
+<     x + 1
+---
+>     x + 2
 
-```@repl index
-repo = VersionControl("examples"; require_view=true)
-h = Handle("examples/foo.jl", 2)
-replacement = replace(string(h), "x + 1" => "x + 2");
-edit = Replace(h, replacement)
-apply!(repo, edit, "Change foo increment")
-read("examples/foo.jl", String)
+julia> apply!(repo, edit, "Change foo increment")
+[main f30e117] Change foo increment
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+Applied: 1 file changed, commit f30e117
+
+julia> println(read("examples/foo.jl", String));
+function foo(x)
+    x + 2
+end
 ```
 
 If Revise.jl is loaded, CodeEdit.jl asks Revise to revise after a successful edit, so changed method definitions usually take effect immediately.

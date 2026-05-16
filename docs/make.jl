@@ -5,14 +5,6 @@ DocMeta.setdocmeta!(CodeEdit, :DocTestSetup, :(using CodeEdit); recursive=true)
 
 basedir = mktempdir()
 
-# In the examples, let the display_path be relative to the workdir.
-# This is needed because display is rendered from the wrong directory during docs build.
-function CodeEdit.display_path(path::AbstractString)
-    d, f = splitdir(path)
-    isempty(d) && return f
-    return joinpath(relpath(realpath(d), realpath(basedir)), f)
-end
-
 makedocs(
     sitename = "CodeEdit.jl",
     modules = [CodeEdit],
@@ -29,8 +21,38 @@ makedocs(
         "API reference" => "api.md",
     ],
     checkdocs = :none,
-    workdir = basedir
+    workdir = basedir,
 )
+
+function clean_generated_html_paths(builddir::AbstractString, basedir::AbstractString)
+    prefixes = [basedir]
+    real_basedir = realpath(basedir)
+
+    if real_basedir != basedir
+        push!(prefixes, real_basedir)
+    end
+    sort!(prefixes, by=length, rev=true)
+
+    for (root, _, files) in walkdir(builddir)
+        for file in files
+            endswith(file, ".html") || continue
+
+            path = joinpath(root, file)
+            contents = read(path, String)
+            cleaned = contents
+
+            for prefix in prefixes
+                cleaned = replace(cleaned, prefix * "/" => "")
+            end
+
+            if cleaned != contents
+                write(path, cleaned)
+            end
+        end
+    end
+end
+
+clean_generated_html_paths(joinpath(@__DIR__, "build"), basedir)
 
 if get(ENV, "CI", "false") == "true" && haskey(ENV, "GITHUB_REPOSITORY")
     deploydocs(
