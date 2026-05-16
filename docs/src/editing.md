@@ -43,9 +43,6 @@ The sections below follow that progression.
 A replacement edit changes exactly the block referenced by a handle. This is usually the safest way to update a function, because the planned diff is limited to the selected block.
 
 ```jldoctest editing
-julia> pwd()
-"/Users/rutquist/Documents/Julia/CodeEdit/docs"
-
 julia> h = Handle("examples/ProjectCode.jl", 6)
 # examples/ProjectCode.jl 5 - 7:
 function foo(x)

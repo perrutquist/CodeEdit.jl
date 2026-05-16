@@ -99,7 +99,7 @@ if !@isdefined(_setup_done)
         const SAFETY_VALUE = 1
         """)
 
-        run_quiet(`git init examples`)
+        run_quiet(`git init -b main examples`)
         run_quiet(`git -C examples config user.email docs@example.com`)
         run_quiet(`git -C examples config user.name "CodeEdit Docs"`)
         run_quiet(`git -C examples add .`)
