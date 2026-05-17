@@ -189,7 +189,7 @@ Use [`Combine`](@ref), or the `*` shorthand, when multiple edits are part of one
 
 ```jldoctest editing
 julia> source = Handle("examples/ProjectCode.jl", 10)
-# /Users/rutquist/Documents/Julia/CodeEdit/docs/examples/ProjectCode.jl 11 - 13:
+# examples/ProjectCode.jl 11 - 13:
 function bar(x)
     return foo(x) + SCALE
 end
@@ -226,7 +226,7 @@ Equivalent shorthand:
 
 ```jldoctest editing
 julia> h = Handle("examples/ProjectCode.jl", 6)
-# /Users/rutquist/Documents/Julia/CodeEdit/docs/examples/ProjectCode.jl 7 - 9:
+# examples/ProjectCode.jl 7 - 9:
 function foo(x)
     return x + 2
 end

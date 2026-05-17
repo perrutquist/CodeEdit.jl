@@ -133,11 +133,11 @@ julia> hs = handles(pathof(CodeEdit); includes = true);
 
 julia> search(hs, "search")
 15 handles
-# /Users/rutquist/Documents/Julia/CodeEdit/src/CodeEdit.jl:
+# src/CodeEdit.jl:
   22 - 22: include("search.jl")
   31 - 31: export search
 
-# /Users/rutquist/Documents/Julia/CodeEdit/src/search.jl:
+# src/search.jl:
    74 -  88: "search(handle_set, needle::AbstractStri…
    90 - 104: "search(handle_set, needle::Regex) Searc…
   106 - 121: "search(handle_set, trace) Search an exi…
@@ -151,7 +151,7 @@ julia> search(hs, "search")
   198 - 205: "search(repo::VersionControl, needle::Re…
   207 - 215: "search(repo::VersionControl, trace) Sea…
 
-# /Users/rutquist/Documents/Julia/CodeEdit/src/spans.jl:
+# src/spans.jl:
   116 - 134: "Return the line range touched by `span`…
 ```
 

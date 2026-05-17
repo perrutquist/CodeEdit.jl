@@ -57,7 +57,7 @@ end
 clean_generated_html_paths(joinpath(@__DIR__, "build"), pwd())
 
 # Uncomment this line to cleanup paths in the jldoctest generated markdown.
-clean_generated_html_paths(joinpath(@__DIR__, "src"), pwd())
+# clean_generated_html_paths(joinpath(@__DIR__, "src"), pwd())
 
 rm(joinpath(@__DIR__, "examples"), recursive=true)
 for f in ("scratch-note.txt", "scratch-safety.txt", "scratch.txt")
