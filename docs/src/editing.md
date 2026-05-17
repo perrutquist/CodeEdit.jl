@@ -63,7 +63,7 @@ Edit modifies examples/DemoPackage.jl:
 >     return x + 2
 
 julia> apply!(repo, edit, "Change increment")
-Applied: 1 file changed, commit 0000000
+Applied: 1 file changed, commit 67decaf
 
 ```
 
@@ -91,7 +91,7 @@ Edit modifies examples/DemoPackage.jl:
 >
 
 julia> apply!(repo, edit, "Add scale constant")
-Applied: 1 file changed, commit 0000000
+Applied: 1 file changed, commit 8c0ffee
 
 ```
 
@@ -119,7 +119,7 @@ Edit modifies examples/DemoPackage.jl:
 >
 
 julia> apply!(repo, edit, "Add scaled_increment")
-Applied: 1 file changed, commit 0000000
+Applied: 1 file changed, commit c0ffeed
 
 ```
 
@@ -145,7 +145,7 @@ Edit modifies examples/DemoPackage.jl:
 ---
 
 julia> apply!(repo, edit, "Remove obsolete function")
-Applied: 1 file changed, commit 0000000
+Applied: 1 file changed, commit 123cafe
 
 ```
 
@@ -167,7 +167,7 @@ Edit creates examples/generated.jl:
 > end
 
 julia> apply!(repo, edit, "Add generated file")
-Applied: 1 file changed, commit 0000000
+Applied: 1 file changed, commit 1bada55
 
 ```
 
@@ -176,7 +176,7 @@ julia> edit = MoveFile("examples/generated.jl", "examples/generated-renamed.jl")
 Edit moves examples/generated.jl -> examples/generated-renamed.jl
 
 julia> apply!(repo, edit, "Rename generated file")
-Applied: 1 file changed, commit 0000000
+Applied: 1 file changed, commit 2facade
 
 ```
 
@@ -185,7 +185,7 @@ julia> edit = DeleteFile("examples/generated-renamed.jl")
 Edit deletes examples/generated-renamed.jl
 
 julia> apply!(repo, edit, "Remove generated file")
-Applied: 1 file changed, commit 0000000
+Applied: 1 file changed, commit deada55
 
 ```
 
@@ -224,7 +224,7 @@ Edit modifies examples/notes.txt:
 > end
 
 julia> apply!(repo, edit, "Move selected source to notes")
-Applied: 2 files changed, commit 0000000
+Applied: 2 files changed, commit 12feed3
 
 ```
 

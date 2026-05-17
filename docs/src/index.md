@@ -61,7 +61,7 @@ Edit modifies examples/DemoPackage.jl:
 >     return x + 2
 
 julia> apply!(repo, edit, "Change increment")
-Applied: 1 file changed, commit 0000000
+Applied: 1 file changed, commit 4c0ffee
 
 julia> println(string(Handle("examples/DemoPackage.jl", 14)));
 function increment(x)
