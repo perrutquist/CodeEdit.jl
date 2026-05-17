@@ -30,24 +30,16 @@ makedocs(
 function clean_generated_html_paths(builddir::AbstractString, basedir::AbstractString)
     prefixes = String[]
     home = get(ENV, "HOME", "")
-
-    function add_prefix!(prefix::AbstractString)
-        push!(prefixes, String(prefix))
-
-        if !isempty(home)
-            if prefix == home
-                push!(prefixes, "~")
-            elseif startswith(prefix, home * "/")
-                push!(prefixes, "~/" * relpath(prefix, home))
-            end
-        end
-    end
-
-    add_prefix!(basedir)
     real_basedir = realpath(basedir)
 
+    push!(prefixes, basedir)
+
     if real_basedir != basedir
-        add_prefix!(real_basedir)
+        push(prefixes, real_basedir)
+    end
+
+    if !isempty(home) && startswith(basedir, home)
+        push!(prefixes, "~/" * relpath(basedir, home))
     end
 
     unique!(prefixes)
