@@ -1,5 +1,7 @@
 const _refreshing_file_keys = Set{FileKey}()
 
+const invalid_handle = Handle(0)
+
 """
 Refresh a handle's backing cache if the file changed externally.
 """
@@ -57,8 +59,6 @@ end
 Return whether a handle currently refers to a valid block, or whether an edit
 can be applied without validation errors.
 """
-function is_valid end
-
 function is_valid(handle::Handle)
     record = refresh_handle!(handle)
     return record !== nothing && record.valid
@@ -232,6 +232,12 @@ function Handle(path::AbstractString, line::Integer, pos::Integer=1; parse_as::S
     return block_handle(cache, block_index_at_offset(cache, offset))
 end
 
+function Handle(sf::StackTraces.StackFrame)
+    file = Base.find_source_file(string(sf.file))
+    isnothing(file) && return invalid_handle
+    Handle(file, sf.line)
+end
+
 """
 Return the EOF handle for a file.
 """
@@ -314,3 +320,9 @@ end
 function handles(root::AbstractString, pattern::AbstractString; includes::Bool=false, parse_as::Symbol=:auto)
     return handles(glob(pattern, root); includes=includes, parse_as=parse_as)
 end
+
+function handles(sf::Vector{StackTraces.StackFrame})
+    Set(Handle(f) for f in sf)
+end
+
+handles(trace::Vector{Union{Ptr{Nothing}, Base.InterpreterIP}}) = handles(stacktrace(trace))

@@ -48,45 +48,33 @@ Capture the backtrace in a variable:
 julia> trace = try
            outer(1)
        catch
-           catch_backtrace()
+           stacktrace(catch_backtrace())
        end;
 ```
 
-Collect source handles and search for frames from the captured stacktrace:
+## Inspecting the most relevant blocks
+
+Let's display the intersection of (blocks in our code) with (blocks in the trace), in the order that they appear in the trace.
 
 ```jldoctest searching_errors
 julia> hs = handles("examples", "*.jl");
 
-julia> matches = search(hs, trace)
-2 handles
-# examples/error-example.jl:
-  1 - 3: function inner(x); error("bad input: $x"…
-  5 - 7: function outer(x); return inner(x + 1); …
-```
-
-The result contains handles for blocks whose source locations occur in the stacktrace.
-
-
-## Inspecting the most relevant block
-
-If the result contains only a few matches, display each block:
-
-```jldoctest searching_errors
-julia> for h in matches
-          println(h)
+julia> for h in Handle.(trace)
+          if h in hs
+              println(h)
+          end
        end
-# examples/error-example.jl 5 - 7:
-function outer(x)
-    return inner(x + 1)
-end
-
 # examples/error-example.jl 1 - 3:
 function inner(x)
     error("bad input: $x")
 end
 
-```
+# examples/error-example.jl 5 - 7:
+function outer(x)
+    return inner(x + 1)
+end
 
+```
 A displayed handle includes the file name and line range, followed by the source block.
 
 ## Editing after locating the error
@@ -96,7 +84,11 @@ After finding the relevant block, construct a replacement and apply it through g
 ```jldoctest searching_errors
 julia> repo = VersionControl("examples"; require_view=true);
 
-julia> h = only(search(matches, "error("));
+julia> h = only(search(intersect(hs, Handle.(trace)), "error("))
+# examples/error-example.jl 1 - 3:
+function inner(x)
+    error("bad input: $x")
+end
 
 julia> fixed = replace(string(h), "error(\"bad input: \$x\")" => "throw(ArgumentError(\"bad input: \$x\"))");
 
