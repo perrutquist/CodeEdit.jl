@@ -18,8 +18,7 @@ makedocs(
     ],
     checkdocs = :none,
     doctestfilters = [
-        r"[0-9a-zA-Z\/\.]*examples",
-        r"[0-9a-zA-Z\/\.]*src\/",
+        r"\~?[0-9a-zA-Z\/\.]*(src|docs|examples)\/",
         r"main [0-9a-f]*",
         r"commit [0-9a-f]*",
         ],
