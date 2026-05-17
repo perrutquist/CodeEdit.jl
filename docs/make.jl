@@ -23,7 +23,7 @@ makedocs(
         r"main [0-9a-f]*",
         r"commit [0-9a-f]*",
         ],
-    #doctest = :fix, # Uncomment this line and run once to update jldoctest outputs.
+    # doctest = :fix, # Uncomment this line and run once to update jldoctest outputs.
                      # It may be necessary to also cleanup paths, see below.
 )
 
@@ -34,6 +34,8 @@ function clean_generated_html_paths(builddir::AbstractString, basedir::AbstractS
     if real_basedir != basedir
         push!(prefixes, real_basedir)
     end
+    # TODO: If basedir starts with ENV["HOME"] then we should also have a prefix that starts with "~/"
+
     sort!(prefixes, by=length, rev=true)
 
     for (root, _, files) in walkdir(builddir)
@@ -61,7 +63,7 @@ clean_generated_html_paths(joinpath(@__DIR__, "build"), pwd())
 # clean_generated_html_paths(joinpath(@__DIR__, "src"), pwd())
 
 rm(joinpath(@__DIR__, "examples"), recursive=true)
-for f in ("scratch-note.txt", "scratch-safety.txt", "scratch.txt")
+for f in ("scratch.jl", "scratch.txt", "scratch-note.txt")
     rm(joinpath(@__DIR__, f))
 end
 

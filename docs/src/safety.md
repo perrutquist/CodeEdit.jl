@@ -55,7 +55,20 @@ Edit modifies scratch.txt:
 julia> write("scratch.txt", "status = changed elsewhere\n");
 
 julia> apply!(NoVersionControl(require_view=true), edit)
-ERROR: Refusing to apply edit: current plan differs from displayed plan
+ERROR: displayed edit was invalid
+Stacktrace:
+ [1] error(s::String)
+   @ Base ./error.jl:44
+ [2] #compile_checked_plan#39
+   @ ~/Documents/Julia/CodeEdit/src/apply.jl:472 [inlined]
+ [3] compile_checked_plan
+   @ ~/Documents/Julia/CodeEdit/src/apply.jl:465 [inlined]
+ [4] apply!(vc::NoVersionControl{@NamedTuple{require_view::Bool}}, edit::Replace; kwargs::@Kwargs{})
+   @ CodeEdit ~/Documents/Julia/CodeEdit/src/apply.jl:546
+ [5] apply!(vc::NoVersionControl{@NamedTuple{require_view::Bool}}, edit::Replace)
+   @ CodeEdit ~/Documents/Julia/CodeEdit/src/apply.jl:540
+ [6] top-level scope
+   @ none:1
 ```
 
 Display the edit again to review the current plan before applying it.
@@ -105,7 +118,7 @@ julia> write("scratch.txt", "temporary = false\n");
 julia> handle = Handle("scratch.txt", 1; parse_as=:text);
 
 julia> edit = Replace(handle, "temporary = true\n")
-Edit modifies scratch-safety.txt:
+Edit modifies scratch.txt:
 1c1
 < temporary = false
 ---
@@ -134,9 +147,24 @@ Edit modifies scratch.jl:
 < end
 ---
 > function broken(
+Validation errors:
+- ArgumentError: Julia file could not be parsed: /Users/rutquist/Documents/Julia/CodeEdit/docs/scratch.jl
 
 julia> apply!(NoVersionControl(require_view=true), edit)
-ERROR: Refusing to apply edit: resulting Julia source is invalid
+ERROR: displayed edit was invalid
+Stacktrace:
+ [1] error(s::String)
+   @ Base ./error.jl:44
+ [2] #compile_checked_plan#39
+   @ ~/Documents/Julia/CodeEdit/src/apply.jl:469 [inlined]
+ [3] compile_checked_plan
+   @ ~/Documents/Julia/CodeEdit/src/apply.jl:465 [inlined]
+ [4] apply!(vc::NoVersionControl{@NamedTuple{require_view::Bool}}, edit::Replace; kwargs::@Kwargs{})
+   @ CodeEdit ~/Documents/Julia/CodeEdit/src/apply.jl:546
+ [5] apply!(vc::NoVersionControl{@NamedTuple{require_view::Bool}}, edit::Replace)
+   @ CodeEdit ~/Documents/Julia/CodeEdit/src/apply.jl:540
+ [6] top-level scope
+   @ none:1
 ```
 
 Combined edits are planned and validated as a unit, so intermediate states may be invalid as long as the final result is valid.

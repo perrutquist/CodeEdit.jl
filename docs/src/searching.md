@@ -119,4 +119,4 @@ Recursive include traversal uses cycle detection, so include loops are visited a
 
 ## Result order
 
-Search results are handle sets. Their displayed summary is grouped by file, but iteration order should not be used as a relevance signal. If order matters, sort results explicitly using [`filepath`](@ref) and [`lines`](@ref), or select a single result with [`only`](@ref) when you expect exactly one match.
+Search results are handle sets. Their displayed summary is grouped by file, but iteration order should not be used as a relevance signal. If order matters, sort results explicitly using [`filepath`](@ref) and [`lines`](@ref), or select a single result with `only` when you expect exactly one match.

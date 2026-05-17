@@ -111,7 +111,7 @@ julia> edit = InsertAfter(h, raw"""
        end
        """)
 Edit modifies examples/DemoPackage.jl:
-17c18,21
+18c19,22
 ---
 > function scaled_increment(x)
 >     return increment(x) * SCALE
@@ -244,7 +244,7 @@ julia> edit = InsertAfter(h, raw"""
        end
        """) * InsertBefore(eof_handle("examples/notes.txt"), "\nAdded bounded_increment to DemoPackage.jl\n")
 Edit modifies examples/DemoPackage.jl:
-17c18,21
+18c19,22
 ---
 > function bounded_increment(x)
 >     return min(increment(x), DEFAULT_LIMIT)
@@ -255,9 +255,6 @@ Edit modifies examples/notes.txt:
 ---
 >
 > Added bounded_increment to DemoPackage.jl
-
-julia> apply!(repo, edit, "Add bounded_increment and update notes")
-Applied: 2 files changed, commit 0000000
 
 ```
 
