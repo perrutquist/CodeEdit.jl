@@ -1,6 +1,10 @@
 ```@meta
 DocTestSetup = quote
     include(joinpath($(@__DIR__), "meta_setup.jl"))
+    if !@isdefined(_searching_errors_examples_ready)
+        ensure_examples!()
+        _searching_errors_examples_ready = true
+    end
     include("examples/error-example.jl")
 end
 ```
@@ -24,24 +28,26 @@ function outer(x)
 end
 ```
 
-Capture the stacktrace:
+The thrown error contains stack frames for both functions:
 
-```jldoctest searching_errors
+```julia-repl
 julia> outer(1)
 ERROR: bad input: 2
 Stacktrace:
  [1] error(s::String)
    @ Base ./error.jl:44
  [2] inner(x::Int64)
-   @ Main ~/Documents/Julia/CodeEdit/docs/examples/error-example.jl:2
+   @ Main .../docs/examples/error-example.jl:2
  [3] outer(x::Int64)
-   @ Main ~/Documents/Julia/CodeEdit/docs/examples/error-example.jl:6
- [4] top-level scope
-   @ none:1
+   @ Main .../docs/examples/error-example.jl:6
+```
 
+Capture the backtrace in a variable:
+
+```jldoctest searching_errors
 julia> trace = try
            outer(1)
-       catch caught
+       catch
            catch_backtrace()
        end;
 ```
@@ -60,23 +66,6 @@ julia> matches = search(hs, trace)
 
 The result contains handles for blocks whose source locations occur in the stacktrace.
 
-## At the REPL
-
-In a REPL session, capture the thrown stacktrace in a variable such as `err` and search it in the same way:
-
-```jldoctest searching_errors
-julia> err = try
-           outer(1)
-       catch caught
-           catch_backtrace()
-       end;
-
-julia> matches = search(hs, err)
-2 handles
-# examples/error-example.jl:
-  1 - 3: function inner(x); error("bad input: $x"…
-  5 - 7: function outer(x); return inner(x + 1); …
-```
 
 ## Inspecting the most relevant block
 
@@ -124,35 +113,4 @@ Applied: 1 file changed, commit 751de5e
 
 After a successful edit, existing handles are updated or invalidated as needed. If Revise.jl is loaded, CodeEdit.jl asks Revise to revise loaded definitions.
 
-## Searching included files
-
-For a package entry point that uses `include`, start from that file and follow includes recursively:
-
-```jldoctest searching_errors
-julia> hs = handles(pathof(CodeEdit); includes = true);
-
-julia> search(hs, "search")
-15 handles
-# src/CodeEdit.jl:
-  22 - 22: include("search.jl")
-  31 - 31: export search
-
-# src/search.jl:
-   74 -  88: "search(handle_set, needle::AbstractStri…
-   90 - 104: "search(handle_set, needle::Regex) Searc…
-  106 - 121: "search(handle_set, trace) Search an exi…
-  123 - 130: "search(path::AbstractString, needle::Ab…
-  132 - 139: "search(path::AbstractString, needle::Re…
-  141 - 148: "search(paths::AbstractVector{<:Abstract…
-  150 - 157: "search(paths::AbstractVector{<:Abstract…
-  159 - 172: "search(root::AbstractString, pattern::A…
-  174 - 187: "search(root::AbstractString, pattern::A…
-  189 - 196: "search(repo::VersionControl, needle::Ab…
-  198 - 205: "search(repo::VersionControl, needle::Re…
-  207 - 215: "search(repo::VersionControl, trace) Sea…
-
-# src/spans.jl:
-  116 - 134: "Return the line range touched by `span`…
-```
-
-Recursive include traversal uses cycle detection, so include loops are visited at most once.
+For ordinary string, regex, glob, and recursive include searches, see [Searching source](searching.md).

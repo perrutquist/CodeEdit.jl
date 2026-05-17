@@ -1,6 +1,10 @@
 ```@meta
 DocTestSetup = quote
     include(joinpath($(@__DIR__), "meta_setup.jl"))
+    if !@isdefined(_safety_examples_ready)
+        ensure_examples!()
+        _safety_examples_ready = true
+    end
 end
 ```
 
@@ -15,24 +19,46 @@ Displaying an edit shows the planned change. Applying the edit replans it, check
 An edit such as [`Replace`](@ref), [`InsertBefore`](@ref), or [`Delete`](@ref) describes an intended change. It can be inspected before it is applied:
 
 ```jldoctest safety
-julia> handle = Handle("examples/safety.jl", 1)
-# examples/safety.jl 1 - 1:
-const SAFETY_VALUE = 1
+julia> handle = Handle("examples/DemoPackage.jl", 5)
+# examples/DemoPackage.jl 5 - 5:
+const DEFAULT_LIMIT = 10
 
-julia> new_source = replace(string(handle), "1" => "2")
-"const SAFETY_VALUE = 2\n"
+julia> new_source = replace(string(handle), "10" => "20")
+"const DEFAULT_LIMIT = 20\n"
 
 julia> edit = Replace(handle, new_source)
-Edit modifies examples/safety.jl:
-1c1
-< const SAFETY_VALUE = 1
+Edit modifies examples/DemoPackage.jl:
+5c5
+< const DEFAULT_LIMIT = 10
 ---
-> const SAFETY_VALUE = 2
+> const DEFAULT_LIMIT = 20
 ```
 
 When `require_view=true`, CodeEdit.jl stores the exact plan that was displayed. Later, [`apply!`](@ref) plans the edit again and refuses to apply it if the current plan differs from the displayed plan.
 
 This protects against applying a stale edit after the surrounding file has changed.
+
+For example, this edit is displayed against the original file, but the file is changed before `apply!` runs:
+
+```jldoctest safety
+julia> write("scratch.txt", "status = old\n");
+
+julia> handle = Handle("scratch.txt", 1; parse_as=:text);
+
+julia> edit = Replace(handle, "status = new\n")
+Edit modifies scratch.txt:
+1c1
+< status = old
+---
+> status = new
+
+julia> write("scratch.txt", "status = changed elsewhere\n");
+
+julia> apply!(NoVersionControl(require_view=true), edit)
+ERROR: Refusing to apply edit: current plan differs from displayed plan
+```
+
+Display the edit again to review the current plan before applying it.
 
 ## Git-backed editing
 
@@ -41,17 +67,17 @@ The standard workflow uses [`VersionControl`](@ref):
 ```jldoctest safety
 julia> repo = VersionControl("examples"; require_view=true);
 
-julia> handle = Handle("examples/safety.jl", 1);
+julia> handle = Handle("examples/DemoPackage.jl", 5);
 
-julia> edit = Replace(handle, replace(string(handle), "1" => "2"))
-Edit modifies examples/safety.jl:
-1c1
-< const SAFETY_VALUE = 1
+julia> edit = Replace(handle, replace(string(handle), "10" => "20"))
+Edit modifies examples/DemoPackage.jl:
+5c5
+< const DEFAULT_LIMIT = 10
 ---
-> const SAFETY_VALUE = 2
+> const DEFAULT_LIMIT = 20
 
-julia> apply!(repo, edit, "Update safety example")
-Applied: 1 file changed, commit fb81aff
+julia> apply!(repo, edit, "Update default limit")
+Applied: 1 file changed, commit 0000000
 ```
 
 A git-backed apply writes the edited files, stages the affected paths, and creates a commit. By default, CodeEdit.jl expects edited files to be tracked by git and rejects creation outside the worktree.
@@ -60,21 +86,23 @@ Git is the recommended undo and recovery mechanism. CodeEdit.jl does not provide
 
 ## Dirty files
 
-CodeEdit.jl can reject edits when relevant tracked files are dirty. It can also make a precommit before formatting or applying the edit when `precommit_message` is supplied.
+CodeEdit.jl can reject edits when relevant tracked files are dirty. This prevents an edit from accidentally mixing with uncommitted changes in the same files.
 
-This supports two common workflows:
+If you deliberately want to checkpoint existing dirty work first, supply `precommit_message`. CodeEdit.jl can then commit the existing changes before formatting or applying the new edit. This supports two workflows:
 
-- keep the worktree clean before each edit;
-- deliberately checkpoint existing dirty work before CodeEdit.jl changes anything.
+- keep the relevant files clean before each edit;
+- explicitly checkpoint dirty work before CodeEdit.jl changes anything.
+
+The important rule is to make the state of the worktree intentional before applying an edit. Do not rely on CodeEdit.jl as an undo stack; use git history for review and recovery.
 
 ## Applying without version control
 
 For scratch files, generated files, or temporary changes, use [`NoVersionControl`](@ref):
 
 ```jldoctest safety
-julia> write("scratch-safety.txt", "temporary = false\n");
+julia> write("scratch.txt", "temporary = false\n");
 
-julia> handle = Handle("scratch-safety.txt", 1; parse_as=:text);
+julia> handle = Handle("scratch.txt", 1; parse_as=:text);
 
 julia> edit = Replace(handle, "temporary = true\n")
 Edit modifies scratch-safety.txt:
@@ -91,7 +119,25 @@ This mode is explicit by design: the call site states that the edit will not be 
 
 ## Validation
 
-Julia files are reparsed before edits are applied. If the final result would introduce syntax errors, the edit is rejected.
+Julia files are reparsed before edits are applied. If the final result would introduce syntax errors, the edit is rejected before the invalid source is written:
+
+```jldoctest safety
+julia> write("scratch.jl", "function ok()\n    return 1\nend\n");
+
+julia> handle = Handle("scratch.jl", 1);
+
+julia> edit = Replace(handle, "function broken(\n")
+Edit modifies scratch.jl:
+1,3c1
+< function ok()
+<     return 1
+< end
+---
+> function broken(
+
+julia> apply!(NoVersionControl(require_view=true), edit)
+ERROR: Refusing to apply edit: resulting Julia source is invalid
+```
 
 Combined edits are planned and validated as a unit, so intermediate states may be invalid as long as the final result is valid.
 
@@ -101,11 +147,11 @@ Combined edits are planned and validated as a unit, so intermediate states may b
 
 Applying a combined edit that touches multiple files is still best-effort at the filesystem level. If an early file operation succeeds and a later one fails, the filesystem can be left partially changed.
 
-Use git-backed editing for changes that matter, so the result can be reviewed and recovered.
+Use git-backed editing for source changes you want to review, commit, or recover.
 
 ## Limitations
 
-CodeEdit.jl is deliberately conservative, but it is not a transactional filesystem and is not a replacement for version control.
+CodeEdit.jl rejects edits when it cannot replan or validate them safely, but it is not a transactional filesystem and is not a replacement for version control.
 
 In particular:
 

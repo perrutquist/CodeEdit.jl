@@ -13,44 +13,8 @@ if !@isdefined(_setup_done)
         rm("examples"; recursive=true, force=true)
         mkpath("examples")
 
-        writefile("examples/foo.jl", """
-        function foo(x)
-            x + 1
-        end
-        """)
-
-        writefile("examples/ProjectCode.jl", """
-        module ProjectCode
-
-        const DEFAULT_LIMIT = 10
-
-        function foo(x)
-            return x + 1
-        end
-
-        function helper(x)
-            return foo(x) * 2
-        end
-
-        function obsolete()
-            return :remove_me
-        end
-
-        end
-        """)
-
-        writefile("examples/notes.txt", """
-        First note.
-
-        Second note.
-        """)
-
-        writefile("examples/helpers.jl", """
-        helper(x) = x + 1
-        """)
-
-        writefile("examples/MyPackage.jl", """
-        module MyPackage
+        writefile("examples/DemoPackage.jl", """
+        module DemoPackage
 
         include("helpers.jl")
 
@@ -62,27 +26,29 @@ if !@isdefined(_setup_done)
             return z
         end
 
+        function increment(x)
+            return x + 1
+        end
+
         function old_function_name()
             return foo(1)
         end
 
+        function obsolete()
+            return :remove_me
+        end
+
         end
         """)
 
-        writefile("examples/concepts.jl", """
-        function foo(x)
-            return x + 1
-        end
-
-        function bar(x)
-            return foo(x)
-        end
+        writefile("examples/helpers.jl", """
+        helper(x) = x + 1
         """)
 
-        writefile("examples/concepts-notes.txt", """
-        First paragraph.
+        writefile("examples/notes.txt", """
+        First note.
 
-        Second paragraph.
+        Second note.
         """)
 
         writefile("examples/error-example.jl", raw"""
@@ -93,10 +59,6 @@ if !@isdefined(_setup_done)
         function outer(x)
             return inner(x + 1)
         end
-        """)
-
-        writefile("examples/safety.jl", """
-        const SAFETY_VALUE = 1
         """)
 
         run_quiet(`git init -b main examples`)

@@ -1,6 +1,10 @@
 ```@meta
 DocTestSetup = quote
     include(joinpath($(@__DIR__), "meta_setup.jl"))
+    if !@isdefined(_index_examples_ready)
+        ensure_examples!()
+        _index_examples_ready = true
+    end
 end
 ```
 
@@ -14,6 +18,7 @@ Rather than editing line ranges directly, CodeEdit.jl operates on parsed source 
 
 - [Getting started](getting-started.md)
 - [Blocks and handles](concepts.md)
+- [Searching source](searching.md)
 - [Editing code](editing.md)
 - [Safety and version control](safety.md)
 - [Finding errors from stacktraces](searching-errors.md)
@@ -21,11 +26,9 @@ Rather than editing line ranges directly, CodeEdit.jl operates on parsed source 
 
 ## Source model
 
-CodeEdit.jl represents source locations with [`Handle`](@ref)s. Each handle refers to one parsed block in a file. See [Blocks and handles](concepts.md) for the exact rules.
+CodeEdit.jl represents source locations with [`Handle`](@ref)s. Each handle refers to one parsed block in a file. For Julia files, blocks are top-level syntactic units such as functions, types, constants, imports, exports, and includes. For text files, blocks are paragraphs separated by blank lines.
 
-For Julia source files, blocks are top-level syntactic units such as functions, types, macros, constants, assignments, imports, exports, and includes. Attached docstrings are kept with the block they document.
-
-For non-Julia files, blocks are paragraphs separated by blank lines.
+See [Blocks and handles](concepts.md) for the exact rules.
 
 ## Basic workflow
 
@@ -35,38 +38,38 @@ The usual workflow is explicit at each step:
 Handle -> Edit -> Displayed plan -> Apply -> Commit
 ```
 
-The following example uses the shared documentation repository, changes one function, applies the edit, and reads the file back from disk.
+The following example uses the shared documentation repository, changes one function, applies the edit, and reads the edited block back from disk.
 
 
 ```jldoctest index
 julia> repo = VersionControl("examples"; require_view=true)
 GitVersionControl("examples"; require_view=true)
 
-julia> h = Handle("examples/foo.jl", 2)
-# examples/foo.jl 1 - 3:
-function foo(x)
-    x + 1
+julia> h = Handle("examples/DemoPackage.jl", 14)
+# examples/DemoPackage.jl 13 - 15:
+function increment(x)
+    return x + 1
 end
 
 julia> replacement = replace(string(h), "x + 1" => "x + 2");
 
 julia> edit = Replace(h, replacement)
-Edit modifies examples/foo.jl:
-2c2
-<     x + 1
+Edit modifies examples/DemoPackage.jl:
+14c14
+<     return x + 1
 ---
->     x + 2
+>     return x + 2
 
-julia> apply!(repo, edit, "Change foo increment")
-Applied: 1 file changed, commit 90d016a
+julia> apply!(repo, edit, "Change increment")
+Applied: 1 file changed, commit 0000000
 
-julia> println(read("examples/foo.jl", String));
-function foo(x)
-    x + 2
+julia> println(string(Handle("examples/DemoPackage.jl", 14)));
+function increment(x)
+    return x + 2
 end
 ```
 
-If Revise.jl is loaded, CodeEdit.jl asks Revise to revise after a successful edit, so changed method definitions usually take effect immediately.
+If Revise.jl is loaded, CodeEdit.jl calls Revise after a successful edit, so changed method definitions usually take effect immediately.
 
 ## Safety model
 

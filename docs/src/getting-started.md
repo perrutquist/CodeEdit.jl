@@ -1,6 +1,10 @@
 ```@meta
 DocTestSetup = quote
     include(joinpath($(@__DIR__), "meta_setup.jl"))
+    if !@isdefined(_getting_started_examples_ready)
+        ensure_examples!()
+        _getting_started_examples_ready = true
+    end
 end
 ```
 
@@ -29,8 +33,8 @@ julia> using CodeEdit
 CodeEdit.jl starts from source locations, but edits operate on blocks rather than on raw line ranges. Use [`Handle`](@ref) to refer to the block containing a location:
 
 ```jldoctest getting_started
-julia> h = Handle("examples/MyPackage.jl", 10)
-# examples/MyPackage.jl 7 - 11:
+julia> h = Handle("examples/DemoPackage.jl", 10)
+# examples/DemoPackage.jl 7 - 11:
 function foo(x)
     y = helper(x)
     z = y * 2
@@ -46,104 +50,35 @@ julia> source = string(h)
 "function foo(x)\n    y = helper(x)\n    z = y * 2\n    return z\nend\n"
 ```
 
-## Listing handles
+## Listing and searching handles
 
-List all parsed blocks in one file:
-
-```jldoctest getting_started
-julia> hs = handles("examples/MyPackage.jl")
-7 handles
-# examples/MyPackage.jl:
-   1 -  1: module MyPackage
-   3 -  3: include("helpers.jl")
-   5 -  5: const DEFAULT_LIMIT = 10
-   7 - 11: function foo(x); y = helper(x); z = y * …
-  13 - 15: function old_function_name(); return foo…
-  17 - 17: end
-  EOF:
-```
-
-List all blocks in files matching a glob:
+List the parsed blocks in a file with [`handles`](@ref):
 
 ```jldoctest getting_started
-julia> hs = handles("examples", "*.jl")
-26 handles
-# examples/MyPackage.jl:
-   1 -  1: module MyPackage
-   3 -  3: include("helpers.jl")
-   5 -  5: const DEFAULT_LIMIT = 10
-   7 - 11: function foo(x); y = helper(x); z = y * …
-  13 - 15: function old_function_name(); return foo…
-  17 - 17: end
-  EOF:
-
-# examples/ProjectCode.jl:
-   1 -  1: module ProjectCode
-   3 -  3: const DEFAULT_LIMIT = 10
-   5 -  7: function foo(x); return x + 1; end
-   9 - 11: function helper(x); return foo(x) * 2; e…
-  13 - 15: function obsolete(); return :remove_me; …
-  17 - 17: end
-  EOF:
-
-# examples/concepts.jl:
-  1 - 3: function foo(x); return x + 1; end
-  5 - 7: function bar(x); return foo(x); end
-  EOF:
-
-# examples/error-example.jl:
-  1 - 3: function inner(x); error("bad input: $x"…
-  5 - 7: function outer(x); return inner(x + 1); …
-  EOF:
-
-# examples/foo.jl:
-  1 - 3: function foo(x); x + 1; end
-  EOF:
-
-# examples/helpers.jl:
-  1 - 1: helper(x) = x + 1
-  EOF:
-
-# examples/safety.jl:
-  1 - 1: const SAFETY_VALUE = 1
-  EOF:
-```
-
-Follow Julia `include` statements recursively:
-
-```jldoctest getting_started
-julia> hs = handles("examples/MyPackage.jl"; includes = true)
+julia> hs = handles("examples/DemoPackage.jl")
 9 handles
-# examples/MyPackage.jl:
-   1 -  1: module MyPackage
+# examples/DemoPackage.jl:
+   1 -  1: module DemoPackage
    3 -  3: include("helpers.jl")
    5 -  5: const DEFAULT_LIMIT = 10
    7 - 11: function foo(x); y = helper(x); z = y * …
-  13 - 15: function old_function_name(); return foo…
-  17 - 17: end
-  EOF:
-
-# examples/helpers.jl:
-  1 - 1: helper(x) = x + 1
+  13 - 15: function increment(x); return x + 1; end
+  17 - 19: function old_function_name(); return foo…
+  21 - 23: function obsolete(); return :remove_me; …
+  25 - 25: end
   EOF:
 ```
 
-## Searching handles
-
-Search within a collection of handles:
+Search within those handles to find a block by text:
 
 ```jldoctest getting_started
-julia> hs = handles("examples", "*.jl");
-
-julia> matches = search(hs, "old_function_name");
-
-julia> matches
+julia> matches = search(hs, "old_function_name")
 1 handle
-# examples/MyPackage.jl:
-  13 - 15: function old_function_name(); return foo…
+# examples/DemoPackage.jl:
+  17 - 19: function old_function_name(); return foo…
 ```
 
-The result is a `Set` of handles. Each matching block can be inspected, displayed, or used as the target of an edit.
+The result can be inspected, displayed, or used as the target of an edit. See [Searching source](searching.md) for glob searches, regex searches, and recursive `include` traversal.
 
 ## Applying an edit with git
 
@@ -165,8 +100,8 @@ With `require_view=true`, displaying the edit records the exact plan. When [`app
 julia> h = only(search(hs, "old_function_name"));
 
 julia> edit = Replace(h, replace(string(h), "old_function_name" => "new_function_name"))
-Edit modifies examples/MyPackage.jl:
-13c13
+Edit modifies examples/DemoPackage.jl:
+17c17
 < function old_function_name()
 ---
 > function new_function_name()
@@ -175,7 +110,7 @@ julia> apply!(repo, edit, "Rename old_function_name")
 Applied: 1 file changed, commit 3630f3e
 ```
 
-The edit is written to disk and committed to git. This is the normal CodeEdit.jl workflow: source changes become small, named commits.
+The edit is written to disk and committed to git. Each successful git-backed edit is committed with the message you provide.
 
 ## Inserting at the end of a file
 

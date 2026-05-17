@@ -18,6 +18,8 @@ Handles identify parsed blocks and are the primary objects used for searching an
 - [`search`](@ref): search handles, files, stacktraces, or exceptions.
 - `occursin(handle, trace)`: test whether a handle's source location occurs in a stacktrace-like object.
 
+See [Searching source](searching.md) for the main source-search workflow and [Finding errors from stacktraces](searching-errors.md) for stacktrace search.
+
 ## Edits
 
 Edits are immutable descriptions of changes. Constructing an edit does not modify the filesystem.
@@ -42,9 +44,11 @@ Combined edits are planned and validated as a unit. See [Editing code](editing.m
 
 Version-control specifications determine how an edit is applied.
 
-- [`VersionControl`](@ref): describe a git repository and default `apply!` keyword arguments.
-- [`GitVersionControl`](@ref): convenience constructor for git-backed editing.
+- [`VersionControl`](@ref): describe a version-control backend and default `apply!` keyword arguments.
+- [`GitVersionControl`](@ref): git-backed version-control specification.
 - [`NoVersionControl`](@ref): explicitly apply edits without version control.
+
+`VersionControl("path")` constructs the appropriate version-control specification for a repository. For git repositories, the displayed value is a [`GitVersionControl`](@ref).
 
 `apply!(repo, edit, message)` applies an edit, stages affected paths, and creates a git commit with `message`.
 

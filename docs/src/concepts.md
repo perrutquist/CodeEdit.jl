@@ -1,6 +1,10 @@
 ```@meta
 DocTestSetup = quote
     include(joinpath($(@__DIR__), "meta_setup.jl"))
+    if !@isdefined(_concepts_examples_ready)
+        ensure_examples!()
+        _concepts_examples_ready = true
+    end
 end
 ```
 
@@ -12,7 +16,7 @@ Edits built from handles can be applied through git or through an explicit no-ve
 
 ## Blocks
 
-For Julia files, blocks are top-level syntactic units such as functions, types, macros, constants, assignments, imports, exports, and includes. Attached docstrings are kept with the block they document.
+For Julia files, blocks are top-level syntactic units such as functions, types, macros, constants, assignments, imports, exports, and includes. Attached docstrings are kept with the block they document, so replacing a documented function keeps the docstring and function together.
 
 For example, CodeEdit.jl sees a file like this as several separate blocks:
 
@@ -40,19 +44,19 @@ For non-Julia files, blocks are paragraphs separated by blank lines.
 A [`Handle`](@ref) points to one parsed block. It is the object passed to search, display, and edit operations.
 
 ```jldoctest concepts
-julia> h = Handle("examples/concepts.jl", 2)
-# examples/concepts.jl 1 - 3:
-function foo(x)
+julia> h = Handle("examples/DemoPackage.jl", 14)
+# examples/DemoPackage.jl 13 - 15:
+function increment(x)
     return x + 1
 end
 ```
 
-Because line 2 is inside `foo`, the handle refers to the whole `foo` block.
+Because line 14 is inside `increment`, the handle refers to the whole `increment` block.
 
 Handles are interned for a parsed file: requesting the same block again returns the same handle object.
 
 ```jldoctest concepts
-julia> h === Handle("examples/concepts.jl", 1)
+julia> h === Handle("examples/DemoPackage.jl", 13)
 true
 ```
 
@@ -61,11 +65,11 @@ true
 By default, `.jl` files are parsed as Julia source and other files are parsed as text. Use `parse_as=:julia` or `parse_as=:text` to override this behavior when constructing or collecting handles.
 
 ```jldoctest concepts
-julia> handles("examples/concepts-notes.txt"; parse_as=:text)
+julia> handles("examples/notes.txt"; parse_as=:text)
 3 handles
-# examples/concepts-notes.txt:
-  1 - 1: First paragraph.
-  3 - 3: Second paragraph.
+# examples/notes.txt:
+  1 - 1: First note.
+  3 - 3: Second note.
   EOF:
 ```
 
@@ -82,4 +86,8 @@ julia> is_valid(h)
 true
 ```
 
-Files modified outside CodeEdit.jl are reparsed automatically when a cached timestamp changes. Call [`reindex`](@ref) to update cached handles explicitly.
+Files modified outside CodeEdit.jl are reparsed automatically when a cached timestamp changes. Call [`reindex`](@ref) to update cached handles explicitly:
+
+```jldoctest concepts
+julia> reindex("examples/DemoPackage.jl");
+```

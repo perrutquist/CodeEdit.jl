@@ -1,6 +1,10 @@
 ```@meta
 DocTestSetup = quote
     include(joinpath($(@__DIR__), "meta_setup.jl"))
+    if !@isdefined(_editing_examples_ready)
+        ensure_examples!()
+        _editing_examples_ready = true
+    end
 end
 ```
 
@@ -31,7 +35,7 @@ Most edits correspond to one of the following operations:
 
 - replace an existing block with [`Replace`](@ref);
 - insert code near an existing block with [`InsertBefore`](@ref) or [`InsertAfter`](@ref);
-- insert code at the end of a file with [`eof_handle`](@ref) and [`InsertBefore`](@ref);
+- append code with [`eof_handle`](@ref) and [`InsertBefore`](@ref): the EOF handle is a zero-width anchor at the end of the file;
 - delete a block with [`Delete`](@ref);
 - create, move, or delete whole files;
 - group related edits with [`Combine`](@ref).
@@ -43,23 +47,23 @@ The sections below follow that progression.
 A replacement edit changes exactly the block referenced by a handle. This is usually the safest way to update a function, because the planned diff is limited to the selected block.
 
 ```jldoctest editing
-julia> h = Handle("examples/ProjectCode.jl", 6)
-# examples/ProjectCode.jl 5 - 7:
-function foo(x)
+julia> h = Handle("examples/DemoPackage.jl", 14)
+# examples/DemoPackage.jl 13 - 15:
+function increment(x)
     return x + 1
 end
 
 julia> new_code = replace(string(h), "x + 1" => "x + 2");
 
 julia> edit = Replace(h, new_code)
-Edit modifies examples/ProjectCode.jl:
-6c6
+Edit modifies examples/DemoPackage.jl:
+14c14
 <     return x + 1
 ---
 >     return x + 2
 
-julia> apply!(repo, edit, "Change foo increment")
-Applied: 1 file changed, commit 6d088c4
+julia> apply!(repo, edit, "Change increment")
+Applied: 1 file changed, commit 0000000
 
 ```
 
@@ -70,9 +74,9 @@ Insertion edits are useful when a nearby block provides a stable anchor point.
 Insert before a block:
 
 ```jldoctest editing
-julia> h = Handle("examples/ProjectCode.jl", 6)
-# examples/ProjectCode.jl 5 - 7:
-function foo(x)
+julia> h = Handle("examples/DemoPackage.jl", 14)
+# examples/DemoPackage.jl 13 - 15:
+function increment(x)
     return x + 2
 end
 
@@ -80,70 +84,72 @@ julia> edit = InsertBefore(h, raw"""
        const SCALE = 2
        
        """)
-Edit modifies examples/ProjectCode.jl:
-4c5,6
+Edit modifies examples/DemoPackage.jl:
+12c13,14
 ---
 > const SCALE = 2
 >
 
 julia> apply!(repo, edit, "Add scale constant")
-Applied: 1 file changed, commit e19fa34
+Applied: 1 file changed, commit 0000000
 
 ```
 
 Insert after a block:
 
 ```jldoctest editing
-julia> h = Handle("examples/ProjectCode.jl", 6)
-# examples/ProjectCode.jl 7 - 9:
-function foo(x)
+julia> h = Handle("examples/DemoPackage.jl", 16)
+# examples/DemoPackage.jl 15 - 17:
+function increment(x)
     return x + 2
 end
 
 julia> edit = InsertAfter(h, raw"""
        
-       function bar(x)
-           return foo(x) + SCALE
+       function scaled_increment(x)
+           return increment(x) * SCALE
        end
        """)
-Edit modifies examples/ProjectCode.jl:
-10c11,14
+Edit modifies examples/DemoPackage.jl:
+17c18,21
 ---
-> function bar(x)
->     return foo(x) + SCALE
+> function scaled_increment(x)
+>     return increment(x) * SCALE
 > end
 >
 
-julia> apply!(repo, edit, "Add bar")
-Applied: 1 file changed, commit dc8f16a
+julia> apply!(repo, edit, "Add scaled_increment")
+Applied: 1 file changed, commit 0000000
 
 ```
 
 Use raw string literals such as `raw"""..."""` when writing Julia code as strings. They avoid accidental escaping of backslashes and dollar signs.
 
+Inserted text is used exactly as provided. Include leading or trailing newlines when you want blank lines around the inserted code.
+
 ## Deleting code
 
 ```jldoctest editing
-julia> h = Handle("examples/ProjectCode.jl", 14)
-# examples/ProjectCode.jl 15 - 17:
-function helper(x)
-    return foo(x) * 2
+julia> h = only(search(handles("examples/DemoPackage.jl"), "function obsolete"))
+# examples/DemoPackage.jl 27 - 29:
+function obsolete()
+    return :remove_me
 end
 
 julia> edit = Delete(h)
-Edit modifies examples/ProjectCode.jl:
-15,17c14
-< function helper(x)
-<     return foo(x) * 2
+Edit modifies examples/DemoPackage.jl:
+27,29c26
+< function obsolete()
+<     return :remove_me
 < end
 ---
 
 julia> apply!(repo, edit, "Remove obsolete function")
-Applied: 1 file changed, commit adb22b6
+Applied: 1 file changed, commit 0000000
 
 ```
 
-EOF handles are unaffected by [`Delete`](@ref).
+Deleting an EOF handle has no effect and is usually not useful.
 
 ## Creating, moving, and deleting files
 
@@ -161,7 +167,7 @@ Edit creates examples/generated.jl:
 > end
 
 julia> apply!(repo, edit, "Add generated file")
-Applied: 1 file changed, commit 0024785
+Applied: 1 file changed, commit 0000000
 
 ```
 
@@ -170,7 +176,7 @@ julia> edit = MoveFile("examples/generated.jl", "examples/generated-renamed.jl")
 Edit moves examples/generated.jl -> examples/generated-renamed.jl
 
 julia> apply!(repo, edit, "Rename generated file")
-Applied: 1 file changed, commit e3ef87c
+Applied: 1 file changed, commit 0000000
 
 ```
 
@@ -179,7 +185,7 @@ julia> edit = DeleteFile("examples/generated-renamed.jl")
 Edit deletes examples/generated-renamed.jl
 
 julia> apply!(repo, edit, "Remove generated file")
-Applied: 1 file changed, commit 2d7466f
+Applied: 1 file changed, commit 0000000
 
 ```
 
@@ -188,70 +194,70 @@ Applied: 1 file changed, commit 2d7466f
 Use [`Combine`](@ref), or the `*` shorthand, when multiple edits are part of one logical change and should be planned together:
 
 ```jldoctest editing
-julia> source = Handle("examples/ProjectCode.jl", 10)
-# examples/ProjectCode.jl 11 - 13:
-function bar(x)
-    return foo(x) + SCALE
+julia> source = only(search(handles("examples/DemoPackage.jl"), "function old_function_name"))
+# examples/DemoPackage.jl 23 - 25:
+function old_function_name()
+    return foo(1)
 end
 
 julia> destination = eof_handle("examples/notes.txt")
 # examples/notes.txt EOF:
 
 julia> edit = Combine(
-           InsertBefore(destination, "\nMoved helper source:\n\n" * string(source)),
+           InsertBefore(destination, "\nMoved selected source:\n\n" * string(source)),
            Delete(source),
        )
-Edit modifies examples/ProjectCode.jl:
-11,13c10
-< function bar(x)
-<     return foo(x) + SCALE
+Edit modifies examples/DemoPackage.jl:
+23,25c22
+< function old_function_name()
+<     return foo(1)
 < end
 ---
 Edit modifies examples/notes.txt:
 3c4,9
 ---
 >
-> Moved helper source:
+> Moved selected source:
 >
-> function bar(x)
->     return foo(x) + SCALE
+> function old_function_name()
+>     return foo(1)
 > end
 
-julia> apply!(repo, edit, "Move helper source to notes")
-Applied: 2 files changed, commit ae34f02
+julia> apply!(repo, edit, "Move selected source to notes")
+Applied: 2 files changed, commit 0000000
 
 ```
 
 Equivalent shorthand:
 
 ```jldoctest editing
-julia> h = Handle("examples/ProjectCode.jl", 6)
-# examples/ProjectCode.jl 7 - 9:
-function foo(x)
+julia> h = only(search(handles("examples/DemoPackage.jl"), "function increment"))
+# examples/DemoPackage.jl 15 - 17:
+function increment(x)
     return x + 2
 end
 
 julia> edit = InsertAfter(h, raw"""
        
-       function baz(x)
-           return foo(x) - 1
+       function bounded_increment(x)
+           return min(increment(x), DEFAULT_LIMIT)
        end
-       """) * InsertBefore(eof_handle("examples/notes.txt"), "\nAdded baz to ProjectCode.jl\n")
-Edit modifies examples/ProjectCode.jl:
-10c11,14
+       """) * InsertBefore(eof_handle("examples/notes.txt"), "\nAdded bounded_increment to DemoPackage.jl\n")
+Edit modifies examples/DemoPackage.jl:
+17c18,21
 ---
-> function baz(x)
->     return foo(x) - 1
+> function bounded_increment(x)
+>     return min(increment(x), DEFAULT_LIMIT)
 > end
 >
 Edit modifies examples/notes.txt:
 9c10,11
 ---
 >
-> Added baz to ProjectCode.jl
+> Added bounded_increment to DemoPackage.jl
 
-julia> apply!(repo, edit, "Add baz and update notes")
-Applied: 2 files changed, commit 18887ed
+julia> apply!(repo, edit, "Add bounded_increment and update notes")
+Applied: 2 files changed, commit 0000000
 
 ```
 
@@ -263,7 +269,7 @@ Planning and validation are all-or-nothing. Applying a combined edit that touche
 
 For scratch files, generated files, or other changes that should not create a commit, pass an explicit [`NoVersionControl`](@ref) specification.
 
-This mode is explicit so that the call site states that the edit will not be committed by CodeEdit.jl.
+[`NoVersionControl`](@ref) makes uncommitted edits explicit at the call site.
 
 ```jldoctest editing
 julia> write("scratch-note.txt", "status = old\n")
