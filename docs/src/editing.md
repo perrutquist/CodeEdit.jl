@@ -59,9 +59,7 @@ Edit modifies examples/ProjectCode.jl:
 >     return x + 2
 
 julia> apply!(repo, edit, "Change foo increment")
-[main b37882a] Change foo increment
- 1 file changed, 1 insertion(+), 1 deletion(-)
-Applied: 1 file changed, commit b37882a
+Applied: 1 file changed, commit 6d088c4
 
 ```
 
@@ -89,9 +87,7 @@ Edit modifies examples/ProjectCode.jl:
 >
 
 julia> apply!(repo, edit, "Add scale constant")
-[main 09ac13f] Add scale constant
- 1 file changed, 2 insertions(+)
-Applied: 1 file changed, commit 09ac13f
+Applied: 1 file changed, commit e19fa34
 
 ```
 
@@ -119,9 +115,7 @@ Edit modifies examples/ProjectCode.jl:
 >
 
 julia> apply!(repo, edit, "Add bar")
-[main 69155ec] Add bar
- 1 file changed, 4 insertions(+)
-Applied: 1 file changed, commit 69155ec
+Applied: 1 file changed, commit dc8f16a
 
 ```
 
@@ -145,9 +139,7 @@ Edit modifies examples/ProjectCode.jl:
 ---
 
 julia> apply!(repo, edit, "Remove obsolete function")
-[main 8e0993f] Remove obsolete function
- 1 file changed, 3 deletions(-)
-Applied: 1 file changed, commit 8e0993f
+Applied: 1 file changed, commit adb22b6
 
 ```
 
@@ -169,10 +161,7 @@ Edit creates examples/generated.jl:
 > end
 
 julia> apply!(repo, edit, "Add generated file")
-[main 39f5219] Add generated file
- 1 file changed, 3 insertions(+)
- create mode 100644 generated.jl
-Applied: 1 file changed, commit 39f5219
+Applied: 1 file changed, commit 0024785
 
 ```
 
@@ -181,10 +170,7 @@ julia> edit = MoveFile("examples/generated.jl", "examples/generated-renamed.jl")
 Edit moves examples/generated.jl -> examples/generated-renamed.jl
 
 julia> apply!(repo, edit, "Rename generated file")
-[main 405aeaf] Rename generated file
- 1 file changed, 0 insertions(+), 0 deletions(-)
- rename generated.jl => generated-renamed.jl (100%)
-Applied: 1 file changed, commit 405aeaf
+Applied: 1 file changed, commit e3ef87c
 
 ```
 
@@ -193,10 +179,7 @@ julia> edit = DeleteFile("examples/generated-renamed.jl")
 Edit deletes examples/generated-renamed.jl
 
 julia> apply!(repo, edit, "Remove generated file")
-[main 8594d0a] Remove generated file
- 1 file changed, 3 deletions(-)
- delete mode 100644 generated-renamed.jl
-Applied: 1 file changed, commit 8594d0a
+Applied: 1 file changed, commit 2d7466f
 
 ```
 
@@ -235,9 +218,7 @@ Edit modifies examples/notes.txt:
 > end
 
 julia> apply!(repo, edit, "Move helper source to notes")
-[main 6667766] Move helper source to notes
- 2 files changed, 6 insertions(+), 3 deletions(-)
-Applied: 2 files changed, commit 6667766
+Applied: 2 files changed, commit ae34f02
 
 ```
 
@@ -270,9 +251,7 @@ Edit modifies examples/notes.txt:
 > Added baz to ProjectCode.jl
 
 julia> apply!(repo, edit, "Add baz and update notes")
-[main 03c737d] Add baz and update notes
- 2 files changed, 6 insertions(+)
-Applied: 2 files changed, commit 03c737d
+Applied: 2 files changed, commit 18887ed
 
 ```
 

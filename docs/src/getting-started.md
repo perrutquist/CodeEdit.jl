@@ -172,9 +172,7 @@ Edit modifies examples/MyPackage.jl:
 > function new_function_name()
 
 julia> apply!(repo, edit, "Rename old_function_name")
-[main 8a04ce2] Rename old_function_name
- 1 file changed, 1 insertion(+), 1 deletion(-)
-Applied: 1 file changed, commit 8a04ce2
+Applied: 1 file changed, commit 3630f3e
 ```
 
 The edit is written to disk and committed to git. This is the normal CodeEdit.jl workflow: source changes become small, named commits.
@@ -197,9 +195,7 @@ Edit modifies examples/helpers.jl:
 > another_helper(x) = helper(x) * 2
 
 julia> apply!(repo, edit, "Add another helper")
-[main 10288e6] Add another helper
- 1 file changed, 2 insertions(+)
-Applied: 1 file changed, commit 10288e6
+Applied: 1 file changed, commit c58b1c4
 ```
 
 ## Applying without version control

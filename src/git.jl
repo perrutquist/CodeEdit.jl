@@ -89,7 +89,7 @@ end
 
 function commit_staged!(repo_root::AbstractString, message::AbstractString, rels::Vector{String}=String[])
     staged_dirty(repo_root, rels) || return nothing
-    args = isempty(rels) ? String["commit", "-m", String(message)] : vcat(String["commit", "-m", String(message), "--"], rels)
+    args = isempty(rels) ? String["commit", "-q", "-m", String(message)] : vcat(String["commit", "-q", "-m", String(message), "--"], rels)
     git_run(repo_root, args)
     return git_commit_id(repo_root)
 end

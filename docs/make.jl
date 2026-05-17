@@ -18,11 +18,12 @@ makedocs(
     ],
     checkdocs = :none,
     doctestfilters = [
-        r"/[0-9a-zA-Z/]*/examples",
+        r"[0-9a-zA-Z\/]*/examples",
         r"main [0-9a-f]*",
         r"commit [0-9a-f]*",
         ],
-    #doctest = :fix,
+    #doctest = :fix, # Uncomment this line and run once to update jldoctest outputs.
+                     # It may be necessary to also cleanup paths, see below.
 )
 
 function clean_generated_html_paths(builddir::AbstractString, basedir::AbstractString)
@@ -36,7 +37,7 @@ function clean_generated_html_paths(builddir::AbstractString, basedir::AbstractS
 
     for (root, _, files) in walkdir(builddir)
         for file in files
-            endswith(file, ".html") || continue
+            endswith(file, ".html") || endswith(file, ".md") || continue
 
             path = joinpath(root, file)
             contents = read(path, String)
@@ -54,6 +55,9 @@ function clean_generated_html_paths(builddir::AbstractString, basedir::AbstractS
 end
 
 clean_generated_html_paths(joinpath(@__DIR__, "build"), pwd())
+
+# Uncomment this line to cleanup paths in the jldoctest generated markdown.
+clean_generated_html_paths(joinpath(@__DIR__, "src"), pwd())
 
 rm(joinpath(@__DIR__, "examples"), recursive=true)
 for f in ("scratch-note.txt", "scratch-safety.txt", "scratch.txt")

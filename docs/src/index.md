@@ -58,9 +58,7 @@ Edit modifies examples/foo.jl:
 >     x + 2
 
 julia> apply!(repo, edit, "Change foo increment")
-[main fd4796f] Change foo increment
- 1 file changed, 1 insertion(+), 1 deletion(-)
-Applied: 1 file changed, commit fd4796f
+Applied: 1 file changed, commit 90d016a
 
 julia> println(read("examples/foo.jl", String));
 function foo(x)

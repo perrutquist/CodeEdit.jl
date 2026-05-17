@@ -119,9 +119,7 @@ Edit modifies examples/error-example.jl:
 >     throw(ArgumentError("bad input: $x"))
 
 julia> apply!(repo, edit, "Throw ArgumentError for bad input")
-[main b52c24f] Throw ArgumentError for bad input
- 1 file changed, 1 insertion(+), 1 deletion(-)
-Applied: 1 file changed, commit b52c24f
+Applied: 1 file changed, commit 751de5e
 ```
 
 After a successful edit, existing handles are updated or invalidated as needed. If Revise.jl is loaded, CodeEdit.jl asks Revise to revise loaded definitions.

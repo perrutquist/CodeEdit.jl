@@ -51,9 +51,7 @@ Edit modifies examples/safety.jl:
 > const SAFETY_VALUE = 2
 
 julia> apply!(repo, edit, "Update safety example")
-[main 8652943] Update safety example
- 1 file changed, 1 insertion(+), 1 deletion(-)
-Applied: 1 file changed, commit 8652943
+Applied: 1 file changed, commit fb81aff
 ```
 
 A git-backed apply writes the edited files, stages the affected paths, and creates a commit. By default, CodeEdit.jl expects edited files to be tracked by git and rejects creation outside the worktree.
