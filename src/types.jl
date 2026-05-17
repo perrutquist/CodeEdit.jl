@@ -135,6 +135,7 @@ end
 """
     Handle(path, line, pos=1; parse_as=:auto)
     Handle(method)
+    Handle(stackframe)
 
 Reference to a parsed source/text block.
 
