@@ -56,19 +56,6 @@ julia> write("scratch.txt", "status = changed elsewhere\n");
 
 julia> apply!(NoVersionControl(require_view=true), edit)
 ERROR: displayed edit was invalid
-Stacktrace:
- [1] error(s::String)
-   @ Base ./error.jl:44
- [2] #compile_checked_plan#39
-   @ src/apply.jl:472 [inlined]
- [3] compile_checked_plan
-   @ src/apply.jl:465 [inlined]
- [4] apply!(vc::NoVersionControl{@NamedTuple{require_view::Bool}}, edit::Replace; kwargs::@Kwargs{})
-   @ CodeEdit src/apply.jl:546
- [5] apply!(vc::NoVersionControl{@NamedTuple{require_view::Bool}}, edit::Replace)
-   @ CodeEdit src/apply.jl:540
- [6] top-level scope
-   @ none:1
 ```
 
 Display the edit again to review the current plan before applying it.
@@ -152,19 +139,6 @@ Validation errors:
 
 julia> apply!(NoVersionControl(require_view=true), edit)
 ERROR: displayed edit was invalid
-Stacktrace:
- [1] error(s::String)
-   @ Base ./error.jl:44
- [2] #compile_checked_plan#39
-   @ src/apply.jl:469 [inlined]
- [3] compile_checked_plan
-   @ src/apply.jl:465 [inlined]
- [4] apply!(vc::NoVersionControl{@NamedTuple{require_view::Bool}}, edit::Replace; kwargs::@Kwargs{})
-   @ CodeEdit src/apply.jl:546
- [5] apply!(vc::NoVersionControl{@NamedTuple{require_view::Bool}}, edit::Replace)
-   @ CodeEdit src/apply.jl:540
- [6] top-level scope
-   @ none:1
 ```
 
 Combined edits are planned and validated as a unit, so intermediate states may be invalid as long as the final result is valid.
