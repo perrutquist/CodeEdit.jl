@@ -28,14 +28,29 @@ makedocs(
 )
 
 function clean_generated_html_paths(builddir::AbstractString, basedir::AbstractString)
-    prefixes = [basedir]
+    prefixes = String[]
+    home = get(ENV, "HOME", "")
+
+    function add_prefix!(prefix::AbstractString)
+        push!(prefixes, String(prefix))
+
+        if !isempty(home)
+            if prefix == home
+                push!(prefixes, "~")
+            elseif startswith(prefix, home * "/")
+                push!(prefixes, "~/" * relpath(prefix, home))
+            end
+        end
+    end
+
+    add_prefix!(basedir)
     real_basedir = realpath(basedir)
 
     if real_basedir != basedir
-        push!(prefixes, real_basedir)
+        add_prefix!(real_basedir)
     end
-    # TODO: If basedir starts with ENV["HOME"] then we should also have a prefix that starts with "~/"
 
+    unique!(prefixes)
     sort!(prefixes, by=length, rev=true)
 
     for (root, _, files) in walkdir(builddir)
