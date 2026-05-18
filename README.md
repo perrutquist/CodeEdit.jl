@@ -187,8 +187,8 @@ Important `apply!` keyword arguments can be stored in `VersionControl(path; kwar
 - `require_clean` - If `true`, reject edits when tracked files in scope are dirty. Defaults to `true` unless `precommit_message` is supplied.
 - `atomic_repo=false` - If `true`, dirty-file checks and precommits apply to the whole repository rather than only affected files.
 - `precommit_message` - Commit message used to commit dirty tracked files before formatting or applying the edit.
-- `formatter` - Function from `AbstractString` to `AbstractString` applied to affected files before the edit.
-- `preformat=true` - If `true` and a formatter is supplied, format affected files before applying the edit.
+- `formatter` - Function from `AbstractString` to `AbstractString` applied to affected files after the edit, and also before the edit when `preformat=true`.
+- `preformat=true` - If `true` and a formatter is supplied, format affected files before applying the edit so handles can be reindexed against formatted source before the change.
 - `format_message` - Commit message for formatter-only changes.
 - `default_message` - Commit message used when `apply!(repo, edit)` is called without a positional message.
 

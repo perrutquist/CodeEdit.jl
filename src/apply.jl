@@ -551,8 +551,14 @@ function apply!(vc::VersionControl{:none}, edit::AbstractEdit; kwargs...)
     end
 
     plan = formatter !== nothing && preformat ? compile_checked_plan(edit; require_view=false) : initial_plan
-    apply_compiled_plan!(plan)
-    return ApplyResult(:none, applied_file_changes(plan), CommitInfo[], plan.display_text, formatted_paths)
+    apply_plan!(plan)
+
+    if formatter !== nothing
+        append!(formatted_paths, format_paths!(affected_paths(plan), formatter))
+    end
+
+    run_after_apply_hooks!()
+    return ApplyResult(:none, applied_file_changes(plan), CommitInfo[], plan.display_text, unique(formatted_paths))
 end
 
 function apply!(vc::VersionControl{:none}, edit::AbstractEdit, message::AbstractString; kwargs...)
@@ -607,6 +613,11 @@ function apply!(vc::VersionControl{:git}, edit::AbstractEdit, message::AbstractS
     assert_versioning_requirements(plan, repo_root; require_versioning=require_versioning)
 
     apply_plan!(plan)
+
+    if formatter !== nothing
+        append!(formatted_paths, format_paths!(affected_paths(plan), formatter))
+    end
+
     run_after_apply_hooks!()
 
     final_rels = repo_relative_paths(affected_paths(plan), repo_root)
@@ -618,5 +629,5 @@ function apply!(vc::VersionControl{:git}, edit::AbstractEdit, message::AbstractS
     format_commit !== nothing && push!(commits, format_commit)
     edit_commit_id !== nothing && push!(commits, CommitInfo(:edit, edit_commit_id, message))
 
-    return ApplyResult(:git, applied_file_changes(plan), commits, plan.display_text, formatted_paths)
+    return ApplyResult(:git, applied_file_changes(plan), commits, plan.display_text, unique(formatted_paths))
 end
