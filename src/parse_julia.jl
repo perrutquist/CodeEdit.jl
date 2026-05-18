@@ -63,6 +63,17 @@ function is_julia_comment_line(text::AbstractString, line_starts::Vector{Int}, l
 end
 
 """
+Return whether any physical line in `lines` is a Julia line comment.
+"""
+function contains_julia_comment_line(text::AbstractString, line_starts::Vector{Int}, lines)
+    for line in lines
+        is_julia_comment_line(text, line_starts, line) && return true
+    end
+
+    return false
+end
+
+"""
 Return the first line to include with a syntax node after attaching adjacent
 leading comment lines.
 """
@@ -114,6 +125,28 @@ function push_julia_line_block!(
     hi = line_span(text, line_starts, end_line).hi
     push!(blocks, Block(Span(lo, hi), start_line:end_line, kind))
     return blocks
+end
+
+"""
+Push a trailing comment block for a parsed Julia region and return the next
+cursor line.
+
+JuliaSyntax ignores comments as trivia. Leading comments are attached to the
+following syntax node, but final comments have no following node and need their
+own block to preserve source reconstruction.
+"""
+function push_julia_trailing_comment_block!(
+    blocks::Vector{Block},
+    text::AbstractString,
+    line_starts::Vector{Int},
+    cursor_line::Integer,
+    end_line::Integer,
+)
+    cursor_line <= end_line || return cursor_line
+    contains_julia_comment_line(text, line_starts, cursor_line:end_line) || return cursor_line
+
+    push_julia_line_block!(blocks, text, line_starts, cursor_line, end_line, :comment)
+    return end_line + 1
 end
 
 """
@@ -198,6 +231,8 @@ function push_julia_module_blocks!(
         end
     end
 
+    push_julia_trailing_comment_block!(blocks, text, line_starts, body_cursor, last_line - 1)
+
     push_julia_line_block!(blocks, text, line_starts, last_line, last_line, :module_footer)
     return last_line + 1
 end
@@ -226,6 +261,14 @@ function parse_julia_blocks(
 
         cursor_line = push_julia_node_blocks!(blocks, node, text, line_starts, cursor_line)
     end
+
+    push_julia_trailing_comment_block!(
+        blocks,
+        text,
+        line_starts,
+        cursor_line,
+        line_count(line_starts),
+    )
 
     eof = eof_span(text)
     eof_lineno = eof_line(text, line_starts)
