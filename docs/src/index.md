@@ -12,7 +12,7 @@ end
 
 CodeEdit.jl provides tools for making source edits from Julia. Edits are described as ordinary Julia values, displayed as diffs, and applied explicitly.
 
-Rather than editing line ranges directly, CodeEdit.jl operates on parsed source blocks. A [`Handle`](@ref) identifies a block; an edit such as [`Replace`](@ref) or [`InsertAfter`](@ref) describes a change to that block; [`apply!`](@ref) writes the result through a version-control backend or through [`NoVersionControl`](@ref).
+CodeEdit.jl operates on parsed source blocks. A [`Handle`](@ref) identifies a block; an edit such as [`Replace`](@ref) or [`InsertAfter`](@ref) describes a change to that block; [`apply!`](@ref) writes the result through a version-control backend or through [`NoVersionControl`](@ref).
 
 ## Manual
 
@@ -73,6 +73,6 @@ If Revise.jl is loaded, CodeEdit.jl calls Revise after a successful edit, so cha
 
 ## Safety model
 
-Constructing an edit does not modify the filesystem. Displaying an edit shows the planned change. With `require_view=true`, [`apply!`](@ref) verifies that the displayed plan is still current before writing any files.
+Constructing an edit only describes a change. Displaying an edit shows the planned change. With `require_view=true`, [`apply!`](@ref) verifies that the displayed plan is still current before writing any files.
 
 The standard workflow applies edits through git and records each successful edit as a commit. See [Safety and version control](safety.md) for details.

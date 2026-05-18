@@ -10,7 +10,7 @@ end
 
 # Getting started
 
-This chapter introduces the basic CodeEdit.jl workflow: find a block, construct an edit, review the plan, and apply the change deliberately.
+This chapter introduces the basic CodeEdit.jl workflow: find a block, construct an edit, review the plan, and apply it deliberately.
 
 The documentation examples share a small git repository in `examples` and commit each successful source edit.
 
@@ -30,7 +30,7 @@ julia> using CodeEdit
 
 ## Creating a handle
 
-CodeEdit.jl starts from source locations, but edits operate on blocks rather than on raw line ranges. Use [`Handle`](@ref) to refer to the block containing a location:
+CodeEdit.jl starts from source locations and edits blocks rather than raw line ranges. Use [`Handle`](@ref) to refer to the block containing a location:
 
 ```jldoctest getting_started
 julia> h = Handle("examples/DemoPackage.jl", 10)
@@ -43,7 +43,7 @@ end
 
 ```
 
-If line 10 is inside a function, `h` refers to the whole function block, not only to that line.
+If line 10 is inside a function, `h` refers to the whole function block.
 
 ```jldoctest getting_started
 julia> source = string(h)
@@ -82,7 +82,7 @@ The result can be inspected, displayed, or used as the target of an edit. See [S
 
 ## Applying an edit with git
 
-Inspecting handles does not modify files. To change source, construct an edit value and choose how it should be applied.
+Inspecting handles leaves files unchanged. To change source, construct an edit value and choose how it should be applied.
 
 For ordinary source changes, use a git-backed version-control specification:
 

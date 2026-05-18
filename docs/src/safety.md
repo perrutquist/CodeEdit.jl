@@ -10,7 +10,7 @@ end
 
 # Safety and version control
 
-CodeEdit.jl separates planning from application. Constructing an edit value does not touch the filesystem; applying an edit does.
+CodeEdit.jl separates planning from application. Constructing an edit value describes a change; applying an edit writes it to the filesystem.
 
 Displaying an edit shows the planned change. Applying the edit replans it, checks that the result is still valid, writes files, and, in the standard workflow, records the change as a git commit.
 
@@ -82,7 +82,7 @@ Applied: 1 file changed, commit 0000000
 
 A git-backed apply writes the edited files, stages the affected paths, and creates a commit. By default, CodeEdit.jl expects edited files to be tracked by git and rejects creation outside the worktree.
 
-Git is the recommended undo and recovery mechanism. CodeEdit.jl does not provide an undo stack.
+Git is the recommended undo and recovery mechanism for CodeEdit.jl edits.
 
 ## Dirty files
 
@@ -153,7 +153,7 @@ Use git-backed editing for source changes you want to review, commit, or recover
 
 ## Limitations
 
-CodeEdit.jl rejects edits when it cannot replan or validate them safely, but it is not a transactional filesystem and is not a replacement for version control.
+CodeEdit.jl rejects edits when it cannot replan or validate them safely. Use version control for history, review, and recovery.
 
 In particular:
 

@@ -11,7 +11,7 @@ end
 
 # Finding errors from stacktraces
 
-CodeEdit.jl can search for source blocks referenced by a stacktrace. This makes a debugging session into an editing workflow: catch the error, capture the stacktrace with `catch_backtrace()`, search project source for referenced frames, inspect the matching blocks, then edit the source and commit the fix.
+CodeEdit.jl can locate source blocks referenced by a stacktrace. This makes a debugging session into an editing workflow: catch the error, capture the stacktrace with `catch_backtrace()`, map frames to handles, inspect the matching blocks, then edit the source and commit the fix.
 
 
 ## Starting from a stacktrace
@@ -103,6 +103,6 @@ julia> apply!(repo, edit, "Throw ArgumentError for bad input")
 Applied: 1 file changed, commit 751de5e
 ```
 
-After a successful edit, existing handles are updated or invalidated as needed. If Revise.jl is loaded, CodeEdit.jl asks Revise to revise loaded definitions.
+After a successful edit, existing handles are updated or invalidated as needed.
 
 For ordinary string, regex, glob, and recursive include searches, see [Searching source](searching.md).

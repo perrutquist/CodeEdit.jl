@@ -16,7 +16,7 @@ Edits built from handles can be applied through git or through an explicit no-ve
 
 ## Blocks
 
-For Julia files, blocks are top-level syntactic units such as functions, types, macros, constants, assignments, imports, exports, and includes. Attached docstrings are kept with the block they document, so replacing a documented function keeps the docstring and function together.
+For Julia files, blocks are top-level syntactic units such as functions, types, macros, constants, assignments, imports, exports, and includes. Attached docstrings stay with the block they document, so replacing a documented function keeps the docstring and function together.
 
 For example, CodeEdit.jl sees a file like this as several separate blocks:
 
@@ -33,7 +33,7 @@ end                           # block
                               # EOF block
 ```
 
-A Julia `module` is not treated as one large block. The `module ...` line and its matching `end` line are separate blocks, while the module body is subdivided normally.
+A Julia `module` is split into separate blocks. The `module ...` line and its matching `end` line are separate blocks, while the module body is subdivided normally.
 
 At the end of each file, CodeEdit.jl creates a special EOF block. EOF handles are useful when inserting code at the end of a file.
 

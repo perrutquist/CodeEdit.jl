@@ -15,9 +15,9 @@ Handles identify parsed blocks and are the primary objects used for searching an
 
 ## Searching
 
-- [`search`](@ref): search handles, files, stacktraces, or exceptions.
+- [`search`](@ref): search handles and files.
 
-See [Searching source](searching.md) for the main source-search workflow and [Finding errors from stacktraces](searching-errors.md) for stacktrace search.
+See [Searching source](searching.md) for the main source-search workflow and [Finding errors from stacktraces](searching-errors.md) for locating source blocks from stack frames.
 
 ## Edits
 
@@ -49,7 +49,7 @@ Version-control specifications determine how an edit is applied.
 
 `VersionControl("path")` constructs the appropriate version-control specification for a repository. For git repositories, the displayed value is a [`GitVersionControl`](@ref).
 
-`apply!(repo, edit, message)` applies an edit, stages affected paths, and creates a git commit with `message`.
+`apply!(repo, edit, message)` applies an edit, stages affected paths, and creates a git commit with `message` if `repo` is a git repository.
 
 `apply!(repo, edit; default_message="...")` uses a default commit message supplied either in the call or in the `VersionControl` object.
 

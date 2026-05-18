@@ -16,7 +16,7 @@ Editing in CodeEdit.jl separates description from execution: first construct an 
 Handle -> Edit -> Displayed plan -> Apply -> Commit
 ```
 
-Edits are values that subtype [`AbstractEdit`](@ref). Constructing an edit does not modify files; it only describes an intended change to one or more handles or paths.
+Edits are values that subtype [`AbstractEdit`](@ref). Constructing an edit describes an intended change to one or more handles or paths.
 
 The standard workflow uses [`VersionControl`](@ref) to apply the edit, stage the affected paths, and create a git commit. If `require_view=true`, displaying, printing, or stringifying an edit records the exact plan that was shown. [`apply!`](@ref) replans the edit and refuses to apply it if the current plan differs from the displayed plan.
 

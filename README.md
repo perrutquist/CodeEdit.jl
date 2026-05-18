@@ -4,7 +4,7 @@
 [![Dev docs](https://img.shields.io/badge/docs-dev-blue.svg)](https://perrutquist.github.io/CodeEdit.jl/dev/)
 [![Stable docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://perrutquist.github.io/CodeEdit.jl/stable/)
 
-CodeEdit.jl is a Julia package for making source edits from the Julia command line. Instead of manipulating raw line ranges, it works with handles to parsed source blocks.
+CodeEdit.jl is a Julia package for making source edits from the Julia command line using handles to parsed source blocks.
 
 It is designed for workflows where source changes should be easy to create, review, and apply directly from Julia.
 
@@ -49,7 +49,7 @@ Edit modifies foo.jl:
 >     x + 2
 ```
 
-The planned edit is displayed, but it has not been written to the file system yet.
+The planned edit is displayed and has not been written to the file system yet.
 
 Now, apply the edit through git:
 
@@ -98,7 +98,7 @@ The README is only a short introduction. The full documentation is organized as 
 
 ## Getting block handles
 
-`Handle(path, line, [pos=1])` - Returns a handle to the block containing the character at line `line`, character position `pos`. If that location is not inside a block, returns the next block after that location. If the location is outside the file's valid line or character bounds, throws an `ArgumentError`.
+`Handle(path, line, pos=1)` - Returns a handle to the block containing the character at line `line`, character position `pos`. If that location is not inside a block, returns the next block after that location. If the location is outside the file's valid line or character bounds, throws an `ArgumentError`.
 
 `Handle(method)` - Returns a handle to a method, when source information is available. For example, `Handle.(methods(f))` returns handles to methods of `f`.
 
@@ -146,7 +146,7 @@ Editing is performed by first creating one or more "edit" objects (`<: AbstractE
 
 `NoVersionControl(; kwargs...)` - An explicit specification for applying edits without version control.
 
-`apply!(repo, edit, message)` - Apply an edit, update files on disk, stage the affected paths, and create a git commit with `message`. This is the standard workflow.
+`apply!(repo, edit, message)` - Apply an edit, update files on disk, stage the affected paths, and create a git commit with `message` if `repo` is a git repository. This is the standard workflow.
 
 `apply!(repo, edit; default_message="...")` - Apply and commit using a default message supplied either in the call or in the `VersionControl` object. The `apply!` keyword arguments can be stored in `VersionControl(path; kwargs...)` or passed directly to `apply!`:
 - `require_view=false` - If `true`, reject edits that have not been displayed. REPL printing, calls to `Base.display(edit)`, and calls to `string(edit)` all count.
@@ -163,7 +163,7 @@ Applying edits can modify or invalidate the handles that they contain. An invali
 
 Use raw string literals, e.g. `raw"""..."""`, to avoid escaping backslashes and dollar signs when writing Julia code into a string literal.
 
-There is no built-in undo function. The recommended workflow is to use a `VersionControl` object pointing to a git repository, so each edit is recorded as a git commit.
+Use a `VersionControl` object pointing to a git repository so each edit is recorded as a git commit.
 
 **Revise.jl** is an optional weak dependency. When Revise is loaded, CodeEdit.jl calls `Revise.revise()` after a successful `apply!`. Revise failures are reported as warnings because the filesystem edit has already been applied.
 
@@ -211,3 +211,4 @@ Reindexing is triggered automatically when a cached file’s modification timest
 ## Development note
 
 Parts of CodeEdit.jl were developed with assistance from large language models under human review.
+julia --project=docs docs/make.jl
