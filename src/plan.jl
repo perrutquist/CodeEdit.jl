@@ -63,6 +63,16 @@ mutable struct VirtualFileState
     handle_spans::Dict{Int,Union{Nothing,Span}}
 end
 
+struct InterpretResult
+    ok::Bool
+    message::String
+end
+
+const INTERPRET_OK = InterpretResult(true, "")
+
+interpret_ok() = INTERPRET_OK
+interpret_error(message::AbstractString) = InterpretResult(false, String(message))
+
 sha1_hex(text::AbstractString) = bytes2hex(sha1(Vector{UInt8}(codeunits(text))))
 
 function display_path(path::AbstractString)
@@ -120,6 +130,7 @@ function validation_errors(text::AbstractString, parse_as::Symbol, path::Abstrac
         validate_utf8(Vector{UInt8}(codeunits(text)), path)
         parse_as == :julia && validate_julia_parse(text, path)
     catch err
+        err isa ArgumentError || is_julia_syntax_exception(err) || rethrow()
         push!(errors, sprint(showerror, err))
     end
 
@@ -231,6 +242,7 @@ function compile_edit_plan(edit::Union{Replace,Delete,InsertBefore,InsertAfter})
     try
         return compile_content_edit_plan(edit)
     catch err
+        err isa ArgumentError || rethrow()
         message = sprint(showerror, err)
         return unsupported_plan(edit, message)
     end
@@ -268,18 +280,31 @@ function virtual_file_for_handle!(
     virtual_by_key::Dict{FileKey,VirtualFileState},
     virtual_by_path::Dict{String,VirtualFileState},
 )
-    record = valid_handle_record(handle)
+    record = handle_record(handle)
+
+    if record === nothing || !record.valid || record.file === nothing
+        return (result = interpret_error("invalid handle"), file = nothing)
+    end
+
     key = record.file
-    key === nothing && throw(ArgumentError("invalid handle"))
 
     if haskey(virtual_by_key, key)
         vf = virtual_by_key[key]
-        vf.deleted && throw(ArgumentError("file was deleted earlier in combined edit: $(vf.path)"))
-        get(vf.handle_spans, handle.id, nothing) === nothing && throw(ArgumentError("handle was invalidated earlier in combined edit"))
-        return vf
+
+        if vf.deleted
+            return (result = interpret_error("file was deleted earlier in combined edit: $(vf.path)"), file = nothing)
+        end
+
+        if get(vf.handle_spans, handle.id, nothing) === nothing
+            return (result = interpret_error("handle was invalidated earlier in combined edit"), file = nothing)
+        end
+
+        return (result = interpret_ok(), file = vf)
     end
 
-    cache = STATE[].files[key]
+    cache = get(STATE[].files, key, nothing)
+    cache === nothing && return (result = interpret_error("invalid handle"), file = nothing)
+
     cache = load_file(cache.primary_path; parse_as=cache.parse_as)
     handle_spans = Dict{Int,Union{Nothing,Span}}()
 
@@ -302,7 +327,7 @@ function virtual_file_for_handle!(
     )
     virtual_by_key[key] = vf
     virtual_by_path[vf.path] = vf
-    return vf
+    return (result = interpret_ok(), file = vf)
 end
 
 function virtual_file_for_existing_path!(
@@ -342,9 +367,13 @@ function virtual_file_for_existing_path!(
 end
 
 function replace_virtual_text!(vf::VirtualFileState, span::Span, code::AbstractString, target::Union{Nothing,Handle}, operation::Symbol)
-    vf.text === nothing && throw(ArgumentError("cannot edit deleted file: $(vf.path)"))
+    vf.text === nothing && return interpret_error("cannot edit deleted file: $(vf.path)")
     old_text = vf.text
-    validate_span(old_text, span)
+
+    if span.lo < firstindex(old_text) || span.hi < span.lo || span.hi > ncodeunits(old_text) + 1
+        return interpret_error("invalid span")
+    end
+
     new_text = replacement_text(old_text, span, code)
     delta = ncodeunits(code) - (span.hi - span.lo)
     target_id = target === nothing ? 0 : target.id
@@ -376,7 +405,7 @@ function replace_virtual_text!(vf::VirtualFileState, span::Span, code::AbstractS
     end
 
     vf.text = new_text
-    return vf
+    return interpret_ok()
 end
 
 function replacement_for_virtual_edit(edit::Replace, span::Span)
@@ -404,13 +433,19 @@ function interpret_content_edit!(
     steps::Vector{String},
 )
     handle = target_handle(edit)
-    vf = virtual_file_for_handle!(handle, virtual_by_key, virtual_by_path)
+    lookup = virtual_file_for_handle!(handle, virtual_by_key, virtual_by_path)
+    lookup.result.ok || return lookup.result
+
+    vf = lookup.file
     span = get(vf.handle_spans, handle.id, nothing)
-    span === nothing && throw(ArgumentError("handle was invalidated earlier in combined edit"))
+    span === nothing && return interpret_error("handle was invalidated earlier in combined edit")
+
     replacement = replacement_for_virtual_edit(edit, span)
-    replace_virtual_text!(vf, replacement.span, replacement.code, handle, replacement.operation)
+    result = replace_virtual_text!(vf, replacement.span, replacement.code, handle, replacement.operation)
+    result.ok || return result
+
     push!(steps, "$(replacement.operation):$(vf.path):$(replacement.span.lo):$(replacement.span.hi):$(sha1_hex(replacement.code))")
-    return nothing
+    return interpret_ok()
 end
 
 function interpret_create_file!(
@@ -419,13 +454,14 @@ function interpret_create_file!(
     steps::Vector{String},
 )
     path = absolute_path(edit.path)
-    current_path_exists(path, virtual_by_path) && throw(ArgumentError("file already exists: $path"))
-    isdir(dirname(path)) || throw(ArgumentError("parent directory does not exist: $(dirname(path))"))
+    current_path_exists(path, virtual_by_path) && return interpret_error("file already exists: $path")
+    isdir(dirname(path)) || return interpret_error("parent directory does not exist: $(dirname(path))")
+
     parse_as = parse_mode_for_path(path; parse_as=edit.parse_as)
     vf = VirtualFileState(nothing, nothing, path, parse_as, nothing, nothing, edit.code, true, false, Dict{Int,Union{Nothing,Span}}())
     virtual_by_path[path] = vf
     push!(steps, "create:$path:$parse_as:$(sha1_hex(edit.code))")
-    return nothing
+    return interpret_ok()
 end
 
 function interpret_move_file!(
@@ -437,20 +473,22 @@ function interpret_move_file!(
 )
     old_path = absolute_path(edit.old_path)
     new_path = absolute_path(edit.new_path)
-    reject_symlink_path(old_path, "move")
-    is_symlink_path(new_path) && error("cannot move through symlink path: $new_path")
-    current_path_exists(old_path, virtual_by_path) || throw(ArgumentError("file does not exist: $old_path"))
-    current_path_exists(new_path, virtual_by_path) && throw(ArgumentError("destination already exists: $new_path"))
-    isdir(dirname(new_path)) || throw(ArgumentError("parent directory does not exist: $(dirname(new_path))"))
+
+    is_symlink_path(old_path) && return interpret_error("cannot move through symlink path: $old_path")
+    is_symlink_path(new_path) && return interpret_error("cannot move through symlink path: $new_path")
+    current_path_exists(old_path, virtual_by_path) || return interpret_error("file does not exist: $old_path")
+    current_path_exists(new_path, virtual_by_path) && return interpret_error("destination already exists: $new_path")
+    isdir(dirname(new_path)) || return interpret_error("parent directory does not exist: $(dirname(new_path))")
 
     vf = virtual_file_for_existing_path!(old_path, virtual_by_key, virtual_by_path)
-    vf.deleted && throw(ArgumentError("file was deleted earlier in combined edit: $old_path"))
+    vf.deleted && return interpret_error("file was deleted earlier in combined edit: $old_path")
+
     delete!(virtual_by_path, old_path)
     vf.path = new_path
     virtual_by_path[new_path] = vf
     push!(moves, (old_path, new_path))
     push!(steps, "move:$old_path:$new_path")
-    return nothing
+    return interpret_ok()
 end
 
 function interpret_delete_file!(
@@ -461,8 +499,9 @@ function interpret_delete_file!(
     steps::Vector{String},
 )
     path = absolute_path(edit.path)
-    reject_symlink_path(path, "delete")
-    current_path_exists(path, virtual_by_path) || throw(ArgumentError("file does not exist: $path"))
+
+    is_symlink_path(path) && return interpret_error("cannot delete through symlink path: $path")
+    current_path_exists(path, virtual_by_path) || return interpret_error("file does not exist: $path")
 
     vf = virtual_file_for_existing_path!(path, virtual_by_key, virtual_by_path)
     vf.deleted = true
@@ -474,7 +513,7 @@ function interpret_delete_file!(
 
     push!(deletes, path)
     push!(steps, "delete_file:$path")
-    return nothing
+    return interpret_ok()
 end
 
 function effect_validation_errors(effect::FileEditEffect)
@@ -492,22 +531,20 @@ function build_edit_plan(edit::AbstractEdit, edits::Vector{AbstractEdit})
     deletes = String[]
     steps = String[]
 
-    try
-        for child in edits
-            if child isa Union{Replace,Delete,InsertBefore,InsertAfter}
-                interpret_content_edit!(child, virtual_by_key, virtual_by_path, steps)
-            elseif child isa CreateFile
-                interpret_create_file!(child, virtual_by_path, steps)
-            elseif child isa MoveFile
-                interpret_move_file!(child, virtual_by_key, virtual_by_path, moves, steps)
-            elseif child isa DeleteFile
-                interpret_delete_file!(child, virtual_by_key, virtual_by_path, deletes, steps)
-            else
-                throw(ArgumentError("unsupported edit type: $(typeof(child))"))
-            end
+    for child in edits
+        result = if child isa Union{Replace,Delete,InsertBefore,InsertAfter}
+            interpret_content_edit!(child, virtual_by_key, virtual_by_path, steps)
+        elseif child isa CreateFile
+            interpret_create_file!(child, virtual_by_path, steps)
+        elseif child isa MoveFile
+            interpret_move_file!(child, virtual_by_key, virtual_by_path, moves, steps)
+        elseif child isa DeleteFile
+            interpret_delete_file!(child, virtual_by_key, virtual_by_path, deletes, steps)
+        else
+            interpret_error("unsupported edit type: $(typeof(child))")
         end
-    catch err
-        return plan_error(edit, sprint(showerror, err), steps)
+
+        result.ok || return plan_error(edit, result.message, steps)
     end
 
     all_vfiles = VirtualFileState[]

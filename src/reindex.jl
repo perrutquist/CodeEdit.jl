@@ -196,7 +196,8 @@ function syntax_reindex_fingerprint(
     if kind == :julia
         try
             validate_julia_parse(text, path)
-        catch
+        catch err
+            err isa ArgumentError || is_julia_syntax_exception(err) || rethrow()
             return nothing
         end
     end

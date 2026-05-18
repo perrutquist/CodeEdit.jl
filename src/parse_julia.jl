@@ -1,18 +1,14 @@
 """
-Parse Julia source with JuliaSyntax and normalize parse errors.
+Parse Julia source with JuliaSyntax.
 """
 function julia_parse_tree(text::AbstractString, path::AbstractString="<memory>")
-    try
-        return JuliaSyntax.parseall(
-            JuliaSyntax.SyntaxNode,
-            text;
-            filename=String(path),
-            ignore_trivia=true,
-            ignore_warnings=false,
-        )
-    catch
-        throw(ArgumentError("Julia file could not be parsed: $path"))
-    end
+    return JuliaSyntax.parseall(
+        JuliaSyntax.SyntaxNode,
+        text;
+        filename=String(path),
+        ignore_trivia=true,
+        ignore_warnings=false,
+    )
 end
 
 """
@@ -35,6 +31,11 @@ end
 Return whether a JuliaSyntax node has kind `name`.
 """
 julia_kind(node, name::AbstractString) = JuliaSyntax.kind(node) == JuliaSyntax.Kind(name)
+
+"""
+Return whether `err` is an expected JuliaSyntax parsing/validation failure.
+"""
+is_julia_syntax_exception(err) = parentmodule(typeof(err)) === JuliaSyntax
 
 """
 Return the physical source-line range covered by a JuliaSyntax node.
