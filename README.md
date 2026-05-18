@@ -211,4 +211,3 @@ Reindexing is triggered automatically when a cached file’s modification timest
 ## Development note
 
 Parts of CodeEdit.jl were developed with assistance from large language models under human review.
-julia --project=docs docs/make.jl
