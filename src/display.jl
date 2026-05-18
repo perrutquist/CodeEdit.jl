@@ -95,12 +95,68 @@ function handle_sort_key(handle::Handle)
 end
 
 """
+Return whether a byte is part of an ASCII word/symbol token.
+"""
+function is_ascii_word_codeunit(byte::UInt8)
+    return UInt8('A') <= byte <= UInt8('Z') ||
+        UInt8('a') <= byte <= UInt8('z') ||
+        UInt8('0') <= byte <= UInt8('9') ||
+        byte == UInt8('_')
+end
+
+"""
+Return whether cutting after `cut_codeunits` would split an ASCII word/symbol token.
+"""
+function splits_ascii_word(preview::String, cut_codeunits::Integer)
+    cut_codeunits <= 0 && return false
+    cut_codeunits >= ncodeunits(preview) && return false
+
+    return is_ascii_word_codeunit(codeunit(preview, cut_codeunits)) &&
+        is_ascii_word_codeunit(codeunit(preview, cut_codeunits + 1))
+end
+
+"""
+Return the preferred truncation point for a preview, measured in codeunits.
+"""
+function preview_truncation_codeunits(preview::String, limit::Integer=40, max_extra::Integer=20)
+    total = ncodeunits(preview)
+    total <= limit && return total
+
+    max_cut = min(total, limit + max_extra)
+    last_candidate = 0
+
+    for index in eachindex(preview)
+        cut_codeunits = nextind(preview, index) - 1
+        cut_codeunits > max_cut && break
+        last_candidate = cut_codeunits
+
+        if cut_codeunits >= limit && !splits_ascii_word(preview, cut_codeunits)
+            return cut_codeunits
+        end
+    end
+
+    for index in reverse(collect(eachindex(preview)))
+        cut_codeunits = nextind(preview, index) - 1
+        cut_codeunits >= limit && continue
+
+        if !splits_ascii_word(preview, cut_codeunits)
+            return cut_codeunits
+        end
+    end
+
+    return last_candidate
+end
+
+"""
 Return a preview truncated to the display width.
 """
 function truncate_preview(preview::AbstractString)
     preview = String(preview)
-    ncodeunits(preview) > 40 && (preview = first(preview, 40) * "…")
-    return preview
+    cut_codeunits = preview_truncation_codeunits(preview)
+    cut_codeunits >= ncodeunits(preview) && return preview
+    cut_codeunits == 0 && return "…"
+
+    return preview[firstindex(preview):prevind(preview, cut_codeunits + 1)] * "…"
 end
 
 """
