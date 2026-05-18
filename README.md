@@ -240,7 +240,7 @@ Invalid handles are displayed as `#invalid`.
 
 ## Reindexing
 
-After files are modified outside CodeEdit.jl, existing handles may no longer match the file contents. The `reindex()` function attempts to update all handles to point to the correct block using full block spans. This may invalidate some handles and modify the contents of others.
+After files are modified outside CodeEdit.jl, existing handles may no longer match the file contents. The `reindex()` function attempts to update all handles to point to the correct block using formatter-stable Julia syntax fingerprints before falling back to text similarity. Formatting-only changes from tools such as JuliaFormatter.jl should therefore preserve handles when the block's concrete syntax, including comments, is otherwise unchanged. Duplicate syntax-identical blocks are matched only when the preceding block, or the beginning of the file, anchors the match. This may invalidate some handles and modify the contents of others.
 
 Reindexing is triggered automatically when a cached file’s modification timestamp changes, so manual calls are usually unnecessary.
 
