@@ -16,7 +16,6 @@ Handles identify parsed blocks and are the primary objects used for searching an
 ## Searching
 
 - [`search`](@ref): search handles, files, stacktraces, or exceptions.
-- `occursin(handle, trace)`: test whether a handle's source location occurs in a stacktrace-like object.
 
 See [Searching source](searching.md) for the main source-search workflow and [Finding errors from stacktraces](searching-errors.md) for stacktrace search.
 
