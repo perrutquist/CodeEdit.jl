@@ -109,10 +109,7 @@ function has_live_cached_identity(cache::FileCache, id::FileID)
     for path in cache.paths
         isfile(path) || continue
 
-        try
-            file_id(path) == id && return true
-        catch
-        end
+        file_id(path) == id && return true
     end
 
     return false
