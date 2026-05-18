@@ -188,6 +188,7 @@ function syntax_reindex_fingerprint(
     parse_as::Symbol;
     path::AbstractString="<memory>",
 )
+    @show text kind
     parse_as == :julia || return nothing
     kind === nothing && return nothing
     kind == :eof && return "julia:eof"
