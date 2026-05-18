@@ -68,9 +68,9 @@ end
 Return the final byte offset of a quoted Julia literal starting at `i`.
 """
 function quoted_literal_end(bytes, i::Integer)
-    quote = bytes[i]
+    quotemark = bytes[i]
 
-    if quote == UInt8('"') && starts_with_ascii(bytes, i, "\"\"\"")
+    if quotemark == UInt8('"') && starts_with_ascii(bytes, i, "\"\"\"")
         j = i + 3
 
         while j <= length(bytes) - 2
@@ -91,7 +91,7 @@ function quoted_literal_end(bytes, i::Integer)
             escaped = false
         elseif byte == UInt8('\\')
             escaped = true
-        elseif byte == quote
+        elseif byte == quotemark
             return j
         end
 
@@ -216,7 +216,7 @@ function assign_reindex_match!(
     blocks::Vector{Block},
     text::AbstractString,
     path::AbstractString,
-    assigned_blocks::Vector{Bool},
+    assigned_blocks::AbstractVector{Bool},
     assigned_records::Set{Int},
 )
     update_record_from_block!(record, key, index, blocks[index], text)
