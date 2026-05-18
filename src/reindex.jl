@@ -188,7 +188,6 @@ function syntax_reindex_fingerprint(
     parse_as::Symbol;
     path::AbstractString="<memory>",
 )
-    @show text kind
     parse_as == :julia || return nothing
     kind === nothing && return nothing
     kind == :eof && return "julia:eof"
@@ -278,8 +277,6 @@ function reindex_file!(key::FileKey, abs_path::AbstractString)
         if get(state.id_index, old_cache.current_id, nothing) == key
             delete!(state.id_index, old_cache.current_id)
         end
-
-        return replace_file_cache!(key, path, path, old_cache.parse_as, info)
     end
 
     blocks = parse_source_blocks(info.text, info.line_starts, old_cache.parse_as; path=path)
