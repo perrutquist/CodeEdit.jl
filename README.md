@@ -12,12 +12,9 @@ It is designed for workflows where source changes should be easy to review, easy
 
 CodeEdit.jl is useful when you want to:
 
-- locate the function, type, constant, or text paragraph that contains a source location;
-- inspect that block directly at the REPL;
-- build edits as Julia values before touching the filesystem;
-- require a reviewed diff before applying a change;
-- record normal source edits as git commits;
-- update loaded definitions with Revise.jl when Revise is available.
+- locate and inspect a piece of code, directly from Julia
+- write Julia code that edits other Julia code 
+- apply edits in a controlled fashion, optionally backed by git commits
 
 ## Quick example
 
@@ -187,7 +184,7 @@ Important `apply!` keyword arguments can be stored in `VersionControl(path; kwar
 - `require_clean` - If `true`, reject edits when tracked files in scope are dirty. Defaults to `true` unless `precommit_message` is supplied.
 - `atomic_repo=false` - If `true`, dirty-file checks and precommits apply to the whole repository rather than only affected files.
 - `precommit_message` - Commit message used to commit dirty tracked files before formatting or applying the edit.
-- `formatter` - Function from `AbstractString` to `AbstractString` applied to affected files after the edit, and also before the edit when `preformat=true`.
+- `formatter` - Function from `AbstractString` to `AbstractString` applied to affected files after the edit, and also before the edit when `preformat=true`. (For example `Runic.format_string`.)
 - `preformat=true` - If `true` and a formatter is supplied, format affected files before applying the edit so handles can be reindexed against formatted source before the change.
 - `format_message` - Commit message for formatter-only changes.
 - `default_message` - Commit message used when `apply!(repo, edit)` is called without a positional message.
@@ -240,7 +237,7 @@ Invalid handles are displayed as `#invalid`.
 
 ## Reindexing
 
-After files are modified outside CodeEdit.jl, existing handles may no longer match the file contents. The `reindex()` function attempts to update all handles to point to the correct block using formatter-stable Julia syntax fingerprints before falling back to text similarity. Formatting-only changes from tools such as Runic.jl should therefore preserve handles when the block's concrete syntax, including comments, is otherwise unchanged. Duplicate syntax-identical blocks are matched only when the preceding block, or the beginning of the file, anchors the match. This may invalidate some handles and modify the contents of others.
+After files are modified outside CodeEdit.jl, existing handles may no longer match the file contents. The `reindex()` function attempts to update all handles to point to the correct block. It uses syntax fingerprints before falling back to text similarity. (Formatting-only changes from tools such as Runic.jl should preserve handles.)
 
 Reindexing is triggered automatically when a cached file’s modification timestamp changes, so manual calls are usually unnecessary.
 
