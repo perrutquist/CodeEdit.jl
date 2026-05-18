@@ -1,4 +1,4 @@
-using JuliaFormatter
+using Runic
 
 @testset "formatter updates handles after preformatting changes line numbers" begin
     mktempdir() do dir
@@ -21,7 +21,7 @@ using JuliaFormatter
             end
             """)
 
-            apply!(NoVersionControl(formatter=JuliaFormatter.format_text), edit)
+            apply!(NoVersionControl(formatter=Runic.format_string), edit)
 
             text = read("sample.jl", String)
             @test occursin("function before()", text)
@@ -57,7 +57,7 @@ end
             end
             """)
 
-            apply!(NoVersionControl(formatter=JuliaFormatter.format_text), edit)
+            apply!(NoVersionControl(formatter=Runic.format_string), edit)
 
             text = read("sample.jl", String)
             @test occursin("function watched(y)", text)
@@ -86,7 +86,7 @@ end
             marker = Handle("sample.jl", 2)
             edit = InsertBefore(marker, "function inserted();3;end\n")
 
-            apply!(NoVersionControl(formatter=JuliaFormatter.format_text), edit)
+            apply!(NoVersionControl(formatter=Runic.format_string), edit)
 
             text = read("sample.jl", String)
             inserted_range = findfirst("function inserted()", text)
@@ -117,7 +117,7 @@ end
             victim = Handle("sample.jl", 2)
             survivor = Handle("sample.jl", 3)
 
-            apply!(NoVersionControl(formatter=JuliaFormatter.format_text), Delete(victim))
+            apply!(NoVersionControl(formatter=Runic.format_string), Delete(victim))
 
             text = read("sample.jl", String)
             @test occursin("function prefix()", text)
@@ -155,7 +155,7 @@ end
                 InsertAfter(second_target, "function inserted_after();4;end\n"),
             )
 
-            apply!(NoVersionControl(formatter=JuliaFormatter.format_text), edit)
+            apply!(NoVersionControl(formatter=Runic.format_string), edit)
 
             text = read("sample.jl", String)
             @test occursin("function first_target()", text)
