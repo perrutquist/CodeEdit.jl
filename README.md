@@ -4,9 +4,9 @@
 [![Dev docs](https://img.shields.io/badge/docs-dev-blue.svg)](https://perrutquist.github.io/CodeEdit.jl/dev/)
 [![Stable docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://perrutquist.github.io/CodeEdit.jl/stable/)
 
-CodeEdit.jl is a Julia package for making small, reviewable source edits from the Julia command line. Instead of manipulating raw line ranges, you work with handles to parsed source blocks, build edit objects, inspect the planned diff, and apply the change through git or an explicit no-version-control mode.
+CodeEdit.jl is a Julia package for making source edits from the Julia command line. Instead of manipulating raw line ranges, it works with handles to parsed source blocks.
 
-It is designed for workflows where source changes should be easy to review, easy to commit, and safe to apply incrementally.
+It is designed for workflows where source changes should be easy to create, review, and apply directly from Julia.
 
 ## Why CodeEdit?
 
@@ -49,7 +49,9 @@ Edit modifies foo.jl:
 >     x + 2
 ```
 
-Apply the edit through git:
+The planned edit is displayed, but it has not been written to the file system yet.
+
+Now, apply the edit through git:
 
 ```julia-repl
 julia> repo = VersionControl("."; require_view=true)
@@ -59,28 +61,7 @@ julia> apply!(repo, edit, "Change foo increment")
 Applied: 1 file changed, commit a1b2c3d
 ```
 
-Constructing an edit does not modify files. Applying it through `VersionControl` writes the change, stages the affected paths, commits the result, and returns an `ApplyResult` with the affected files, commit information, and applied diff text.
-
-For scratch files, generated files, or other changes that should not create a commit, use an explicit no-version-control specification:
-
-```julia-repl
-julia> write("scratch.txt", "status = old\n")
-11
-
-julia> h = Handle("scratch.txt", 1; parse_as=:text)
-# scratch.txt 1 - 1:
-status = old
-
-julia> edit = Replace(h, "status = new\n")
-Edit modifies scratch.txt:
-1c1
-< status = old
----
-> status = new
-
-julia> apply!(NoVersionControl(require_view=true), edit)
-Applied: 1 file changed
-```
+For scratch files, generated files, or other changes that should not create a commit, use `NoVersionControl()` instead of a `VersionControl` object.
 
 If **Revise.jl** is loaded, CodeEdit.jl calls `Revise.revise()` after each successful edit so changed method definitions usually take effect immediately.
 
@@ -137,8 +118,6 @@ Handles referring to the same code block are interned: they compare as identical
 
 `search(handles, needle)` - Returns a `Set` of blocks that contain `needle`. This is a convenience wrapper for `filter(h -> occursin(needle, string(h)), handles)`. `needle` may be a string or a regular expression.
 
-`search(handles, trace)` - Returns handles to code referenced by a stacktrace or backtrace-like object, such as a backtrace from `catch_backtrace()` or a collection of stack frames. To search for an error location, pass the captured stacktrace/backtrace rather than the thrown error value.
-
 The `search` functions also accept a file path, a vector of file paths, a directory path and glob pattern, or a `VersionControl` object in place of `handles`. `search(repo, needle)` searches the same handle set returned by `handles(repo)`.
 
 ## Editing
@@ -169,16 +148,7 @@ Editing is performed by first creating one or more "edit" objects (`<: AbstractE
 
 `apply!(repo, edit, message)` - Apply an edit, update files on disk, stage the affected paths, and create a git commit with `message`. This is the standard workflow.
 
-`apply!(repo, edit; default_message="...")` - Apply and commit using a default message supplied either in the call or in the `VersionControl` object.
-
-`apply!(NoVersionControl(require_view=true), edit)` - Apply without version control, while requiring the edit to have been displayed.
-
-`apply!(edit)` - Always errors. Pass an explicit `VersionControl` or `NoVersionControl` specification.
-
-`apply!` returns an `ApplyResult` with `changes`, `commits`, `diff`, and `formatted_paths` fields. Its default display is brief, for example `Applied: 1 file changed` or `Applied: 2 files changed, commit a1b2c3d`.
-
-Important `apply!` keyword arguments can be stored in `VersionControl(path; kwargs...)` or passed directly to `apply!`:
-
+`apply!(repo, edit; default_message="...")` - Apply and commit using a default message supplied either in the call or in the `VersionControl` object. The `apply!` keyword arguments can be stored in `VersionControl(path; kwargs...)` or passed directly to `apply!`:
 - `require_view=false` - If `true`, reject edits that have not been displayed. REPL printing, calls to `Base.display(edit)`, and calls to `string(edit)` all count.
 - `require_versioning=true` for git, `false` without version control - If `true`, reject edits to existing files that are not tracked by git and reject creation outside the worktree.
 - `require_clean` - If `true`, reject edits when tracked files in scope are dirty. Defaults to `true` unless `precommit_message` is supplied.
@@ -189,13 +159,11 @@ Important `apply!` keyword arguments can be stored in `VersionControl(path; kwar
 - `format_message` - Commit message for formatter-only changes.
 - `default_message` - Commit message used when `apply!(repo, edit)` is called without a positional message.
 
-When `require_view=true`, displaying an edit records the exact plan that was shown; `apply!` replans the edit and rejects it if the plan changed. Handles automatically adapt to changing line numbers due to edits elsewhere in the file.
-
 Applying edits can modify or invalidate the handles that they contain. An invalidated handle no longer refers to any code.
 
 Use raw string literals, e.g. `raw"""..."""`, to avoid escaping backslashes and dollar signs when writing Julia code into a string literal.
 
-There is no built-in undo function. The recommended workflow is to use `apply!(VersionControl("."), edit, "message")` so each edit is recorded as a git commit.
+There is no built-in undo function. The recommended workflow is to use a `VersionControl` object pointing to a git repository, so each edit is recorded as a git commit.
 
 **Revise.jl** is an optional weak dependency. When Revise is loaded, CodeEdit.jl calls `Revise.revise()` after a successful `apply!`. Revise failures are reported as warnings because the filesystem edit has already been applied.
 
@@ -232,8 +200,6 @@ Invalid handles are displayed as `#invalid`.
 `filepath_matches(handle, regex)` - Returns whether the handle's filepath matches `regex`. `filepath_matches(regex)` returns a predicate suitable for `filter`.
 
 `is_valid(edit)` - Returns true if an edit could be applied without introducing any syntax errors in the final file contents.
-
-`Base.occursin(handle, trace)` - Returns `true` if the code that `handle` points to occurs in the stacktrace `trace`.
 
 ## Reindexing
 
