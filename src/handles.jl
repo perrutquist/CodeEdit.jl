@@ -234,7 +234,7 @@ end
 
 function Handle(sf::StackTraces.StackFrame)
     file = Base.find_source_file(string(sf.file))
-    isnothing(file) && return invalid_handle
+    (isnothing(file) || !isfile(file)) && return invalid_handle
     Handle(file, sf.line)
 end
 

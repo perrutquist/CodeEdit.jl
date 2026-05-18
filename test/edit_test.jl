@@ -221,7 +221,7 @@ end
             catch_backtrace()
         end
 
-        found = search(hs, trace)
+        found = intersect(hs, handles(trace))
         @test any(h -> occursin("child_function", string(h)), found)
     end
 end

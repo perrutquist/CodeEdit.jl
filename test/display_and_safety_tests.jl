@@ -82,9 +82,10 @@ end
             catch_backtrace()
         end
 
-        @test occursin(traced, trace)
-        @test !occursin(other, trace)
-        @test traced in search(hs, trace)
+        ht = handles(trace)
+        @test traced in ht
+        @test !(other in ht)
+        @test traced in intersect(hs, ht)
 
         deleteat!(Base.LOAD_PATH, findall(==(dir), Base.LOAD_PATH))
     end

@@ -1,77 +1,4 @@
 """
-Return normalized stack frames for a Julia stacktrace or backtrace-like object.
-"""
-function normalized_trace_frames(trace)
-    try
-        return stacktrace(trace)
-    catch
-    end
-
-    if trace isa Vector{Any}
-        try
-            raw_trace = Union{Ptr{Nothing},Base.InterpreterIP}[]
-
-            for item in trace
-                if item isa Ptr{Nothing} || item isa Base.InterpreterIP
-                    push!(raw_trace, item)
-                else
-                    error("not a raw backtrace")
-                end
-            end
-
-            return stacktrace(raw_trace)
-        catch
-        end
-    end
-
-    try
-        iterate(trace) === nothing && return ()
-        return trace
-    catch
-        return ()
-    end
-end
-
-"""
-Return source locations from a Julia stacktrace or backtrace-like object.
-"""
-function trace_locations(trace)
-    locations = Tuple{String,Int}[]
-
-    for frame in normalized_trace_frames(trace)
-        hasproperty(frame, :file) || continue
-        hasproperty(frame, :line) || continue
-
-        file = getproperty(frame, :file)
-        line = getproperty(frame, :line)
-
-        if file !== nothing && line !== nothing
-            try
-                push!(locations, (absolute_path(String(file)), Int(line)))
-            catch
-            end
-        end
-    end
-
-    return locations
-end
-
-"""
-Return whether a handle contains any source location from a trace.
-"""
-function Base.occursin(handle::Handle, trace)
-    is_valid(handle) || return false
-    record = valid_handle_record(handle)
-    handle_path = absolute_path(record.path)
-
-    for (path, line) in trace_locations(trace)
-        path == handle_path && line in record.lines && return true
-    end
-
-    return false
-end
-
-"""
     search(handle_set, needle::AbstractString)
 
 Search an existing handle collection for blocks containing `needle`.
@@ -98,23 +25,6 @@ function search(handle_set, needle::Regex)
     for handle in handle_set
         is_valid(handle) || continue
         occursin(needle, string(handle)) && push!(result, handle)
-    end
-
-    return result
-end
-
-"""
-    search(handle_set, trace)
-
-Search an existing handle collection for blocks referenced by a stacktrace or
-backtrace-like object, such as a backtrace from `catch_backtrace()` or a
-collection of stack frames.
-"""
-function search(handle_set, trace)
-    result = Set{Handle}()
-
-    for handle in handle_set
-        occursin(handle, trace) && push!(result, handle)
     end
 
     return result
