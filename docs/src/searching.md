@@ -119,4 +119,31 @@ Recursive include traversal uses cycle detection, so include loops are visited a
 
 ## Result order
 
-Search results are handle sets. Their displayed summary is grouped by file, but iteration order should not be used as a relevance signal. If order matters, sort results explicitly using [`filepath`](@ref) and [`lines`](@ref), or select a single result with `only` when you expect exactly one match.
+Search results are handle sets. Their displayed summary is grouped by file, but iteration over the set will yeld an arbitrary order. If order matters, sort results explicitly using [`filepath`](@ref) and [`lines`](@ref). The command `sort!(collect(hs), by=CodeEdit.handle_sort_key)` will generate a sorted `Vector` from the set `hs` in the exact order that it is displayed.
+
+# Extracting a single handle from a search
+
+A `search` or `filter` operation that returns a single handle can be passed to the `only` function to extract that handle, for exmple:
+
+```jldoctest searching
+julia> h1 = only(search(hs, "function foo"))
+# examples/DemoPackage.jl 7 - 11:
+function foo(x)
+    y = helper(x)
+    z = y * 2
+    return z
+end
+
+```
+
+A simple way is often to use the `Handle` constructor with the filename an line number, although this can be brittle as line numbers can change due to edits.
+
+```jldoctest searching
+julia> h2 = Handle("examples/DemoPackage.jl", 10);
+
+julia> h3 = only(filter(h -> occursin("DemoPackage", filepath(h)) && 10 in lines(h), hs));
+
+julia> h1 === h2 === h3
+true
+
+```
