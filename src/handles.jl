@@ -239,6 +239,28 @@ function Handle(sf::StackTraces.StackFrame)
 end
 
 """
+Return a handle to a Method's source block when source information is available.
+"""
+function Handle(method::Method)
+    path = string(@something(method.file, ""))
+    line = method.line
+
+    if line <= 0 || isempty(path) || startswith(path, "REPL[")
+        throw(ArgumentError("source information unavailable"))
+    end
+
+    if !isfile(path)
+        path = Base.find_source_file(string(path))
+    end
+
+    if !isfile(path)
+        throw(ArgumentError("source file could not be located"))
+    end
+
+    return Handle(path, Int(line))
+end
+
+"""
 Return the EOF handle for a file.
 """
 function eof_handle(path::AbstractString; parse_as::Symbol=:auto)
