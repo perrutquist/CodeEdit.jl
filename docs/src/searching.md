@@ -119,7 +119,7 @@ Recursive include traversal uses cycle detection, so include loops are visited a
 
 ## Result order
 
-Search results are handle sets. Their displayed summary is grouped by file, but iteration over the set will yield an arbitrary order. If order matters, sort results explicitly using [`filepath`](@ref) and [`lines`](@ref). The command `sort!(collect(hs), by=CodeEdit.handle_sort_key)` will generate a sorted `Vector` from the set `hs` in the exact order that it is displayed.
+Search results are handle sets. Their displayed summary is grouped by file, but iteration over the set will yield an arbitrary order. If order matters, sort results explicitly using [`filepath`](@ref) and [`lines`](@ref). The command `sort!(collect(hs))` will generate a sorted `Vector` from the set `hs` in the exact order that it is displayed.
 
 # Extracting a single handle from a search
 

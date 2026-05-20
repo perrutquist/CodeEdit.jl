@@ -82,19 +82,6 @@ function handle_primary_path(record::HandleRecord)
 end
 
 """
-Sort key used when displaying collections of handles.
-"""
-function handle_sort_key(handle::Handle)
-    record = handle_record(handle)
-
-    if record === nothing || !record.valid
-        return ("\uffff", typemax(Int), typemax(Int), handle.id)
-    end
-
-    return (handle_primary_path(record), record.span.lo, record.span.hi, handle.id)
-end
-
-"""
 Return whether a byte is part of an ASCII word/symbol token.
 """
 function is_ascii_word_codeunit(byte::UInt8)

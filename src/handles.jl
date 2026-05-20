@@ -241,23 +241,23 @@ end
 """
 Return a handle to a Method's source block when source information is available.
 """
-function Handle(method::Method)
+function Handle(method::Method, return_invalid=true)
     path = string(@something(method.file, ""))
     line = method.line
 
     if line <= 0 || isempty(path) || startswith(path, "REPL[")
-        throw(ArgumentError("source information unavailable"))
+        return_invalid && return invalid_handle
+        throw(ArgumentError("invalid source location"))
     end
 
-    if !isfile(path)
-        path = Base.find_source_file(string(path))
+    source_path = isfile(path) ? path : Base.find_source_file(path)
+
+    if !isfile(source_path)
+        return_invalid && return invalid_handle
+        throw(ArgumentError("source file could not be located: $path"))
     end
 
-    if !isfile(path)
-        throw(ArgumentError("source file could not be located"))
-    end
-
-    return Handle(path, Int(line))
+    return Handle(source_path, Int(line))
 end
 
 """
@@ -343,8 +343,29 @@ function handles(root::AbstractString, pattern::AbstractString; includes::Bool=f
     return handles(glob(pattern, root); includes=includes, parse_as=parse_as)
 end
 
+function handles(ml::Base.MethodList)
+    Set(Handle(f) for f in ml)
+end
+
 function handles(sf::Vector{StackTraces.StackFrame})
     Set(Handle(f) for f in sf)
 end
 
 handles(trace::Vector{Union{Ptr{Nothing}, Base.InterpreterIP}}) = handles(stacktrace(trace))
+
+"""
+Sort key used when displaying collections of handles.
+"""
+function handle_sort_key(handle::Handle)
+    record = handle_record(handle)
+
+    if record === nothing || !record.valid
+        return ("\uffff", typemax(Int), typemax(Int), handle.id)
+    end
+
+    return (handle_primary_path(record), record.span.lo, record.span.hi, handle.id)
+end
+
+function Base.isless(a::Handle, b::Handle)
+    isless(handle_sort_key(a), handle_sort_key(b))
+end
