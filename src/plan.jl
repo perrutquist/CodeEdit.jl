@@ -59,10 +59,14 @@ function validation_errors(text::AbstractString, parse_as::Symbol, path::Abstrac
 
     try
         validate_utf8(Vector{UInt8}(codeunits(text)), path)
-        parse_as == :julia && validate_julia_parse(text, path)
     catch err
-        err isa ArgumentError || is_julia_syntax_exception(err) || rethrow()
+        err isa ArgumentError || rethrow()
         push!(errors, sprint(showerror, err))
+        return errors
+    end
+
+    if parse_as == :julia
+        append!(errors, julia_parse_errors(text, path))
     end
 
     return errors

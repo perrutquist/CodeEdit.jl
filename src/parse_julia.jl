@@ -1,13 +1,63 @@
 """
+Parse Julia source with JuliaSyntax without throwing on syntax errors.
+"""
+function julia_parse_green_tree(text::AbstractString, path::AbstractString="<memory>")
+    return JuliaSyntax.parseall(
+        JuliaSyntax.GreenNode,
+        text;
+        filename=String(path),
+        raise=false,
+    )
+end
+
+"""
+Collect JuliaSyntax error-node messages from a GreenNode tree.
+"""
+function collect_julia_parse_errors!(
+    errors::Vector{String},
+    node,
+    offset::Integer=0,
+)
+    if JuliaSyntax.kind(node) == JuliaSyntax.K"error"
+        push!(errors, "Julia syntax error at byte offset $offset: $node")
+    end
+
+    child_offset = offset
+
+    for child in syntax_children(node)
+        collect_julia_parse_errors!(errors, child, child_offset)
+        child_offset += Int(JuliaSyntax.span(child))
+    end
+
+    return errors
+end
+
+"""
+Return Julia syntax validation errors without throwing.
+"""
+function julia_parse_errors(text::AbstractString, path::AbstractString="<memory>")
+    tree = julia_parse_green_tree(text, path)
+    errors = String[]
+    collect_julia_parse_errors!(errors, tree)
+    return errors
+end
+
+"""
 Parse Julia source with JuliaSyntax.
 """
 function julia_parse_tree(text::AbstractString, path::AbstractString="<memory>")
+    errors = julia_parse_errors(text, path)
+
+    if !isempty(errors)
+        throw(ArgumentError(join(errors, "\n")))
+    end
+
     return JuliaSyntax.parseall(
         JuliaSyntax.SyntaxNode,
         text;
         filename=String(path),
         ignore_trivia=true,
-        ignore_warnings=false,
+        ignore_warnings=true,
     )
 end
 
@@ -15,8 +65,9 @@ end
 Validate Julia source using JuliaSyntax.
 """
 function validate_julia_parse(text::AbstractString, path::AbstractString="<memory>")
-    julia_parse_tree(text, path)
-    return nothing
+    errors = julia_parse_errors(text, path)
+    isempty(errors) && return nothing
+    throw(ArgumentError(join(errors, "\n")))
 end
 
 """
@@ -32,10 +83,6 @@ Return whether a JuliaSyntax node has kind `name`.
 """
 julia_kind(node, name::AbstractString) = JuliaSyntax.kind(node) == JuliaSyntax.Kind(name)
 
-"""
-Return whether `err` is an expected JuliaSyntax parsing/validation failure.
-"""
-is_julia_syntax_exception(err) = parentmodule(typeof(err)) === JuliaSyntax
 
 const _unsafe_module_boundary_warning_paths = Set{String}()
 

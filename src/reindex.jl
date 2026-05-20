@@ -193,13 +193,8 @@ function syntax_reindex_fingerprint(
     kind == :eof && return "julia:eof"
     kind == :module_footer && return "julia:module_footer:end"
 
-    if kind == :julia
-        try
-            validate_julia_parse(text, path)
-        catch err
-            err isa ArgumentError || is_julia_syntax_exception(err) || rethrow()
-            return nothing
-        end
+    if kind == :julia && !isempty(julia_parse_errors(text, path))
+        return nothing
     end
 
     return "julia:$kind:" * normalized_julia_source_fingerprint(text)
