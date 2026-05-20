@@ -135,7 +135,7 @@ Edit modifies scratch.jl:
 ---
 > function broken(
 Validation errors:
-- ArgumentError: Julia file could not be parsed: docs/scratch.jl
+- scratch.jl has a Julia syntax error
 
 julia> apply!(NoVersionControl(require_view=true), edit)
 ERROR: displayed edit was invalid
