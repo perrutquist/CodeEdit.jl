@@ -11,36 +11,25 @@ function julia_parse_green_tree(text::AbstractString, path::AbstractString="<mem
     )
 end
 
-"""
-Collect JuliaSyntax error-node messages from a GreenNode tree.
-"""
-function collect_julia_parse_errors!(
-    errors::Vector{String},
-    node,
-    offset::Integer=0,
-)
-    if JuliaSyntax.kind(node) == JuliaSyntax.K"error"
-        push!(errors, "Julia syntax error at byte offset $offset.")
-    end
-
-    child_offset = offset
-
-    for child in syntax_children(node)
-        collect_julia_parse_errors!(errors, child, child_offset)
-        child_offset += Int(JuliaSyntax.span(child))
-    end
-
-    return errors
-end
 
 """
 Return Julia syntax validation errors without throwing.
 """
 function julia_parse_errors(text::AbstractString, path::AbstractString="<memory>")
     tree = julia_parse_green_tree(text, path)
-    errors = String[]
-    collect_julia_parse_errors!(errors, tree)
-    return errors
+    stack = Any[tree]
+
+    while !isempty(stack)
+        node = pop!(stack)
+
+        if JuliaSyntax.kind(node) == JuliaSyntax.K"error"
+            return ["$path has a Julia syntax error"]
+        end
+
+        append!(stack, syntax_children(node))
+    end
+
+    return String[]
 end
 
 """
