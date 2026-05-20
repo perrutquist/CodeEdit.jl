@@ -381,14 +381,13 @@ function Base.show(io::IO, ::MIME"text/plain", vector::Vector{Handle})
         return
     end
 
-    for (index, handle) in pairs(sort(collect(vector); by=handle_sort_key))
+    for handle in vector
         record = handle_record(handle)
-        index > 1 && println(io)
 
         if record === nothing || !record.valid
-            print(io, "#invalid")
+            println(io, "#invalid")
         else
-            print(io, "$(handle_header(handle)) $(handle_preview(record))")
+            println(io, "$(handle_header(handle)) $(handle_preview(record))")
         end
     end
 end
