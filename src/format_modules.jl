@@ -38,6 +38,9 @@ end
 
 """
 Return `text[span]` with selected semicolon byte offsets replaced by line breaks.
+
+Each inserted line break is followed by the indentation from the original line,
+and horizontal whitespace immediately after the semicolon is removed.
 """
 function replace_offsets_with_linebreak(
     text::AbstractString,
@@ -56,8 +59,27 @@ function replace_offsets_with_linebreak(
             print(io, String(text[cursor:prevind(text, offset)]))
         end
 
+        line_start = offset
+        while firstindex(text) < line_start
+            previous = prevind(text, line_start)
+            text[previous] == '\n' && break
+            line_start = previous
+        end
+
+        indentation_end = line_start
+        while indentation_end < offset && text[indentation_end] in (' ', '\t')
+            indentation_end = nextind(text, indentation_end)
+        end
+
         print(io, line_ending)
+        if line_start < indentation_end
+            print(io, String(text[line_start:prevind(text, indentation_end)]))
+        end
+
         cursor = nextind(text, offset)
+        while cursor < span.hi && text[cursor] in (' ', '\t')
+            cursor = nextind(text, cursor)
+        end
     end
 
     if cursor < span.hi
