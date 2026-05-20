@@ -160,3 +160,189 @@ mutable struct HandleRecord
     doc::Union{Nothing,String}
     valid::Bool
 end
+
+"""
+    AbstractEdit
+
+Abstract supertype for all edit values.
+
+Edit objects describe source or filesystem changes that can be displayed,
+validated, and then applied with [`apply!`](@ref).
+"""
+abstract type AbstractEdit end
+
+"""
+Placeholder for the displayed-plan fingerprint used by later apply planning.
+"""
+struct DisplayedPlan
+    fingerprint::String
+    valid::Bool
+    text::String
+end
+
+"""
+    Replace(handle::Handle, code::AbstractString)
+
+Edit that replaces the source block referred to by `handle` with `code`.
+"""
+struct Replace <: AbstractEdit
+    handle::Handle
+    code::String
+    displayed::Base.RefValue{Union{Nothing,DisplayedPlan}}
+end
+
+"""
+    Delete(handle::Handle)
+
+Edit that deletes the source block referred to by `handle`.
+
+Deleting an EOF handle has no effect.
+"""
+struct Delete <: AbstractEdit
+    handle::Handle
+    displayed::Base.RefValue{Union{Nothing,DisplayedPlan}}
+end
+
+"""
+    InsertBefore(handle::Handle, code::AbstractString)
+
+Edit that inserts `code` immediately before the source block referred to by
+`handle`.
+"""
+struct InsertBefore <: AbstractEdit
+    handle::Handle
+    code::String
+    displayed::Base.RefValue{Union{Nothing,DisplayedPlan}}
+end
+
+"""
+    InsertAfter(handle::Handle, code::AbstractString)
+
+Edit that inserts `code` immediately after the source block referred to by
+`handle`.
+"""
+struct InsertAfter <: AbstractEdit
+    handle::Handle
+    code::String
+    displayed::Base.RefValue{Union{Nothing,DisplayedPlan}}
+end
+
+"""
+    CreateFile(path::AbstractString, code::AbstractString; parse_as::Symbol=:auto)
+
+Edit that creates a new file at `path` containing `code`.
+
+`parse_as` may be `:auto`, `:julia`, or `:text`.
+"""
+struct CreateFile <: AbstractEdit
+    path::String
+    code::String
+    parse_as::Symbol
+    displayed::Base.RefValue{Union{Nothing,DisplayedPlan}}
+end
+
+"""
+    MoveFile(old_path::AbstractString, new_path::AbstractString)
+
+Edit that moves or renames a file from `old_path` to `new_path`.
+"""
+struct MoveFile <: AbstractEdit
+    old_path::String
+    new_path::String
+    displayed::Base.RefValue{Union{Nothing,DisplayedPlan}}
+end
+
+"""
+    DeleteFile(path::AbstractString)
+
+Edit that deletes the file at `path`.
+"""
+struct DeleteFile <: AbstractEdit
+    path::String
+    displayed::Base.RefValue{Union{Nothing,DisplayedPlan}}
+end
+
+"""
+    Combine(edits::AbstractEdit...)
+    Combine(edits::AbstractVector{<:AbstractEdit})
+
+Edit that combines multiple edits into one planned operation.
+
+Combined edits are interpreted in order and validated as a unit. Applying a
+combined edit that touches multiple files is best-effort at the filesystem
+level, so a later filesystem failure can leave earlier operations applied.
+"""
+struct Combine <: AbstractEdit
+    edits::Vector{AbstractEdit}
+    displayed::Base.RefValue{Union{Nothing,DisplayedPlan}}
+end
+
+"""
+Executable plan for one handle-based content replacement.
+"""
+struct ReplacementEditPlan
+    edit::AbstractEdit
+    key::FileKey
+    path::String
+    parse_as::Symbol
+    stamp::FileStamp
+    span::Span
+    code::String
+    old_text::String
+    new_text::String
+    target::Handle
+    operation::Symbol
+    valid::Bool
+    errors::Vector{String}
+    fingerprint::String
+    display_text::String
+end
+
+"""
+Final filesystem/content effect for one logical or path-only file.
+"""
+struct FileEditEffect
+    key::Union{Nothing,FileKey}
+    original_path::Union{Nothing,String}
+    path::String
+    parse_as::Symbol
+    stamp::Union{Nothing,FileStamp}
+    old_text::Union{Nothing,String}
+    new_text::Union{Nothing,String}
+    created::Bool
+    deleted::Bool
+    handle_spans::Dict{Int,Union{Nothing,Span}}
+end
+
+"""
+Executable ordered edit plan for combined and file-level edits.
+"""
+struct EditPlan
+    edit::AbstractEdit
+    effects::Vector{FileEditEffect}
+    moves::Vector{Tuple{String,String}}
+    deletes::Vector{String}
+    ordered_steps::Vector{String}
+    valid::Bool
+    errors::Vector{String}
+    fingerprint::String
+    display_text::String
+end
+
+mutable struct VirtualFileState
+    key::Union{Nothing,FileKey}
+    original_path::Union{Nothing,String}
+    path::String
+    parse_as::Symbol
+    stamp::Union{Nothing,FileStamp}
+    original_text::Union{Nothing,String}
+    text::Union{Nothing,String}
+    created::Bool
+    deleted::Bool
+    handle_spans::Dict{Int,Union{Nothing,Span}}
+end
+
+struct InterpretResult
+    ok::Bool
+    message::String
+end

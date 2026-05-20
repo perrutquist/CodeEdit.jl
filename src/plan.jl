@@ -1,72 +1,3 @@
-"""
-Executable plan for one handle-based content replacement.
-"""
-struct ReplacementEditPlan
-    edit::AbstractEdit
-    key::FileKey
-    path::String
-    parse_as::Symbol
-    stamp::FileStamp
-    span::Span
-    code::String
-    old_text::String
-    new_text::String
-    target::Handle
-    operation::Symbol
-    valid::Bool
-    errors::Vector{String}
-    fingerprint::String
-    display_text::String
-end
-
-"""
-Final filesystem/content effect for one logical or path-only file.
-"""
-struct FileEditEffect
-    key::Union{Nothing,FileKey}
-    original_path::Union{Nothing,String}
-    path::String
-    parse_as::Symbol
-    stamp::Union{Nothing,FileStamp}
-    old_text::Union{Nothing,String}
-    new_text::Union{Nothing,String}
-    created::Bool
-    deleted::Bool
-    handle_spans::Dict{Int,Union{Nothing,Span}}
-end
-
-"""
-Executable ordered edit plan for combined and file-level edits.
-"""
-struct EditPlan
-    edit::AbstractEdit
-    effects::Vector{FileEditEffect}
-    moves::Vector{Tuple{String,String}}
-    deletes::Vector{String}
-    ordered_steps::Vector{String}
-    valid::Bool
-    errors::Vector{String}
-    fingerprint::String
-    display_text::String
-end
-
-mutable struct VirtualFileState
-    key::Union{Nothing,FileKey}
-    original_path::Union{Nothing,String}
-    path::String
-    parse_as::Symbol
-    stamp::Union{Nothing,FileStamp}
-    original_text::Union{Nothing,String}
-    text::Union{Nothing,String}
-    created::Bool
-    deleted::Bool
-    handle_spans::Dict{Int,Union{Nothing,Span}}
-end
-
-struct InterpretResult
-    ok::Bool
-    message::String
-end
 
 const INTERPRET_OK = InterpretResult(true, "")
 
@@ -523,7 +454,9 @@ function effect_validation_errors(effect::FileEditEffect)
 end
 
 function build_edit_plan(edit::AbstractEdit, edits::Vector{AbstractEdit})
-    isempty(edits) && return plan_error(edit, "empty Combine edits are not supported")
+    if isempty(edits)
+        return EditPlan(edit, FileEditEffect[], Tuple{String,String}[], String[], String[], true, String[], sha1_hex("noop"), "Edit makes no changes.\n")
+    end
 
     virtual_by_key = Dict{FileKey,VirtualFileState}()
     virtual_by_path = Dict{String,VirtualFileState}()
