@@ -105,6 +105,5 @@ function format_modules(path::AbstractString)
         push!(edits, Replace(block_handle(cache, block_index), replacement))
     end
 
-    isempty(edits) && throw(ArgumentError("no unsafe multi-line module boundaries found in $(String(path))"))
-    return length(edits) == 1 ? only(edits) : Combine(edits...)
+    return Combine(edits...)
 end
