@@ -237,6 +237,23 @@ function module_body_node(node)
 end
 
 """
+Return the physical line containing the `module` or `baremodule` declaration.
+
+JuliaSyntax includes a module docstring in the module node range, so the node's
+first line may be the docstring rather than the declaration.
+"""
+function module_declaration_line(node, text::AbstractString, line_starts::Vector{Int})
+    module_lines = syntax_node_line_range(node, line_starts)
+
+    for line in module_lines
+        content = strip(span_text(text, line_content_span(text, line_starts, line)))
+        (startswith(content, "module ") || startswith(content, "baremodule ")) && return line
+    end
+
+    return module_lines.start
+end
+
+"""
 Return the first semicolon byte offset in `span`, optionally before `before`.
 """
 function first_semicolon_offset(text::AbstractString, span::Span; before::Integer=span.hi)
@@ -280,7 +297,7 @@ body syntax ends on the module closing line.
 """
 function unsafe_module_boundary_offsets(node, text::AbstractString, line_starts::Vector{Int})
     module_lines = syntax_node_line_range(node, line_starts)
-    first_line = module_lines.start
+    first_line = module_declaration_line(node, text, line_starts)
     last_line = module_lines.stop
     last_line <= first_line && return Int[]
 
@@ -329,16 +346,17 @@ end
 """
 Return whether a multi-line module has body code on a boundary line.
 """
-function has_unsafe_module_boundaries(node, line_starts::Vector{Int})
+function has_unsafe_module_boundaries(node, text::AbstractString, line_starts::Vector{Int})
     module_lines = syntax_node_line_range(node, line_starts)
-    module_lines.stop <= module_lines.start && return false
+    first_line = module_declaration_line(node, text, line_starts)
+    module_lines.stop <= first_line && return false
 
     body = module_body_node(node)
     body === nothing && return false
 
     for child in syntax_children(body)
         child_lines = syntax_node_line_range(child, line_starts)
-        (child_lines.start == module_lines.start || child_lines.stop == module_lines.stop) && return true
+        (child_lines.start == first_line || child_lines.stop == module_lines.stop) && return true
     end
 
     return false
@@ -377,19 +395,20 @@ function push_julia_module_blocks!(
     path::AbstractString="<memory>",
 )
     module_lines = syntax_node_line_range(node, line_starts)
-    first_line = module_lines.start
+    first_line = module_declaration_line(node, text, line_starts)
     last_line = module_lines.stop
 
     if last_line <= first_line
         return push_julia_syntax_block!(blocks, node, text, line_starts, cursor_line)
     end
 
-    if has_unsafe_module_boundaries(node, line_starts)
+    if has_unsafe_module_boundaries(node, text, line_starts)
         warn_unsafe_module_boundaries_once(path)
         return push_julia_syntax_block!(blocks, node, text, line_starts, cursor_line)
     end
 
-    header_start = attached_leading_start_line(text, line_starts, cursor_line, first_line)
+    node_start_line = module_lines.start
+    header_start = attached_leading_start_line(text, line_starts, cursor_line, node_start_line)
     push_julia_line_block!(blocks, text, line_starts, header_start, first_line, :module_header)
 
     body = module_body_node(node)
