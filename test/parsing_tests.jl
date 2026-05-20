@@ -43,6 +43,44 @@ end
     @test same_line[1].kind == :julia
     @test same_line[1].lines == 1:1
     @test same_line[2].kind == :eof
+
+    inline_module = CodeEdit.parse_julia_blocks("module Inline; end\n")
+    @test length(inline_module) == 2
+    @test inline_module[1].kind == :julia
+    @test inline_module[1].lines == 1:1
+    @test inline_module[2].kind == :eof
+
+    mixed_header = CodeEdit.parse_julia_blocks("module MixedHeader; x = 1\nend\n")
+    @test length(mixed_header) == 2
+    @test mixed_header[1].kind == :julia
+    @test mixed_header[1].lines == 1:2
+    @test mixed_header[2].kind == :eof
+
+    mixed_footer = CodeEdit.parse_julia_blocks("module MixedFooter\nx = 1; end\n")
+    @test length(mixed_footer) == 2
+    @test mixed_footer[1].kind == :julia
+    @test mixed_footer[1].lines == 1:2
+    @test mixed_footer[2].kind == :eof
+
+    commented_module = CodeEdit.parse_julia_blocks("module Commented # header comment\nx = 1\nend # footer comment\n")
+    @test length(commented_module) == 4
+    @test commented_module[1].kind == :module_header
+    @test commented_module[1].lines == 1:1
+    @test commented_module[2].kind == :julia
+    @test commented_module[2].lines == 2:2
+    @test commented_module[3].kind == :module_footer
+    @test commented_module[3].lines == 3:3
+    @test commented_module[4].kind == :eof
+
+    documented_module = CodeEdit.parse_julia_blocks("\"\"\"\nModule docs\n\"\"\"\nmodule Documented\nx = 1\nend\n")
+    @test length(documented_module) == 4
+    @test documented_module[1].kind == :module_header
+    @test documented_module[1].lines == 1:4
+    @test documented_module[2].kind == :julia
+    @test documented_module[2].lines == 5:5
+    @test documented_module[3].kind == :module_footer
+    @test documented_module[3].lines == 6:6
+    @test documented_module[4].kind == :eof
 end
 
 @testset "file loading, handles, display, and search" begin
