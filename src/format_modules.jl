@@ -96,8 +96,8 @@ Return an edit that puts unsafe multi-line module boundaries on their own lines.
 
 The edit replaces semicolons with the file's existing line ending where a
 multi-line module has body code on the same physical line as its `module`
-declaration or closing `end`. The returned value is a `Replace` edit for one
-affected block, or a `Combine` of `Replace` edits for multiple affected blocks.
+declaration or closing `end`. The returned value is a `Combine` of zero or
+more `Replace` edits.
 """
 function format_modules(path::AbstractString)
     cache = load_file(path; parse_as=:julia)
