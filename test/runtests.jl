@@ -1,4 +1,5 @@
 using CodeEdit
+using JuliaSyntax: JuliaSyntax
 using Test
 
 include("parsing_tests.jl")

@@ -144,7 +144,7 @@ end
         invalid = joinpath(dir, "invalid_utf8.jl")
         write(invalid, UInt8[0xff, 0xfe, 0xfd])
 
-        @test_throws ArgumentError handles(invalid)
+        @test_throws JuliaSyntax.ParseError handles(invalid)
 
         path = joinpath(dir, "mode_switch.jl")
         write(path, """
