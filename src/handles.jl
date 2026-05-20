@@ -214,20 +214,32 @@ function block_index_at_offset(cache::FileCache, offset::Integer)
     return length(cache.blocks)
 end
 
-function Handle(path::AbstractString, line::Integer, pos::Integer=1; parse_as::Symbol=:auto)
+function Handle(path::AbstractString, line::Integer, pos::Integer=1; parse_as::Symbol=:auto, return_invalid=false)
+    if !isfile(path)
+        return_invalid && return invalid_handle
+        throw(ArgumentError("source file could not be located: $path"))
+    end
+
     cache = load_file(path; parse_as=parse_as)
     eof_lineno = eof_line(cache.text, cache.line_starts)
 
     if line == eof_lineno
-        pos == 1 || throw(ArgumentError("character position is outside line bounds: $pos"))
+        if pos != 1
+           return_invalid && return invalid_handle
+           throw(ArgumentError("character position is outside line bounds: $pos"))
+        end
         return block_handle(cache, length(cache.blocks))
     end
 
     if isempty(cache.line_starts)
+        return_invalid && return invalid_handle
         throw(ArgumentError("line is outside file bounds: $line"))
     end
 
-    1 <= line <= line_count(cache.line_starts) || throw(ArgumentError("line is outside file bounds: $line"))
+    if !(1 <= line <= line_count(cache.line_starts))
+        return_invalid && return invalid_handle
+        throw(ArgumentError("line is outside file bounds: $line"))
+    end
     offset = byte_offset_for_line_pos(cache.text, cache.line_starts, line, pos)
     return block_handle(cache, block_index_at_offset(cache, offset))
 end
@@ -237,28 +249,24 @@ function Handle(::Nothing, line::Integer; return_invalid=true)
     throw(ArgumentError("invalid source location"))
 end
 
-function Handle(file::Symbol, line::Integer; return_invalid=true)
-    path = Base.find_source_file(string(file))
-
-    if isnothing(path) || !isfile(path)
-        return_invalid && return invalid_handle
-        throw(ArgumentError("source file could not be located: $path"))
-    end
-    Handle(path, line)
-end
-
 """
 Return a handle to the source block referenced by a StackFrame when source information is available.
 """
 function Handle(sf::StackTraces.StackFrame; return_invalid=true)
-    Handle(sf.file, sf.line; return_invalid)
+    (path, line) = if sf.linfo isa Core.MethodInstance
+        functionloc(sf.linfo.def)
+    else
+        (Base.find_source_file(Base.fixup_stdlib_path(string(sf.file))), Int32(sf.line))
+    end
+    Handle(path, line; return_invalid)
 end
 
 """
 Return a handle to a Method's source block when source information is available.
 """
 function Handle(method::Method; return_invalid=true)
-    Handle(method.file, method.line; return_invalid)
+    (path, line) = functionloc(method)
+    Handle(path, line; return_invalid)
 end
 
 """
