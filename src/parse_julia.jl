@@ -6,7 +6,8 @@ function julia_parse_green_tree(text::AbstractString, path::AbstractString="<mem
         JuliaSyntax.GreenNode,
         text;
         filename=String(path),
-        raise=false,
+        ignore_errors=true,
+        ignore_warnings=true,
     )
 end
 
@@ -19,7 +20,7 @@ function collect_julia_parse_errors!(
     offset::Integer=0,
 )
     if JuliaSyntax.kind(node) == JuliaSyntax.K"error"
-        push!(errors, "Julia syntax error at byte offset $offset: $node")
+        push!(errors, "Julia syntax error at byte offset $offset.")
     end
 
     child_offset = offset
@@ -65,9 +66,13 @@ end
 Validate Julia source using JuliaSyntax.
 """
 function validate_julia_parse(text::AbstractString, path::AbstractString="<memory>")
-    errors = julia_parse_errors(text, path)
-    isempty(errors) && return nothing
-    throw(ArgumentError(join(errors, "\n")))
+    return JuliaSyntax.parseall(
+        JuliaSyntax.GreenNode,
+        text;
+        filename=String(path),
+        ignore_errors=false,
+        ignore_warnings=true,
+    )
 end
 
 """
