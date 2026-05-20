@@ -237,6 +237,19 @@ function module_body_node(node)
 end
 
 """
+Return the module child of a JuliaSyntax doc node, if present.
+"""
+function documented_module_node(node)
+    julia_kind(node, "doc") || return nothing
+
+    for child in syntax_children(node)
+        julia_kind(child, "module") && return child
+    end
+
+    return nothing
+end
+
+"""
 Return the physical line containing the `module` or `baremodule` declaration.
 
 JuliaSyntax includes a module docstring in the module node range, so the node's
@@ -377,6 +390,21 @@ function push_julia_node_blocks!(
         return push_julia_module_blocks!(blocks, node, text, line_starts, cursor_line; path=path)
     end
 
+    module_node = documented_module_node(node)
+
+    if module_node !== nothing
+        doc_lines = syntax_node_line_range(node, line_starts)
+        return push_julia_module_blocks!(
+            blocks,
+            module_node,
+            text,
+            line_starts,
+            cursor_line;
+            path=path,
+            header_start_line=doc_lines.start,
+        )
+    end
+
     return push_julia_syntax_block!(blocks, node, text, line_starts, cursor_line)
 end
 
@@ -393,6 +421,7 @@ function push_julia_module_blocks!(
     line_starts::Vector{Int},
     cursor_line::Integer;
     path::AbstractString="<memory>",
+    header_start_line=nothing,
 )
     module_lines = syntax_node_line_range(node, line_starts)
     first_line = module_declaration_line(node, text, line_starts)
@@ -407,7 +436,7 @@ function push_julia_module_blocks!(
         return push_julia_syntax_block!(blocks, node, text, line_starts, cursor_line)
     end
 
-    node_start_line = module_lines.start
+    node_start_line = header_start_line === nothing ? module_lines.start : header_start_line
     header_start = attached_leading_start_line(text, line_starts, cursor_line, node_start_line)
     push_julia_line_block!(blocks, text, line_starts, header_start, first_line, :module_header)
 
