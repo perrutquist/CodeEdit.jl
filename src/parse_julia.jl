@@ -37,6 +37,24 @@ Return whether `err` is an expected JuliaSyntax parsing/validation failure.
 """
 is_julia_syntax_exception(err) = parentmodule(typeof(err)) === JuliaSyntax
 
+const _unsafe_module_boundary_warning_paths = Set{String}()
+
+"""
+Warn once for a file when a multi-line module cannot be safely split into
+line-oriented header/body/footer blocks.
+"""
+function warn_unsafe_module_boundaries_once(path::AbstractString)
+    path_string = String(path)
+    path_string in _unsafe_module_boundary_warning_paths && return nothing
+
+    push!(_unsafe_module_boundary_warning_paths, path_string)
+    @warn(
+        "CodeEdit cannot safely split a multi-line module because its header or closing end shares a line with body code. Put the module declaration and closing end on their own lines, or run `format_modules($(repr(path_string)))` and apply the returned edit.",
+        path = path_string,
+    )
+    return nothing
+end
+
 """
 Return the physical source-line range covered by a JuliaSyntax node.
 """
@@ -178,6 +196,114 @@ function module_body_node(node)
 end
 
 """
+Return the first semicolon byte offset in `span`, optionally before `before`.
+"""
+function first_semicolon_offset(text::AbstractString, span::Span; before::Integer=span.hi)
+    hi = min(span.hi - 1, before - 1)
+    hi < span.lo && return nothing
+
+    for offset in span.lo:hi
+        codeunit(text, offset) == UInt8(';') && return offset
+    end
+
+    return nothing
+end
+
+"""
+Return the last semicolon byte offset in `span`, optionally after `after` and
+before `before`.
+"""
+function last_semicolon_offset(
+    text::AbstractString,
+    span::Span;
+    after::Integer=span.lo,
+    before::Integer=span.hi - 1,
+)
+    lo = max(span.lo, after)
+    hi = min(span.hi - 1, before)
+    hi < lo && return nothing
+
+    for offset in hi:-1:lo
+        codeunit(text, offset) == UInt8(';') && return offset
+    end
+
+    return nothing
+end
+
+"""
+Return byte offsets of module-boundary semicolons that should become line breaks.
+
+Only multi-line modules are considered. A header boundary is unsafe when body
+syntax starts on the module declaration line. A footer boundary is unsafe when
+body syntax ends on the module closing line.
+"""
+function unsafe_module_boundary_offsets(node, text::AbstractString, line_starts::Vector{Int})
+    module_lines = syntax_node_line_range(node, line_starts)
+    first_line = module_lines.start
+    last_line = module_lines.stop
+    last_line <= first_line && return Int[]
+
+    body = module_body_node(node)
+    body === nothing && return Int[]
+
+    header_body_start = typemax(Int)
+    footer_body_end = 0
+
+    for child in syntax_children(body)
+        child_lines = syntax_node_line_range(child, line_starts)
+
+        if child_lines.start == first_line
+            header_body_start = min(header_body_start, Int(JuliaSyntax.first_byte(child)))
+        end
+
+        if child_lines.stop == last_line
+            footer_body_end = max(footer_body_end, Int(JuliaSyntax.last_byte(child)))
+        end
+    end
+
+    offsets = Int[]
+
+    if header_body_start != typemax(Int)
+        header_line = line_content_span(text, line_starts, first_line)
+        offset = first_semicolon_offset(text, header_line; before=header_body_start)
+        offset === nothing && (offset = first_semicolon_offset(text, header_line))
+        offset === nothing || push!(offsets, offset)
+    end
+
+    if footer_body_end != 0
+        footer_line = line_content_span(text, line_starts, last_line)
+        offset = last_semicolon_offset(
+            text,
+            footer_line;
+            after=footer_body_end + 1,
+            before=Int(JuliaSyntax.last_byte(node)),
+        )
+        offset === nothing && (offset = last_semicolon_offset(text, footer_line))
+        offset === nothing || push!(offsets, offset)
+    end
+
+    return unique(offsets)
+end
+
+"""
+Return whether a multi-line module has body code on a boundary line.
+"""
+function has_unsafe_module_boundaries(node, line_starts::Vector{Int})
+    module_lines = syntax_node_line_range(node, line_starts)
+    module_lines.stop <= module_lines.start && return false
+
+    body = module_body_node(node)
+    body === nothing && return false
+
+    for child in syntax_children(body)
+        child_lines = syntax_node_line_range(child, line_starts)
+        (child_lines.start == module_lines.start || child_lines.stop == module_lines.stop) && return true
+    end
+
+    return false
+end
+
+"""
 Push Julia blocks for `node` and return the next cursor line.
 """
 function push_julia_node_blocks!(
@@ -185,10 +311,11 @@ function push_julia_node_blocks!(
     node,
     text::AbstractString,
     line_starts::Vector{Int},
-    cursor_line::Integer,
+    cursor_line::Integer;
+    path::AbstractString="<memory>",
 )
     if julia_kind(node, "module")
-        return push_julia_module_blocks!(blocks, node, text, line_starts, cursor_line)
+        return push_julia_module_blocks!(blocks, node, text, line_starts, cursor_line; path=path)
     end
 
     return push_julia_syntax_block!(blocks, node, text, line_starts, cursor_line)
@@ -205,13 +332,19 @@ function push_julia_module_blocks!(
     node,
     text::AbstractString,
     line_starts::Vector{Int},
-    cursor_line::Integer,
+    cursor_line::Integer;
+    path::AbstractString="<memory>",
 )
     module_lines = syntax_node_line_range(node, line_starts)
     first_line = module_lines.start
     last_line = module_lines.stop
 
     if last_line <= first_line
+        return push_julia_syntax_block!(blocks, node, text, line_starts, cursor_line)
+    end
+
+    if has_unsafe_module_boundaries(node, line_starts)
+        warn_unsafe_module_boundaries_once(path)
         return push_julia_syntax_block!(blocks, node, text, line_starts, cursor_line)
     end
 
@@ -227,7 +360,7 @@ function push_julia_module_blocks!(
             child_lines.start <= first_line && continue
             child_lines.stop >= last_line && continue
 
-            body_cursor = push_julia_node_blocks!(blocks, child, text, line_starts, body_cursor)
+            body_cursor = push_julia_node_blocks!(blocks, child, text, line_starts, body_cursor; path=path)
         end
     end
 
@@ -259,7 +392,7 @@ function parse_julia_blocks(
         node_lines = syntax_node_line_range(node, line_starts)
         node_lines.stop < cursor_line && continue
 
-        cursor_line = push_julia_node_blocks!(blocks, node, text, line_starts, cursor_line)
+        cursor_line = push_julia_node_blocks!(blocks, node, text, line_starts, cursor_line; path=path)
     end
 
     push_julia_trailing_comment_block!(

@@ -142,6 +142,8 @@ Editing is performed by first creating one or more "edit" objects (`<: AbstractE
 
 `edit1 * edit2` - Shorthand for `Combine(edit1, edit2)`. Chaining `*` appends edits in left-to-right order.
 
+`format_modules(path)` - Returns a `Replace` edit, or a `Combine` of `Replace` edits, that puts unsafe multi-line module boundaries on their own lines by replacing the necessary semicolons with line breaks. This is useful when CodeEdit warns that it cannot safely split a multi-line module because body code shares a physical line with the module declaration or closing `end`.
+
 `VersionControl(path; kwargs...)` - A git-backed version-control specification for the repository at `path`.
 
 `GitVersionControl(path; kwargs...)` - A convenience constructor for a git-backed version-control specification.
