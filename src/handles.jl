@@ -232,32 +232,33 @@ function Handle(path::AbstractString, line::Integer, pos::Integer=1; parse_as::S
     return block_handle(cache, block_index_at_offset(cache, offset))
 end
 
-function Handle(sf::StackTraces.StackFrame)
-    file = Base.find_source_file(string(sf.file))
-    (isnothing(file) || !isfile(file)) && return invalid_handle
-    Handle(file, sf.line)
+function Handle(::Nothing, line::Integer; return_invalid=true)
+    return_invalid && return invalid_handle
+    throw(ArgumentError("invalid source location"))
+end
+
+function Handle(file::Symbol, line::Integer; return_invalid=true)
+    path = Base.find_source_file(string(file))
+
+    if isnothing(path) || !isfile(path)
+        return_invalid && return invalid_handle
+        throw(ArgumentError("source file could not be located: $path"))
+    end
+    Handle(path, line)
+end
+
+"""
+Return a handle to the source block referenced by a StackFrame when source information is available.
+"""
+function Handle(sf::StackTraces.StackFrame; return_invalid=true)
+    Handle(sf.file, sf.line; return_invalid)
 end
 
 """
 Return a handle to a Method's source block when source information is available.
 """
-function Handle(method::Method, return_invalid=true)
-    path = string(@something(method.file, ""))
-    line = method.line
-
-    if line <= 0 || isempty(path) || startswith(path, "REPL[")
-        return_invalid && return invalid_handle
-        throw(ArgumentError("invalid source location"))
-    end
-
-    source_path = isfile(path) ? path : Base.find_source_file(path)
-
-    if !isfile(source_path)
-        return_invalid && return invalid_handle
-        throw(ArgumentError("source file could not be located: $path"))
-    end
-
-    return Handle(source_path, Int(line))
+function Handle(method::Method; return_invalid=true)
+    Handle(method.file, method.line; return_invalid)
 end
 
 """
