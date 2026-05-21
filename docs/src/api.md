@@ -36,23 +36,19 @@ Edits are immutable descriptions of changes. Constructing an edit does not modif
 - [`apply!`](@ref): apply an edit through an explicit version-control specification.
 - [`displayed!`](@ref): mark an edit as displayed.
 
-The `edit1 * edit2` operator is shorthand for `Combine(edit1, edit2)`. Chaining `*` appends edits to a combined edit.
-
-Combined edits are planned and validated as a unit. See [Editing code](editing.md) and [Safety and version control](safety.md) for workflow details and failure modes.
+Combined edits succeed or fail as a unit. See [Editing code](editing.md) and [Safety and version control](safety.md) for workflow details and failure modes. The multiplication operator `*` can be used as shorthand for `Combine`, e.g. `apply!(repo, edit1 * edit2, message)` will apply both `edit1` and `edit2`. (Or, if there's a problem with either, none of them.)
 
 ## Version control
 
 Version-control specifications determine how an edit is applied.
 
 - [`VersionControl`](@ref): describe a version-control backend and default `apply!` keyword arguments.
-- [`GitVersionControl`](@ref): git-backed version-control specification.
-- [`NoVersionControl`](@ref): explicitly apply edits without version control.
+- [`GitVersionControl`](@ref): git-backed version-control specification, type alias for `VersionControl{:git}`. 
+- [`NoVersionControl`](@ref): apply edits without version control, type alias for `VersionControl{:none}`. 
 
-`VersionControl("path")` constructs the appropriate version-control specification for a repository. For git repositories, the displayed value is a [`GitVersionControl`](@ref).
+`repo = VersionControl("path")` constructs the appropriate version-control specification for a repository. For git repositories, the displayed value is a [`GitVersionControl`](@ref).
 
-`apply!(repo, edit, message)` applies an edit, stages affected paths, and creates a git commit with `message` if `repo` is a git repository.
-
-`apply!(repo, edit; default_message="...")` uses a default commit message supplied either in the call or in the `VersionControl` object.
+`apply!(repo, edit, message)` applies an edit, stages affected paths, and creates a git commit with `message` if `repo` is a `GitVersionControl` object.
 
 `apply!(NoVersionControl(require_view=true), edit)` applies without git while still requiring a displayed review.
 
