@@ -12,7 +12,9 @@ end
 
 CodeEdit.jl provides tools for making source edits from Julia. 
 
-The core idea is that because Julia code frequently consists of fairly short top-level blocks, and the meaning of each code block depends very little on its location in relation to other code. It therefore makes sense to be able to access, search and modify code in terms of blocks, rather than files.
+The core idea is to divide Julia code into syntactically independent blocks, that can be manipulated directly from Julia.
+
+Julia code frequently consists of fairly short top-level blocks where the meaning of each code block depends very little on its location in relation to other code. It therefore makes sense to be able to access, search and modify code in terms of blocks, rather than files.
 
 ## Manual
 
@@ -30,9 +32,7 @@ A [`Handle`](@ref) identifies a parsed source block, edit constructors such as [
 
 A common workflow starts by choosing a version-control context and collecting handles from it:
 
-```text
-VersionControl -> handles -> search/select -> edit -> apply!
-```
+**VersionControl** → **handles** → **search/select** → **edit** → **apply!**
 
 The following example changes one function in a repository, applies the edit, and reads the edited block back from disk.
 
