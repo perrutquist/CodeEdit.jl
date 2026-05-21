@@ -74,6 +74,7 @@ Display, printing, and `string(edit)` store the exact plan that was shown. When 
 Handle
 eof_handle
 handles
+handle_at
 reindex
 search
 AbstractEdit
