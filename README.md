@@ -27,17 +27,15 @@ function foo(x)
 end
 ```
 
-Create a handle to the block containing line 2:
+Create a handle to the block containing the function:
 
 ```julia-repl
-julia> h = Handle("foo.jl", 2)
+julia> h = only(search("foo.jl", "function foo"))
 # foo.jl 1 - 3:
 function foo(x)
     x + 1
 end
 ```
-
-Because line 2 is inside the function, the handle points to the whole function block.
 
 Now build an edit and review the planned diff:
 
