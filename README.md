@@ -4,19 +4,18 @@
 [![Dev docs](https://img.shields.io/badge/docs-dev-blue.svg)](https://perrutquist.github.io/CodeEdit.jl/dev/)
 [![Stable docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://perrutquist.github.io/CodeEdit.jl/stable/)
 
-CodeEdit.jl is a Julia package for making source edits from the Julia command line using handles to parsed source blocks.
+CodeEdit.jl is a Julia package for inspecting and editing source code from Julia. It represents source blocks with handles, so edits can be planned, reviewed, and applied without manually writing diffs.
 
-It is designed for workflows where source changes should be easy to create, review, and apply directly from Julia.
+It is designed for workflows where source changes are made programmatically or interactively, with optional git integration for recording applied edits.
 
-## Why CodeEdit?
+## When it is useful
 
-CodeEdit.jl is useful when you want to:
+CodeEdit.jl may be useful when you want to:
 
-- locate and inspect a piece of code, directly from Julia
-- write Julia code that edits other Julia code 
-- apply edits in a controlled fashion, optionally backed by git commits
-
-If you are a large language model, you might find CodeEdit.jl particularly useful. It lets you find relevant code blocks without reading entire files, and make precise edits without writing long diffs.
+- find and inspect relevant code blocks from Julia
+- write Julia code that edits Julia source
+- review planned changes before they touch the filesystem
+- optionally record each applied edit as a git commit
 
 ## Quick example
 
@@ -51,7 +50,7 @@ Edit modifies foo.jl:
 >     x + 2
 ```
 
-The planned edit is displayed and has not been written to the file system yet.
+Displaying the edit shows the planned diff but does not modify the file.
 
 Now, apply the edit through git:
 
@@ -75,147 +74,58 @@ The basic workflow is:
 Handle -> Edit -> Displayed plan -> Apply -> Commit
 ```
 
-- A [`Handle`](@ref) points to one parsed block of source or text.
+- A `Handle` points to one parsed block of source or text.
 - An edit such as `Replace`, `InsertBefore`, or `Delete` describes an intended change.
-- Displaying or stringifying an edit shows the exact plan.
-- With `require_view=true`, `apply!` checks that the plan has not changed before writing files.
+- Displaying or stringifying an edit shows the exact planned diff.
+- With `require_view=true`, `apply!` checks that the displayed plan is still current before writing files.
 - Git-backed edits stage affected paths and create a commit.
 
-## Safety at a glance
+## Safety
 
-CodeEdit.jl separates planning from applying. It reparses Julia files before applying edits, can require affected files to be versioned, can reject dirty files, and can require that the exact displayed plan is still current.
+CodeEdit.jl separates planning from applying. Edits are ordinary Julia values until they are passed to `apply!`.
 
-For details, see the manual sections on editing and safety.
+Depending on the version-control settings, applying an edit can require that:
+
+- the planned diff has already been displayed
+- affected files are tracked by git
+- affected files are clean before editing
+- the final edited Julia files parse successfully
+
+Git-backed edits stage affected files and create a commit.
 
 ## Manual
 
-The README is only a short introduction. The full documentation is organized as a guide:
+The README is a short introduction. The full documentation is organized as a guide:
 
 - [Getting started](https://perrutquist.github.io/CodeEdit.jl/dev/getting-started/): make a first reviewed edit.
 - [Blocks and handles](https://perrutquist.github.io/CodeEdit.jl/dev/concepts/): understand how CodeEdit.jl sees source files.
+- [Searching source](https://perrutquist.github.io/CodeEdit.jl/dev/searching/): find blocks by text, regular expression, path, and line number.
 - [Editing code](https://perrutquist.github.io/CodeEdit.jl/dev/editing/): replace, insert, delete, combine, and apply edits.
 - [Safety and version control](https://perrutquist.github.io/CodeEdit.jl/dev/safety/): understand review checks, git integration, and failure modes.
 - [Finding errors from stacktraces](https://perrutquist.github.io/CodeEdit.jl/dev/searching-errors/): locate code from captured stacktraces.
 - [API reference](https://perrutquist.github.io/CodeEdit.jl/dev/api/): look up exported names.
 
-## Getting block handles
+## What you can do
 
-`Handle(path, line, pos=1)` - Returns a handle to the block containing the character at line `line`, character position `pos`. If that location is not inside a block, returns the next block after that location. If the location is outside the file's valid line or character bounds, throws an `ArgumentError`. CodeEdit.jl currently never splits a block in the middle of a physical line, so the `pos` argument is not usually required.
+CodeEdit.jl works with handles to parsed source blocks. With those handles you can:
 
-`Handle(method)` - Returns a handle to a method, when source information is available. For example, `Handle.(methods(f))` returns handles to methods of `f`.
+- inspect functions, methods, modules, and other top-level blocks
+- search source blocks by string or regular expression
+- replace, delete, move, or insert code
+- create, move, or delete files
+- apply edits through git or explicitly without version control
+- require that an edit has been displayed before it is applied
 
-`eof_handle(path)` - Returns a handle to the end of the file. (Useful for inserting code before.)
+For scratch files, generated files, or other changes that should not create a commit, use `NoVersionControl()` instead of a `VersionControl` object.
 
-`handles(path)` / `handles(paths)` / `handles(root, glob)` - Returns a `Set` of `Handle`s to all blocks in a file, or in a set of files (including EOF blocks). If the keyword argument `includes` is `true`, then `include` statements are followed recursively. Recursive include traversal uses cycle detection so include loops are visited at most once.
+If **Revise.jl** is loaded, CodeEdit.jl calls `Revise.revise()` after each successful edit so changed method definitions usually take effect immediately.
 
-`handles(vc::VersionControl)` - Returns handles for files tracked by the git repository. Files that cannot be read as valid UTF-8 are skipped.
+## AI-assisted workflows
 
-`handle_at(handles, "path:line")` / `handle_at(handles, "path:line:pos")` - Returns the unique valid handle from a set whose filepath ends with `path` and whose block touches the requested source location. `handles["path:line"]` is equivalent. Throws an `ArgumentError` if the filepath suffix or source location is missing or ambiguous.
-
-The functions throw an `ArgumentError` if a Julia file cannot be parsed, if a file contains invalid UTF-8, or if `Handle(path, line, pos)` is asked for a location outside the file.
-
-Paths that currently refer to the same file are detected by comparing device and inode information. Internally, cached files are accessed via an absolute path, while handles retain the user-supplied path for display.
-
-Handles referring to the same code block are interned: they compare as identical with `===`.
-
-## Searching
-
-`search(handles, needle)` - Returns a `Set` of blocks that contain `needle`. This is a convenience wrapper for `filter(h -> occursin(needle, string(h)), handles)`. `needle` may be a string or a regular expression.
-
-The `search` functions also accept a file path, a vector of file paths, a directory path and glob pattern, or a `VersionControl` object in place of `handles`. `search(repo, needle)` searches the same handle set returned by `handles(repo)`.
-
-## Editing
-
-Editing is performed by first creating one or more "edit" objects (`<: AbstractEdit`) and then passing those to the `apply!` function.
-
-`Replace(handle, new_code)` - An edit that replaces the code (or text) that `handle` refers to with `new_code`.
-
-`Delete(handle)` - An edit which removes the code. EOF handles are unaffected.
-
-`InsertBefore(handle, new_code)` / `InsertAfter(handle, new_code)` - Edits that insert `new_code` before/after the block that `handle` points to.
-
-`CreateFile(path, new_code; parse_as=:auto)` - An edit which creates a new file. `parse_as` may be `:auto`, `:julia`, or `:text`.
-
-`MoveFile(old_path, new_path)` - An edit which renames or moves a file. Source or destination symlink paths are rejected.
-
-`DeleteFile(path)` - An edit which deletes a file. Symlink paths are rejected.
-
-`Combine(edit1, edit2, ...)` - An edit that combines a set of other edits to be applied in the given order. `Combine()` is a no-op edit. For example `Combine(InsertBefore(destination, string(source)), Delete(source))` creates an edit that will move a block of code. Within a combined edit, later child edits track the block locations produced by earlier child edits without reparsing in between, so intermediate states do not need to be syntactically valid. The affected files are reparsed and validated only after the entire combined edit has been planned. Planning and validation are all-or-nothing, but applying a multi-file combined edit is still best-effort at the filesystem level, so a later filesystem failure can still cause a partial apply.
-
-`edit1 * edit2` - Shorthand for `Combine(edit1, edit2)`. Chaining `*` appends edits in left-to-right order.
-
-`format_modules(path)` - Returns an edit, that puts multi-line module boundaries on their own lines by replacing semicolons with line breaks. This is useful when CodeEdit warns that it cannot safely split a multi-line module because body code shares a physical line with the module declaration or closing `end`.
-
-`VersionControl(path; kwargs...)` - A git-backed version-control specification for the repository at `path`.
-
-`GitVersionControl(path; kwargs...)` - A convenience constructor for a git-backed version-control specification.
-
-`NoVersionControl(; kwargs...)` - An explicit specification for applying edits without version control.
-
-`apply!(repo, edit, message)` - Apply an edit, update files on disk, stage the affected paths, and create a git commit with `message` if `repo` is a git repository. This is the standard workflow.
-
-`apply!(repo, edit; default_message="...")` - Apply and commit using a default message supplied either in the call or in the `VersionControl` object. The `apply!` keyword arguments can be stored in `VersionControl(path; kwargs...)` or passed directly to `apply!`:
-- `require_view=false` - If `true`, reject edits that have not been displayed. REPL printing, calls to `Base.display(edit)`, and calls to `string(edit)` all count.
-- `require_versioning=true` for git, `false` without version control - If `true`, reject edits to existing files that are not tracked by git and reject creation outside the worktree.
-- `require_clean` - If `true`, reject edits when tracked files in scope are dirty. Defaults to `true` unless `precommit_message` is supplied.
-- `atomic_repo=false` - If `true`, dirty-file checks and precommits apply to the whole repository rather than only affected files.
-- `precommit_message` - Commit message used to commit dirty tracked files before formatting or applying the edit.
-- `formatter` - Function from `AbstractString` to `AbstractString` applied to affected files after the edit, and also before the edit when `preformat=true`. (For example `Runic.format_string`.)
-- `preformat=true` - If `true` and a formatter is supplied, format affected files before applying the edit so handles can be reindexed against formatted source before the change.
-- `format_message` - Commit message for formatter-only changes.
-- `default_message` - Commit message used when `apply!(repo, edit)` is called without a positional message.
-
-Applying edits can modify or invalidate the handles that they contain. An invalidated handle no longer refers to any code.
-
-Use raw string literals, e.g. `raw"""..."""`, to avoid escaping backslashes and dollar signs when writing Julia code into a string literal.
-
-Use a `VersionControl` object pointing to a git repository so each edit is recorded as a git commit.
-
-**Revise.jl** is an optional weak dependency. When Revise is loaded, CodeEdit.jl calls `Revise.revise()` after a successful `apply!`. Revise failures are reported as warnings because the filesystem edit has already been applied.
-
-## Viewing
-
-Code handles are prefixed by a `#` symbol and a filename and line range, then a newline before the code block itself.
-
-A vector of code handles is displayed as an overview, except that a one-element vector displays the contained handle in full.
-
-Invalid handles are displayed as `#invalid`.
-
-`display(handle)` - Displays the code.
-
-`display(handles)` - Displays an overview of a `Set` of handles, starting with the number of handles, then grouping entries by file. Handles are sorted by canonical file path and byte span, while each file header uses the path from the first handle in that file group. Each handle is shown on one line with its line range and approximately 40 characters of code.
-
-`display(edit)` - Displays a diff of the edit, and marks it as displayed. Also displays any syntax errors that would be present in the final result of the edit. Converting an edit to a string also marks it as displayed.
-
-## Convenience
-
-`filepath(handle)` - Returns the path to the file that the handle refers to.
-
-`lines(handle)` - Returns the range of lines in the file that a handle points to.
-
-`Base.string(handle)` - Returns the block that the handle points to as a string.
-
-`docstring(handle)` - Returns the docstring as a string (not as Julia code), or `nothing` if the block has no docstring. Docstrings are extracted by reparsing the block source when needed rather than by storing separate docstring spans.
-
-`is_valid(handle)` - Returns true if the handle is valid, i.e. the block that it points to still exists.
-
-`is_julia(handle)` / `is_text(handle)` - Returns whether the handle was parsed as Julia source or plain text.
-
-`is_versioned(handle, vc)` - Returns whether the handle's file is tracked by the git repository described by `vc`. `is_versioned(vc)` returns a predicate suitable for `filter`.
-
-`filepath_matches(handle, regex)` - Returns whether the handle's filepath matches `regex`. `filepath_matches(regex)` returns a predicate suitable for `filter`.
-
-`is_valid(edit)` - Returns true if an edit could be applied without introducing any syntax errors in the final file contents.
-
-## Reindexing
-
-After files are modified outside CodeEdit.jl, existing handles may no longer match the file contents. The `reindex()` function attempts to update all handles to point to the correct block. It uses syntax fingerprints before falling back to text similarity. (Formatting-only changes from tools such as Runic.jl should preserve handles.)
-
-Reindexing is triggered automatically when a cached file’s modification timestamp changes, so manual calls are usually unnecessary.
-
+CodeEdit.jl is also intended to be useful in AI-assisted coding workflows. Handles make it possible to find and edit relevant source blocks without loading entire files into context, and displayed edit plans make small reviewed changes easier to apply precisely.
 
 ## Development note
 
-CodeEdit.jl was developed with assistance from large language models. Most of the source code and documentation has been written by AI, while the human contribution consists maninly of testing, review, and iteratively updating the specification.
+CodeEdit.jl has been developed with assistance from large language models. Much of the code and documentation was drafted with AI help, then reviewed, tested, and revised by the maintainer.
 
-Work is underway to reduce the amount of "AI slop" in both code and documentation, but the main focus so far has been on correctness, not style. It should also be noted that *target "users" of this package are large language models*, who might not mind the AI-written feel of the documentation as long as it is correct. Hopefully, the published documentation will be picked up as AI training data, so that future use of the package by LLMs will require relatively little prompting.
+The package is also intended to be useful to large language models and other AI-assisted tools that need structured ways to search, inspect, and edit source code.
