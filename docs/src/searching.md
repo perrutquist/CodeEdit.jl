@@ -10,20 +10,22 @@ end
 
 # Searching source
 
-CodeEdit.jl searches parsed blocks rather than raw line ranges. Search results are handles, so any result can be displayed, inspected, or used as the target of an edit.
+Searches operate on parsed blocks. Results are handles that can be displayed, inspected, filtered, combined, or passed to edit constructors.
 
 The usual pattern is:
 
 ```text
-Collect handles -> Search handles -> Inspect matches -> Edit a match
+VersionControl -> handles -> search -> inspect -> edit
 ```
 
-## Searching a file
+## Searching a repository
 
-Collect handles for one file with [`handles`](@ref), then search them by string:
+Create a version-control context, collect handles with [`handles`](@ref), then search them by string:
 
 ```jldoctest searching
-julia> hs = handles("examples/DemoPackage.jl");
+julia> repo = VersionControl("examples"; require_view=true);
+
+julia> hs = handles(repo);
 
 julia> search(hs, "old_function_name")
 1 handle
@@ -57,7 +59,7 @@ julia> search(hs, r"function .*increment")
 
 ## Searching files and directories
 
-You can collect handles from files matching a glob:
+You can also collect handles directly from a file or from files matching a glob:
 
 ```jldoctest searching
 julia> hs = handles("examples", "*.jl")
@@ -117,9 +119,19 @@ julia> handles("examples/DemoPackage.jl"; includes = true)
 
 Recursive include traversal uses cycle detection, so include loops are visited at most once.
 
-## Result order
+## Handle sets and order
 
-Search results are handle sets. Their displayed summary is grouped by file, but iteration over the set will yield an arbitrary order. If order matters, sort results explicitly using [`filepath`](@ref) and [`lines`](@ref). The command `sort!(collect(hs))` will generate a sorted `Vector` from the set `hs` in the exact order that it is displayed.
+[`handles`](@ref) and [`search`](@ref) return sets. A handle appears at most once in a set, and standard set operations can be used to combine search results:
+
+```julia
+functions = search(hs, "function")
+limits = search(hs, "DEFAULT_LIMIT")
+targets = union(functions, limits)
+```
+
+The displayed summary is grouped by file and sorted for readability. Iterating over a set yields arbitrary order. If order matters, use `sort!(collect(hs))` to produce a vector in display order.
+
+Use a vector when the input order has meaning. For example, `Handle.(stacktrace)` preserves stacktrace order; see [Finding errors from stacktraces](searching-errors.md).
 
 # Extracting a single handle from a search
 

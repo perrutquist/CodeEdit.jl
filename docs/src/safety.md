@@ -12,7 +12,7 @@ end
 
 CodeEdit.jl separates planning from application. Constructing an edit value describes a change; applying an edit writes it to the filesystem.
 
-Displaying an edit shows the planned change. Applying the edit replans it, checks that the result is still valid, writes files, and, in the standard workflow, records the change as a git commit.
+Displaying an edit shows the planned change. Applying the edit replans it, checks that the result is valid, writes files, and, in the standard workflow, records the change as a git commit.
 
 ## Planning before applying
 
@@ -62,7 +62,7 @@ Display the edit again to review the current plan before applying it.
 
 ## Git-backed editing
 
-The standard workflow uses [`VersionControl`](@ref):
+The standard workflow starts with [`VersionControl`](@ref):
 
 ```jldoctest safety
 julia> repo = VersionControl("examples"; require_view=true);
@@ -115,7 +115,7 @@ julia> apply!(NoVersionControl(require_view=true), edit)
 Applied: 1 file changed
 ```
 
-This mode is explicit by design: the call site states that the edit will not be recorded as a git commit.
+This mode makes uncommitted edits explicit at the call site.
 
 ## Validation
 

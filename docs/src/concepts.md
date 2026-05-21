@@ -16,7 +16,7 @@ Edits built from handles can be applied through git or through an explicit no-ve
 
 ## Blocks
 
-For Julia files, blocks are top-level syntactic units such as functions, types, macros, constants, assignments, imports, exports, and includes. Attached docstrings stay with the block they document, so replacing a documented function keeps the docstring and function together.
+For Julia files, blocks are top-level syntactic units such as functions, types, macros, constants, assignments, imports, exports, and includes. Attached docstrings stay with the block they document, so replacing a documented function keeps the docstring and function together. Use [`docstring`](@ref) to inspect the docstring attached to a handle.
 
 For example, CodeEdit.jl sees a file like this as several separate blocks:
 
@@ -59,6 +59,23 @@ Handles are interned for a parsed file: requesting the same block again returns 
 julia> h === Handle("examples/DemoPackage.jl", 13)
 true
 ```
+
+## Handle collections
+
+[`handles`](@ref) and [`search`](@ref) return sets of handles. A handle appears at most once in a set, so standard set operations are useful for combining and narrowing selections:
+
+```julia
+repo = VersionControl("examples")
+hs = handles(repo)
+
+definitions = search(hs, "function")
+limits = search(hs, "DEFAULT_LIMIT")
+targets = union(definitions, limits)
+```
+
+Set iteration order is arbitrary. The displayed summary is sorted for readability. Use `sort!(collect(hs))` when order matters.
+
+Use a vector when order has meaning. For example, `Handle.(stacktrace)` preserves stacktrace order, which is useful when inspecting errors.
 
 ## Julia and text parsing
 

@@ -36,7 +36,7 @@ function clean_generated_html_paths(builddir::AbstractString, basedir::AbstractS
     push!(prefixes, basedir)
 
     if real_basedir != basedir
-        push(prefixes, real_basedir)
+        push!(prefixes, real_basedir)
     end
 
     if !isempty(home) && startswith(basedir, home)

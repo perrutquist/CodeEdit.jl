@@ -10,9 +10,9 @@ end
 
 # Getting started
 
-This chapter introduces the basic CodeEdit.jl workflow: find a block, construct an edit, review the plan, and apply it deliberately.
+This chapter introduces the basic CodeEdit.jl workflow: choose a version-control context, collect handles, find a block, construct an edit, review the plan, and apply it.
 
-The documentation examples share a small git repository in `examples` and commit each successful source edit.
+The documentation examples share a small git repository in `examples`.
 
 ## Installation
 
@@ -28,12 +28,34 @@ pkg> add https://github.com/perrutquist/CodeEdit.jl
 julia> using CodeEdit
 ```
 
-## Creating a handle
+## Creating a repository context
 
-CodeEdit.jl starts from source locations and edits blocks rather than raw line ranges. Use [`Handle`](@ref) to refer to the block containing a location:
+For source edits in a git repository, start with [`VersionControl`](@ref):
 
 ```jldoctest getting_started
-julia> h = Handle("examples/DemoPackage.jl", 10)
+julia> repo = VersionControl("examples"; require_view=true)
+GitVersionControl("examples"; require_view=true)
+```
+
+The same `repo` value is used to collect editable handles and to apply edits later.
+
+## Listing and searching handles
+
+Collect parsed source blocks from the repository with [`handles`](@ref):
+
+```jldoctest getting_started
+julia> hs = handles(repo);
+
+julia> matches = search(hs, "old_function_name")
+1 handle
+# examples/DemoPackage.jl:
+  17 - 19: function old_function_name(); return foo…
+```
+
+Search results are handles. A handle can be inspected, displayed, converted to source text, or passed to an edit constructor:
+
+```jldoctest getting_started
+julia> h = only(search(hs, "function foo"))
 # examples/DemoPackage.jl 7 - 11:
 function foo(x)
     y = helper(x)
@@ -41,44 +63,11 @@ function foo(x)
     return z
 end
 
-```
-
-If line 10 is inside a function, `h` refers to the whole function block. CodeEdit.jl currently never splits a block in the middle of a physical line, so the optional character-position argument to `Handle` is not usually needed.
-
-```jldoctest getting_started
 julia> source = string(h)
 "function foo(x)\n    y = helper(x)\n    z = y * 2\n    return z\nend\n"
 ```
 
-## Listing and searching handles
-
-List the parsed blocks in a file with [`handles`](@ref):
-
-```jldoctest getting_started
-julia> hs = handles("examples/DemoPackage.jl")
-9 handles
-# examples/DemoPackage.jl:
-   1 -  1: module DemoPackage
-   3 -  3: include("helpers.jl")
-   5 -  5: const DEFAULT_LIMIT = 10
-   7 - 11: function foo(x); y = helper(x); z = y * …
-  13 - 15: function increment(x); return x + 1; end
-  17 - 19: function old_function_name(); return foo…
-  21 - 23: function obsolete(); return :remove_me; …
-  25 - 25: end
-  EOF:
-```
-
-Search within those handles to find a block by text:
-
-```jldoctest getting_started
-julia> matches = search(hs, "old_function_name")
-1 handle
-# examples/DemoPackage.jl:
-  17 - 19: function old_function_name(); return foo…
-```
-
-You can also look up a unique handle in a set by filepath suffix and source line with [`handle_at`](@ref), or equivalently by indexing the set with a `path:line` key:
+You can also look up a unique handle in a collection by filepath suffix and source line with [`handle_at`](@ref), or equivalently by indexing with a `path:line` key:
 
 ```jldoctest getting_started
 julia> hs["DemoPackage.jl:7"]
@@ -91,18 +80,24 @@ end
 
 ```
 
-The result can be inspected, displayed, or used as the target of an edit. See [Searching source](searching.md) for glob searches, regex searches, and recursive `include` traversal.
+Direct construction with [`Handle`](@ref) is useful when you already have a file and line number:
+
+```jldoctest getting_started
+julia> Handle("examples/DemoPackage.jl", 10)
+# examples/DemoPackage.jl 7 - 11:
+function foo(x)
+    y = helper(x)
+    z = y * 2
+    return z
+end
+
+```
+
+See [Searching source](searching.md) for glob searches, regex searches, recursive `include` traversal, and set operations on handle collections.
 
 ## Applying an edit with git
 
-Inspecting handles leaves files unchanged. To change source, construct an edit value and choose how it should be applied.
-
-For ordinary source changes, use a git-backed version-control specification:
-
-```jldoctest getting_started
-julia> repo = VersionControl("examples"; require_view=true)
-GitVersionControl("examples"; require_view=true)
-```
+Inspecting handles leaves files unchanged. To change source, construct an edit value and apply it through the repository.
 
 With `require_view=true`, displaying the edit records the exact plan. When [`apply!`](@ref) runs, CodeEdit.jl plans the edit again and refuses to apply it if the current plan differs from the displayed one:
 
@@ -123,7 +118,7 @@ julia> apply!(repo, edit, "Rename old_function_name")
 Applied: 1 file changed, commit 3630f3e
 ```
 
-The edit is written to disk and committed to git. Each successful git-backed edit is committed with the message you provide.
+The edit is written to disk and committed to git with the message you provide.
 
 ## Inserting at the end of a file
 

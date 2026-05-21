@@ -9,15 +9,16 @@ The detailed docstrings for exported names are listed at the end of this page.
 Handles identify parsed blocks and are the primary objects used for searching and editing.
 
 - [`Handle`](@ref): create a handle to the block containing a file location or method.
+- [`handle_at`](@ref): look up a unique handle in a collection by path and line.
 - [`eof_handle`](@ref): create a handle to the end of a file.
-- [`handles`](@ref): collect handles for blocks in files.
+- [`handles`](@ref): collect handles for blocks in files, directories, or repositories.
 - [`reindex`](@ref): update existing handles after files changed outside CodeEdit.jl.
 
 ## Searching
 
 - [`search`](@ref): search handles and files.
 
-See [Searching source](searching.md) for the main source-search workflow and [Finding errors from stacktraces](searching-errors.md) for locating source blocks from stack frames.
+[`handles`](@ref) and [`search`](@ref) return sets of handles. Use set operations such as `union` and `intersect` to combine selections. See [Searching source](searching.md) for the main source-search workflow and [Finding errors from stacktraces](searching-errors.md) for locating source blocks from ordered stack frames.
 
 ## Edits
 

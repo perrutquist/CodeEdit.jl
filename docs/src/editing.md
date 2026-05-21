@@ -10,15 +10,13 @@ end
 
 # Editing code
 
-Editing in CodeEdit.jl separates description from execution: first construct an edit value, then choose how to apply it.
+Edit constructors create immutable edit values. Use [`apply!`](@ref) to write an edit through an explicit version-control specification.
 
 ```text
-Handle -> Edit -> Displayed plan -> Apply -> Commit
+VersionControl -> handles -> Edit -> displayed plan -> apply!
 ```
 
-Edits are values that subtype [`AbstractEdit`](@ref). Constructing an edit describes an intended change to one or more handles or paths.
-
-The standard workflow uses [`VersionControl`](@ref) to apply the edit, stage the affected paths, and create a git commit. If `require_view=true`, displaying, printing, or stringifying an edit records the exact plan that was shown. [`apply!`](@ref) replans the edit and refuses to apply it if the current plan differs from the displayed plan.
+The standard workflow uses [`VersionControl`](@ref) to apply the edit, stage the affected paths, and create a git commit. See [Safety and version control](safety.md) for review requirements, validation, and dirty-file behavior.
 
 In doctest examples, omitting the semicolon from the `edit = ...` line displays the edit and marks it as displayed. Calling `display(edit)` has the same effect.
 
@@ -26,6 +24,8 @@ In doctest examples, omitting the semicolon from the `edit = ...` line displays 
 ```jldoctest editing
 julia> repo = VersionControl("examples"; require_view=true)
 GitVersionControl("examples"; require_view=true)
+
+julia> hs = handles(repo);
 
 ```
 
@@ -47,7 +47,7 @@ The sections below follow that progression.
 A replacement edit changes exactly the block referenced by a handle. This is usually the safest way to update a function, because the planned diff is limited to the selected block.
 
 ```jldoctest editing
-julia> h = Handle("examples/DemoPackage.jl", 14)
+julia> h = only(search(hs, "function increment"))
 # examples/DemoPackage.jl 13 - 15:
 function increment(x)
     return x + 1

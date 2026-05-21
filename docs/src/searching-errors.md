@@ -54,15 +54,17 @@ julia> trace = try
 
 ## Inspecting the most relevant blocks
 
-Let's display the intersection of (blocks in our code) with (blocks in the trace), in the order that they appear in the trace.
+Let's display the blocks in our code that appear in the trace, preserving stacktrace order.
 
 ```jldoctest searching_errors
-julia> hs = handles("examples", "*.jl");
+julia> repo = VersionControl("examples"; require_view=true);
 
-julia> for h in Handle.(trace)
-          if h in hs
-              println(h)
-          end
+julia> hs = handles(repo);
+
+julia> trace_handles = [h for h in Handle.(trace) if h in hs];
+
+julia> for h in trace_handles
+           println(h)
        end
 # examples/error-example.jl 1 - 3:
 function inner(x)
@@ -75,16 +77,15 @@ function outer(x)
 end
 
 ```
-A displayed handle includes the file name and line range, followed by the source block.
+
+A displayed handle includes the file name and line range, followed by the source block. `Handle.(trace)` returns a vector, so the order of stack frames is preserved. By contrast, [`handles`](@ref) and [`search`](@ref) return sets, which remove duplicate handles and have arbitrary iteration order.
 
 ## Editing after locating the error
 
 After finding the relevant block, construct a replacement and apply it through git:
 
 ```jldoctest searching_errors
-julia> repo = VersionControl("examples"; require_view=true);
-
-julia> h = only(search(intersect(hs, Handle.(trace)), "error("))
+julia> h = only(search(trace_handles, "error("))
 # examples/error-example.jl 1 - 3:
 function inner(x)
     error("bad input: $x")
