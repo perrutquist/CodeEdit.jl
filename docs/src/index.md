@@ -30,9 +30,13 @@ Julia code frequently consists of fairly short top-level blocks where the meanin
 
 A [`Handle`](@ref) identifies a parsed source block, edit constructors such as [`Replace`](@ref) and [`InsertAfter`](@ref) describe changes, and [`apply!`](@ref) writes the result through an explicit version-control specification.
 
-A common workflow starts by choosing a version-control context and collecting handles from it:
+A common workflow is:
 
-**VersionControl** → **handles** → **search/select** → **edit** → **apply!**
+1. Choose a `VersionControl` context.
+2. Collect `handles`.
+3. Search or select blocks.
+4. Construct an edit.
+5. Call `apply!`.
 
 The following example changes one function in a repository, applies the edit, and reads the edited block back from disk.
 
