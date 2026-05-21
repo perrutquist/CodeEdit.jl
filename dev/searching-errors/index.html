@@ -17,12 +17,14 @@ Stacktrace:
            outer(1)
        catch
            stacktrace(catch_backtrace())
-       end;</code></pre><h2 id="Inspecting-the-most-relevant-blocks"><a class="docs-heading-anchor" href="#Inspecting-the-most-relevant-blocks">Inspecting the most relevant blocks</a><a id="Inspecting-the-most-relevant-blocks-1"></a><a class="docs-heading-anchor-permalink" href="#Inspecting-the-most-relevant-blocks" title="Permalink"></a></h2><p>Let&#39;s display the intersection of (blocks in our code) with (blocks in the trace), in the order that they appear in the trace.</p><pre><code class="language-julia-repl hljs">julia&gt; hs = handles(&quot;examples&quot;, &quot;*.jl&quot;);
+       end;</code></pre><h2 id="Inspecting-the-most-relevant-blocks"><a class="docs-heading-anchor" href="#Inspecting-the-most-relevant-blocks">Inspecting the most relevant blocks</a><a id="Inspecting-the-most-relevant-blocks-1"></a><a class="docs-heading-anchor-permalink" href="#Inspecting-the-most-relevant-blocks" title="Permalink"></a></h2><p>Let&#39;s display the blocks in our code that appear in the trace, preserving stacktrace order.</p><pre><code class="language-julia-repl hljs">julia&gt; repo = VersionControl(&quot;examples&quot;; require_view=true);
 
-julia&gt; for h in Handle.(trace)
-          if h in hs
-              println(h)
-          end
+julia&gt; hs = handles(repo);
+
+julia&gt; trace_handles = [h for h in Handle.(trace) if h in hs];
+
+julia&gt; for h in trace_handles
+           println(h)
        end
 # examples/error-example.jl 1 - 3:
 function inner(x)
@@ -33,9 +35,7 @@ end
 function outer(x)
     return inner(x + 1)
 end
-</code></pre><p>A displayed handle includes the file name and line range, followed by the source block.</p><h2 id="Editing-after-locating-the-error"><a class="docs-heading-anchor" href="#Editing-after-locating-the-error">Editing after locating the error</a><a id="Editing-after-locating-the-error-1"></a><a class="docs-heading-anchor-permalink" href="#Editing-after-locating-the-error" title="Permalink"></a></h2><p>After finding the relevant block, construct a replacement and apply it through git:</p><pre><code class="language-julia-repl hljs">julia&gt; repo = VersionControl(&quot;examples&quot;; require_view=true);
-
-julia&gt; h = only(search(intersect(hs, Handle.(trace)), &quot;error(&quot;))
+</code></pre><p>A displayed handle includes the file name and line range, followed by the source block. <code>Handle.(trace)</code> returns a vector, so the order of stack frames is preserved. By contrast, <a href="../api/#CodeEdit.handles"><code>handles</code></a> and <a href="../api/#CodeEdit.search"><code>search</code></a> return sets, which remove duplicate handles and have arbitrary iteration order.</p><h2 id="Editing-after-locating-the-error"><a class="docs-heading-anchor" href="#Editing-after-locating-the-error">Editing after locating the error</a><a id="Editing-after-locating-the-error-1"></a><a class="docs-heading-anchor-permalink" href="#Editing-after-locating-the-error" title="Permalink"></a></h2><p>After finding the relevant block, construct a replacement and apply it through git:</p><pre><code class="language-julia-repl hljs">julia&gt; h = only(search(trace_handles, &quot;error(&quot;))
 # examples/error-example.jl 1 - 3:
 function inner(x)
     error(&quot;bad input: $x&quot;)
@@ -51,4 +51,4 @@ Edit modifies examples/error-example.jl:
 &gt;     throw(ArgumentError(&quot;bad input: $x&quot;))
 
 julia&gt; apply!(repo, edit, &quot;Throw ArgumentError for bad input&quot;)
-Applied: 1 file changed, commit 751de5e</code></pre><p>After a successful edit, existing handles are updated or invalidated as needed.</p><p>For ordinary string, regex, glob, and recursive include searches, see <a href="../searching/">Searching source</a>.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../searching/">« Searching source</a><a class="docs-footer-nextpage" href="../api/">API reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Wednesday 20 May 2026 21:16">Wednesday 20 May 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Applied: 1 file changed, commit 751de5e</code></pre><p>After a successful edit, existing handles are updated or invalidated as needed.</p><p>For ordinary string, regex, glob, and recursive include searches, see <a href="../searching/">Searching source</a>.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../searching/">« Searching source</a><a class="docs-footer-nextpage" href="../api/">API reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Thursday 21 May 2026 09:47">Thursday 21 May 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
