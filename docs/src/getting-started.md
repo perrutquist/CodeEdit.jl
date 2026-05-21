@@ -43,7 +43,7 @@ end
 
 ```
 
-If line 10 is inside a function, `h` refers to the whole function block.
+If line 10 is inside a function, `h` refers to the whole function block. CodeEdit.jl currently never splits a block in the middle of a physical line, so the optional character-position argument to `Handle` is not usually needed.
 
 ```jldoctest getting_started
 julia> source = string(h)
@@ -76,6 +76,19 @@ julia> matches = search(hs, "old_function_name")
 1 handle
 # examples/DemoPackage.jl:
   17 - 19: function old_function_name(); return foo…
+```
+
+You can also look up a unique handle in a set by filepath suffix and source line with [`handle_at`](@ref), or equivalently by indexing the set with a `path:line` key:
+
+```jldoctest getting_started
+julia> hs["DemoPackage.jl:7"]
+# examples/DemoPackage.jl 7 - 11:
+function foo(x)
+    y = helper(x)
+    z = y * 2
+    return z
+end
+
 ```
 
 The result can be inspected, displayed, or used as the target of an edit. See [Searching source](searching.md) for glob searches, regex searches, and recursive `include` traversal.

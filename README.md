@@ -100,7 +100,7 @@ The README is only a short introduction. The full documentation is organized as 
 
 ## Getting block handles
 
-`Handle(path, line, pos=1)` - Returns a handle to the block containing the character at line `line`, character position `pos`. If that location is not inside a block, returns the next block after that location. If the location is outside the file's valid line or character bounds, throws an `ArgumentError`.
+`Handle(path, line, pos=1)` - Returns a handle to the block containing the character at line `line`, character position `pos`. If that location is not inside a block, returns the next block after that location. If the location is outside the file's valid line or character bounds, throws an `ArgumentError`. CodeEdit.jl currently never splits a block in the middle of a physical line, so the `pos` argument is not usually required.
 
 `Handle(method)` - Returns a handle to a method, when source information is available. For example, `Handle.(methods(f))` returns handles to methods of `f`.
 
@@ -109,6 +109,8 @@ The README is only a short introduction. The full documentation is organized as 
 `handles(path)` / `handles(paths)` / `handles(root, glob)` - Returns a `Set` of `Handle`s to all blocks in a file, or in a set of files (including EOF blocks). If the keyword argument `includes` is `true`, then `include` statements are followed recursively. Recursive include traversal uses cycle detection so include loops are visited at most once.
 
 `handles(vc::VersionControl)` - Returns handles for files tracked by the git repository. Files that cannot be read as valid UTF-8 are skipped.
+
+`handle_at(handles, "path:line")` / `handle_at(handles, "path:line:pos")` - Returns the unique valid handle from a set whose filepath ends with `path` and whose block touches the requested source location. `handles["path:line"]` is equivalent. Throws an `ArgumentError` if the filepath suffix or source location is missing or ambiguous.
 
 The functions throw an `ArgumentError` if a Julia file cannot be parsed, if a file contains invalid UTF-8, or if `Handle(path, line, pos)` is asked for a location outside the file.
 

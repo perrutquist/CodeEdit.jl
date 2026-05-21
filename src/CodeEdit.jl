@@ -27,7 +27,7 @@ include("apply.jl")
 include("reindex.jl")
 include("format_modules.jl")
 
-export Handle, eof_handle, handles, reindex, format_modules
+export Handle, eof_handle, handles, handle_at, reindex, format_modules
 export search
 export AbstractEdit, Replace, Delete, InsertBefore, InsertAfter
 export CreateFile, MoveFile, DeleteFile, Combine, apply!, displayed!

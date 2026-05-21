@@ -120,6 +120,124 @@ filepath_matches(regex::Regex, handle::Handle) = filepath_matches(handle, regex)
 
 filepath_matches(regex::Regex) = Base.Fix2(filepath_matches, regex)
 
+function _parse_handle_at_key(key::AbstractString)
+    text = String(key)
+    parts = split(text, ':')
+
+    if length(parts) < 2
+        throw(ArgumentError("handle key must have form \"path:line\" or \"path:line:pos\": \"$text\""))
+    end
+
+    last_number = tryparse(Int, parts[end])
+
+    if last_number === nothing
+        throw(ArgumentError("handle key must end with a numeric line or line:pos: \"$text\""))
+    end
+
+    line = last_number
+    pos = nothing
+    path_parts = parts[1:(end - 1)]
+
+    if length(parts) >= 3
+        previous_number = tryparse(Int, parts[end - 1])
+
+        if previous_number !== nothing
+            line = previous_number
+            pos = last_number
+            path_parts = parts[1:(end - 2)]
+        end
+    end
+
+    path_suffix = join(path_parts, ":")
+
+    isempty(path_suffix) && throw(ArgumentError("handle key path suffix is empty: \"$text\""))
+    line < 1 && throw(ArgumentError("handle key line must be positive: \"$text\""))
+    pos !== nothing && pos < 1 && throw(ArgumentError("handle key position must be positive: \"$text\""))
+
+    return (path_suffix, line, pos)
+end
+
+function _handle_at_query(path_suffix::AbstractString, line::Integer, pos)
+    return pos === nothing ? "$path_suffix:$line" : "$path_suffix:$line:$pos"
+end
+
+function _handle_touches_location(handle::Handle, line::Integer, pos)
+    line in lines(handle) || return false
+    pos === nothing && return true
+
+    record = valid_handle_record(handle)
+    record.file === nothing && return false
+    cache = get(STATE[].files, record.file, nothing)
+    cache === nothing && return false
+
+    offset = try
+        byte_offset_for_line_pos(cache.text, cache.line_starts, line, pos)
+    catch err
+        err isa ArgumentError || rethrow()
+        throw(ArgumentError("character position is outside line bounds in $(filepath(handle)): $pos"))
+    end
+
+    return record.span.lo <= offset < record.span.hi
+end
+
+"""
+    handle_at(handles, key)
+    handle_at(handles, path_suffix, line[, pos])
+
+Return the unique valid handle in `handles` whose filepath ends with
+`path_suffix` and whose block touches `line`, or the exact `line, pos`
+location when `pos` is provided.
+
+`key` must have the form `path:line` or `path:line:pos`, where `line` and
+`pos` are numeric. Throws `ArgumentError` if the filepath suffix or source
+location is missing or ambiguous.
+"""
+function handle_at(handles::AbstractSet{Handle}, key::AbstractString)
+    path_suffix, line, pos = _parse_handle_at_key(key)
+    return handle_at(handles, path_suffix, line, pos)
+end
+
+function handle_at(handles::AbstractSet{Handle}, path_suffix::AbstractString, line::Integer, pos=nothing)
+    line < 1 && throw(ArgumentError("line must be positive: $line"))
+    pos !== nothing && pos < 1 && throw(ArgumentError("position must be positive: $pos"))
+
+    matching_paths = Set{String}()
+
+    for handle in handles
+        is_valid(handle) || continue
+        path = filepath(handle)
+        endswith(path, path_suffix) && push!(matching_paths, path)
+    end
+
+    paths = sort!(collect(matching_paths))
+    query = _handle_at_query(path_suffix, line, pos)
+
+    if isempty(paths)
+        throw(ArgumentError("no filepath ending in \"$path_suffix\" among handles"))
+    elseif length(paths) > 1
+        throw(ArgumentError("ambiguous filepath suffix \"$path_suffix\" matched: $(join(paths, ", "))"))
+    end
+
+    path = paths[1]
+    matches = Handle[]
+
+    for handle in handles
+        is_valid(handle) || continue
+        filepath(handle) == path || continue
+        _handle_touches_location(handle, line, pos) && push!(matches, handle)
+    end
+
+    if isempty(matches)
+        throw(ArgumentError("no handle matching \"$query\""))
+    elseif length(matches) > 1
+        throw(ArgumentError("ambiguous handle location \"$query\" matched $(length(matches)) handles"))
+    end
+
+    return matches[1]
+end
+
+Base.getindex(handles::AbstractSet{Handle}, key::AbstractString) = handle_at(handles, key)
+
 """
 Return whether `text` begins with a Julia string literal docstring prefix.
 """
