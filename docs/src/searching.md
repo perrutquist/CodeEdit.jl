@@ -62,6 +62,8 @@ julia> search(hs, r"function .*increment")
 You can also collect handles directly from a file or from files matching a glob:
 
 ```jldoctest searching
+julia> file_handles = handles("examples/DemoPackage.jl");
+
 julia> hs = handles("examples", "*.jl")
 14 handles
 # examples/DemoPackage.jl:
