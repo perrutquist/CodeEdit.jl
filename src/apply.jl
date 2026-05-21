@@ -533,9 +533,26 @@ end
 
 
 """
-    apply!(vc::VersionControl, edit::AbstractEdit)
+    apply!(repo::VersionControl, edit::AbstractEdit)
 
 Applies an edit using the provided version control schema.
+
+`apply!(repo, edit, message)` - Apply an edit, update files on disk, stage the affected paths, and create a git commit with `message` if `repo` is a git repository. This is the standard workflow.
+
+Keyword arguments:
+- `require_view=false` - If `true`, reject edits that have not been displayed. REPL printing, calls to `Base.display(edit)`, and calls to `string(edit)` all count.
+- `require_versioning=true` for git, `false` without version control - If `true`, reject edits to existing files that are not tracked by git and reject creation outside the worktree.
+- `require_clean` - If `true`, reject edits when tracked files in scope are dirty. Defaults to `true` unless `precommit_message` is supplied.
+- `atomic_repo=false` - If `true`, dirty-file checks and precommits apply to the whole repository rather than only affected files.
+- `precommit_message` - Commit message used to commit dirty tracked files before formatting or applying the edit.
+- `formatter` - Function from `AbstractString` to `AbstractString` applied to affected files after the edit, and also before the edit when `preformat=true`. (For example `Runic.format_string`.)
+- `preformat=true` - If `true` and a formatter is supplied, format affected files before applying the edit so handles can be reindexed against formatted source before the change.
+- `format_message` - Commit message for formatter-only changes.
+- `default_message` - Commit message used when `apply!(repo, edit)` is called without a positional message.
+
+The above keyword arguments also can be provided when constructing the `VersionControl` object, and are then forwarded to `apply!` unless overridden.
+
+Applying edits can modify or invalidate the handles that they contain.
 """
 function apply!(vc::VersionControl{:none}, edit::AbstractEdit; kwargs...)
     options = merged_apply_kwargs(vc, kwargs)
