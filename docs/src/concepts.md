@@ -33,7 +33,7 @@ end                           # block
                               # EOF block
 ```
 
-A Julia `module` is split into separate blocks. The `module ...` line and its matching `end` line are separate blocks, while the module body is subdivided normally.
+A Julia `module` is split into separate blocks. The `module ...` line and its matching `end` line are separate blocks, while the module body is subdivided normally. Single-line modules are kept as one block. Modules where the beginning or end include more code on the same line, such as `module M; x = 1` or `y = 2; end # module`, also become one single block; avoid this syntax when you want the module body to be editable as separate blocks.
 
 At the end of each file, CodeEdit.jl creates a special EOF block. EOF handles are useful when inserting code at the end of a file.
 
