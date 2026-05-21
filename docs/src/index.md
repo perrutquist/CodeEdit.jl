@@ -30,7 +30,7 @@ A common workflow starts by choosing a version-control context and collecting ha
 VersionControl -> handles -> search/select -> edit -> apply!
 ```
 
-The following example changes one function in the shared documentation repository, applies the edit, and reads the edited block back from disk.
+The following example changes one function in a repository, applies the edit, and reads the edited block back from disk.
 
 
 ```jldoctest index

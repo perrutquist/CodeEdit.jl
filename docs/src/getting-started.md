@@ -12,11 +12,11 @@ end
 
 This chapter introduces the basic CodeEdit.jl workflow: choose a version-control context, collect handles, find a block, construct an edit, review the plan, and apply it.
 
-The documentation examples share a small git repository in `examples`.
+(In the examples, we use a small git repository in a directory `examples`. The file `docs/meta_setup.jl` creates this repo.)
 
 ## Installation
 
-Install CodeEdit.jl with Julia's package manager. If the package is not registered, add it from its repository URL:
+Install CodeEdit.jl with Julia's package manager. The package is not yet registered, so add it from its repository URL:
 
 ```julia-repl
 pkg> add https://github.com/perrutquist/CodeEdit.jl
@@ -37,7 +37,7 @@ julia> repo = VersionControl("examples"; require_view=true)
 GitVersionControl("examples"; require_view=true)
 ```
 
-The same `repo` value is used to collect editable handles and to apply edits later.
+The same `repo` object is used to collect editable handles and to apply edits later.
 
 ## Listing and searching handles
 
@@ -52,7 +52,7 @@ julia> matches = search(hs, "old_function_name")
   17 - 19: function old_function_name(); return foo…
 ```
 
-Search results are handles. A handle can be inspected, displayed, converted to source text, or passed to an edit constructor:
+Search results are handles. A handle can be displayed, converted to source text, or passed to an edit constructor:
 
 ```jldoctest getting_started
 julia> h = only(search(hs, "function foo"))
@@ -92,6 +92,12 @@ function foo(x)
 end
 
 ```
+
+!!! warning
+    Do not rely on a displayed line number to create a handle if edits have been applied to that file after the line number was displayed.
+
+!!! note
+    Handles that are obtained via a line number keep referring to the same block, even if the block moves within the file *after the handle was created.*
 
 See [Searching source](searching.md) for glob searches, regex searches, recursive `include` traversal, and set operations on handle collections.
 

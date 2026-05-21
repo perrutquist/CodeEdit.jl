@@ -130,7 +130,7 @@ Inserted text is used exactly as provided. Include leading or trailing newlines 
 ## Deleting code
 
 ```jldoctest editing
-julia> h = only(search(handles("examples/DemoPackage.jl"), "function obsolete"))
+julia> h = only(search(handles(repo), "function obsolete"))
 # examples/DemoPackage.jl 27 - 29:
 function obsolete()
     return :remove_me

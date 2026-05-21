@@ -140,7 +140,7 @@ Use a vector when the input order has meaning. For example, `Handle.(stacktrace)
 A `search` or `filter` operation that returns a single handle can be passed to the `only` function to extract that handle, for example:
 
 ```jldoctest searching
-julia> h1 = only(search(hs, "function foo"))
+julia> h0 = only(search(hs, "function foo"))
 # examples/DemoPackage.jl 7 - 11:
 function foo(x)
     y = helper(x)
@@ -150,14 +150,16 @@ end
 
 ```
 
-A simple way is often to use the `Handle` constructor with the filename and line number, although this can be brittle as line numbers can change due to edits.
+A simple way is often to use the `Handle` constructor with the filename and line number.
 
 ```jldoctest searching
+julia> h1 = hs["DemoPackage.jl:10"];
+
 julia> h2 = Handle("examples/DemoPackage.jl", 10);
 
 julia> h3 = only(filter(h -> occursin("DemoPackage", filepath(h)) && 10 in lines(h), hs));
 
-julia> h1 === h2 === h3
+julia> h0 == h1 === h2 === h3
 true
 
 ```
