@@ -331,47 +331,134 @@ function handle_line_label(record::HandleRecord, start_width::Integer=0, stop_wi
     return "$(lpad(string(record.lines.start), start_width)) - $(lpad(string(record.lines.stop), stop_width))"
 end
 
+const SET_HANDLE_DISPLAY_LIMIT = 10
+const SET_HANDLE_BLOCK_COLLAPSE_THRESHOLD = 15
+const SET_HANDLE_FILE_COLLAPSE_THRESHOLD = 15
+
+"""
+Return the number of source lines covered by a handle record.
+"""
+function handle_record_line_count(record::HandleRecord)
+    record.span.lo == record.span.hi && return 0
+    return max(record.lines.stop - record.lines.start + 1, 0)
+end
+
+"""
+Return the combined line span for non-EOF handle records.
+"""
+function handle_records_line_span(records)
+    start_line = nothing
+    stop_line = nothing
+
+    for record in records
+        record.span.lo == record.span.hi && continue
+        start_line = start_line === nothing ? record.lines.start : min(start_line, record.lines.start)
+        stop_line = stop_line === nothing ? record.lines.stop : max(stop_line, record.lines.stop)
+    end
+
+    return start_line === nothing ? nothing : (start_line, stop_line)
+end
+
+"""
+Return grouped valid handle records and the number of invalid handles.
+"""
+function grouped_handle_records(handles)
+    groups = Tuple{String,Vector{HandleRecord}}[]
+    group_indices = Dict{String,Int}()
+    invalid_count = 0
+
+    for handle in handles
+        record = handle_record(handle)
+
+        if record === nothing || !record.valid
+            invalid_count += 1
+            continue
+        end
+
+        primary_path = handle_primary_path(record)
+        group_index = get(group_indices, primary_path, nothing)
+
+        if group_index === nothing
+            push!(groups, (primary_path, [record]))
+            group_indices[primary_path] = length(groups)
+        else
+            push!(groups[group_index][2], record)
+        end
+    end
+
+    return groups, invalid_count
+end
+
+"""
+Return the summary text for omitted blocks in one file.
+"""
+function more_blocks_summary(records)
+    line_span = handle_records_line_span(records)
+
+    if line_span === nothing
+        return "$(length(records)) more blocks at EOF…"
+    end
+
+    return "$(length(records)) more blocks on lines $(line_span[1]) - $(line_span[2])…"
+end
+
+"""
+Return the summary text for omitted files.
+"""
+function more_files_summary(groups)
+    handle_count = 0
+    line_count = 0
+
+    for (_, records) in groups
+        handle_count += length(records)
+
+        for record in records
+            line_count += handle_record_line_count(record)
+        end
+    end
+
+    return "$(length(groups)) more files, containing a total of $handle_count handles in $line_count lines…"
+end
+
 function Base.show(io::IO, ::MIME"text/plain", set::Set{Handle})
     ordered = sort(collect(set); by=handle_sort_key)
     count = length(ordered)
     print(io, "$count handle$(count == 1 ? "" : "s")")
     isempty(ordered) && return
 
-    label_widths = Dict{String,Tuple{Int,Int}}()
+    groups, invalid_count = grouped_handle_records(ordered)
+    visible_group_count = length(groups) > SET_HANDLE_FILE_COLLAPSE_THRESHOLD ? SET_HANDLE_DISPLAY_LIMIT : length(groups)
+    visible_groups = visible_group_count == length(groups) ? groups : groups[1:visible_group_count]
 
-    for handle in ordered
-        record = handle_record(handle)
-        (record === nothing || !record.valid) && continue
-        primary_path = handle_primary_path(record)
-        current_widths = get(label_widths, primary_path, (0, 0))
-        record_widths = handle_line_label_widths((record,))
-        label_widths[primary_path] = (
-            max(current_widths[1], record_widths[1]),
-            max(current_widths[2], record_widths[2]),
-        )
+    for (_, records) in visible_groups
+        println(io, "\n# $(first(records).path):")
+
+        visible_records = length(records) >= SET_HANDLE_BLOCK_COLLAPSE_THRESHOLD ?
+            records[1:SET_HANDLE_DISPLAY_LIMIT] :
+            records
+        widths = handle_line_label_widths(visible_records)
+
+        for record in visible_records
+            println(io, "  $(handle_line_label(record, widths...)): $(handle_preview(record))")
+        end
+
+        if length(records) >= SET_HANDLE_BLOCK_COLLAPSE_THRESHOLD
+            omitted_records = records[(SET_HANDLE_DISPLAY_LIMIT + 1):end]
+            println(io, "  $(more_blocks_summary(omitted_records))")
+        end
     end
 
-    current_primary_path = nothing
+    if length(groups) > SET_HANDLE_FILE_COLLAPSE_THRESHOLD
+        omitted_groups = groups[(SET_HANDLE_DISPLAY_LIMIT + 1):end]
+        println(io, "\n$(more_files_summary(omitted_groups))")
+    end
 
-    for handle in ordered
-        record = handle_record(handle)
+    if invalid_count > 0
+        println(io, "\n#invalid:")
 
-        if record === nothing || !record.valid
-            current_primary_path != "#invalid" && println(io, "\n#invalid:")
-            current_primary_path = "#invalid"
+        for _ in 1:invalid_count
             println(io, "  #invalid")
-            continue
         end
-
-        primary_path = handle_primary_path(record)
-
-        if primary_path != current_primary_path
-            println(io, "\n# $(record.path):")
-            current_primary_path = primary_path
-        end
-
-        widths = get(label_widths, primary_path, (0, 0))
-        println(io, "  $(handle_line_label(record, widths...)): $(handle_preview(record))")
     end
 end
 
