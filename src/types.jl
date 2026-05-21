@@ -1,8 +1,17 @@
 """
-Version-control specification used by `apply!`.
+    VersionControl(path; kwargs...)
+    VersionControl(nothing; kwargs...)
 
-`vc_type` is typically `Val(:git)` or `Val(:none)`. `kwargs` stores default
-keyword arguments for later `apply!` calls.
+Version-control policy used by [`apply!`](@ref).
+
+`VersionControl(path)` creates a git-backed policy rooted at `path` (or any path
+inside the worktree). `VersionControl(nothing)` creates a no-version-control
+policy. Keyword arguments are stored as defaults and forwarded to `apply!`;
+common options include `require_view`, `require_versioning`, `require_clean`,
+`formatter`, and `default_message`.
+
+Prefer the clearer aliases [`GitVersionControl`](@ref) and
+[`NoVersionControl`](@ref) when the desired backend is known.
 """
 struct VersionControl{T,S<:NamedTuple}
     vc_type::Val{T}
@@ -17,12 +26,25 @@ const NoVersionControl{S} = VersionControl{:none,S}
 const GitVersionControl{S} = VersionControl{:git,S}
 
 """
-A "version control" specification that uses no version control.
-""" 
+    NoVersionControl(; kwargs...)
+
+Create a policy that applies edits directly to the filesystem without staging or
+committing changes. Keyword arguments are used as default `apply!` options.
+
+This is useful for scratch files, generated files, and tests. Use
+`NoVersionControl(require_view=true)` to still require a displayed diff before
+writing files.
+"""
 NoVersionControl(; kwargs...) = VersionControl(nothing; kwargs...)
 
 """
-A git version control specification.
+    GitVersionControl(path; kwargs...)
+
+Create a git-backed version-control policy for the worktree containing `path`.
+Keyword arguments are used as default `apply!` options.
+
+When applied with a commit message, git-backed edits check versioning
+requirements, stage affected paths, and create a commit for the edit.
 """
 GitVersionControl(path::AbstractString; kwargs...) = VersionControl(path; kwargs...)
 
@@ -133,15 +155,20 @@ mutable struct FileCache
 end
 
 """
-    Handle(path, line, pos=1; parse_as=:auto)
+    Handle(path, line[, pos=1]; parse_as=:auto)
     Handle(method)
     Handle(stackframe)
 
-Reference to a parsed source/text block.
+Reference to one parsed source or text block.
 
-The path-based constructor returns a handle to the block containing `(line, pos)`,
-or to the next block after that location. The method-based constructor returns a
-handle to a method definition when source information is available.
+The file constructor loads `path` and returns the block containing the
+1-based `(line, pos)` location. If the location falls between blocks, the next
+block is returned; requesting the end-of-file location returns the EOF handle.
+`parse_as` may be `:auto`, `:julia`, or `:text`.
+
+Method and stack-frame constructors use Julia source-location metadata and return
+an invalid handle when no source location is available. Test handles with
+[`is_valid`](@ref) before using them when source information may be missing.
 """
 struct Handle
     id::Int
@@ -166,8 +193,10 @@ end
 
 Abstract supertype for all edit values.
 
-Edit objects describe source or filesystem changes that can be displayed,
-validated, and then applied with [`apply!`](@ref).
+Concrete edits describe source or filesystem changes without performing them.
+They can be displayed to review the planned diff, validated with
+[`is_valid`](@ref), combined with [`Combine`](@ref) or `*`, and applied with
+[`apply!`](@ref).
 """
 abstract type AbstractEdit end
 
@@ -181,9 +210,13 @@ struct DisplayedPlan
 end
 
 """
-    Replace(handle::Handle, code::AbstractString)
+    Replace(handle, code)
 
-Edit that replaces the source block referred to by `handle` with `code`.
+Edit that replaces the block referenced by `handle` with `code`.
+
+The replacement is planned against the current contents of the handle's file.
+Applying the edit may invalidate or update handles that refer to affected
+blocks.
 """
 struct Replace <: AbstractEdit
     handle::Handle
@@ -192,11 +225,11 @@ struct Replace <: AbstractEdit
 end
 
 """
-    Delete(handle::Handle)
+    Delete(handle)
 
-Edit that deletes the source block referred to by `handle`.
+Edit that deletes the block referenced by `handle`.
 
-Deleting an EOF handle has no effect.
+Deleting an EOF handle is valid and has no effect.
 """
 struct Delete <: AbstractEdit
     handle::Handle
@@ -204,10 +237,9 @@ struct Delete <: AbstractEdit
 end
 
 """
-    InsertBefore(handle::Handle, code::AbstractString)
+    InsertBefore(handle, code)
 
-Edit that inserts `code` immediately before the source block referred to by
-`handle`.
+Edit that inserts `code` immediately before the block referenced by `handle`.
 """
 struct InsertBefore <: AbstractEdit
     handle::Handle
@@ -216,10 +248,9 @@ struct InsertBefore <: AbstractEdit
 end
 
 """
-    InsertAfter(handle::Handle, code::AbstractString)
+    InsertAfter(handle, code)
 
-Edit that inserts `code` immediately after the source block referred to by
-`handle`.
+Edit that inserts `code` immediately after the block referenced by `handle`.
 """
 struct InsertAfter <: AbstractEdit
     handle::Handle
@@ -228,11 +259,13 @@ struct InsertAfter <: AbstractEdit
 end
 
 """
-    CreateFile(path::AbstractString, code::AbstractString; parse_as::Symbol=:auto)
+    CreateFile(path, code; parse_as=:auto)
 
 Edit that creates a new file at `path` containing `code`.
 
-`parse_as` may be `:auto`, `:julia`, or `:text`.
+`path` is stored as an absolute path when the edit is constructed. The file must
+not already exist when the edit is applied. `parse_as` controls how handles in
+the new file are parsed and may be `:auto`, `:julia`, or `:text`.
 """
 struct CreateFile <: AbstractEdit
     path::String
@@ -242,9 +275,12 @@ struct CreateFile <: AbstractEdit
 end
 
 """
-    MoveFile(old_path::AbstractString, new_path::AbstractString)
+    MoveFile(old_path, new_path)
 
 Edit that moves or renames a file from `old_path` to `new_path`.
+
+Both paths are stored as absolute paths when the edit is constructed. The source
+must exist and the destination must not exist when the edit is applied.
 """
 struct MoveFile <: AbstractEdit
     old_path::String
@@ -253,9 +289,12 @@ struct MoveFile <: AbstractEdit
 end
 
 """
-    DeleteFile(path::AbstractString)
+    DeleteFile(path)
 
 Edit that deletes the file at `path`.
+
+The path is stored as an absolute path when the edit is constructed. Handles for
+deleted files are invalidated after application.
 """
 struct DeleteFile <: AbstractEdit
     path::String
@@ -263,14 +302,15 @@ struct DeleteFile <: AbstractEdit
 end
 
 """
-    Combine(edits::AbstractEdit...)
-    Combine(edits::AbstractVector{<:AbstractEdit})
+    Combine(edits...)
+    Combine(edits::AbstractVector)
 
-Edit that combines multiple edits into one planned operation.
+Edit that plans and applies several edits as one operation.
 
-Combined edits are interpreted in order and validated as a unit. Applying a
-combined edit that touches multiple files is best-effort at the filesystem
-level, so a later filesystem failure can leave earlier operations applied.
+Edits are interpreted in order, so later edits see the virtual filesystem
+produced by earlier edits. Validation succeeds or fails for the combined plan as
+a unit. The `*` operator is shorthand for combining edits in left-to-right
+order.
 """
 struct Combine <: AbstractEdit
     edits::Vector{AbstractEdit}

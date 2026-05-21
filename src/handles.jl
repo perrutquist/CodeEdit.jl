@@ -56,8 +56,12 @@ end
     is_valid(handle)
     is_valid(edit)
 
-Return whether a handle currently refers to a valid block, or whether an edit
-can be applied without validation errors.
+Return whether `handle` currently refers to a valid parsed block, or whether
+`edit` can be planned without validation errors.
+
+Handles may become invalid after file edits, file deletion, or external changes
+that cannot be matched during reindexing. For edits, this performs planning but
+does not write to the filesystem.
 """
 function is_valid(handle::Handle)
     record = refresh_handle!(handle)
@@ -65,14 +69,22 @@ function is_valid(handle::Handle)
 end
 
 """
-Return the path associated with a handle.
+    filepath(handle)
+
+Return the absolute path of the file containing `handle`.
+
+Throws `ArgumentError` if the handle is invalid.
 """
 function filepath(handle::Handle)
     return valid_handle_record(handle).path
 end
 
 """
-Return the line range associated with a handle.
+    lines(handle)
+
+Return the 1-based line range covered by `handle`.
+
+Throws `ArgumentError` if the handle is invalid.
 """
 function lines(handle::Handle)
     return valid_handle_record(handle).lines
@@ -95,21 +107,32 @@ function handle_parse_as(handle::Handle)
 end
 
 """
-Return whether a handle was parsed as Julia source.
+    is_julia(handle)
+
+Return `true` if `handle` is valid and its file was parsed as Julia source.
 """
 function is_julia(handle::Handle)
     return handle_parse_as(handle) == :julia
 end
 
 """
-Return whether a handle was parsed as plain text.
+    is_text(handle)
+
+Return `true` if `handle` is valid and its file was parsed as plain text.
 """
 function is_text(handle::Handle)
     return handle_parse_as(handle) == :text
 end
 
 """
-Return whether a handle's filepath matches `regex`.
+    filepath_matches(handle, regex)
+    filepath_matches(regex, handle)
+    filepath_matches(regex)
+
+Return whether `handle` is valid and its filepath matches `regex`.
+
+The one-argument form returns a predicate suitable for `filter`, `search`
+pipelines, and set comprehensions.
 """
 function filepath_matches(handle::Handle, regex::Regex)
     is_valid(handle) || return false
@@ -184,13 +207,15 @@ end
     handle_at(handles, key)
     handle_at(handles, path_suffix, line[, pos])
 
-Return the unique valid handle in `handles` whose filepath ends with
-`path_suffix` and whose block touches `line`, or the exact `line, pos`
-location when `pos` is provided.
+Return the unique valid handle selected by file suffix and source location.
 
-`key` must have the form `path:line` or `path:line:pos`, where `line` and
-`pos` are numeric. Throws `ArgumentError` if the filepath suffix or source
-location is missing or ambiguous.
+`key` must be `"path:line"` or `"path:line:pos"`. `path_suffix` is matched
+against the end of each handle's filepath. Without `pos`, the selected block
+must touch `line`; with `pos`, the block must contain that exact character
+position on the line.
+
+Throws `ArgumentError` if no path matches, the path suffix is ambiguous, no
+block covers the requested location, or multiple blocks match.
 """
 function handle_at(handles::AbstractSet{Handle}, key::AbstractString)
     path_suffix, line, pos = _parse_handle_at_key(key)
@@ -285,7 +310,13 @@ function leading_julia_string_literal(text::AbstractString)
 end
 
 """
-Return a handle's docstring text, if available.
+    docstring(handle)
+
+Return leading Julia string-literal docstrings attached to `handle`, or
+`nothing` if none are found.
+
+Adjacent leading string literals are joined with newlines. Throws
+`ArgumentError` if the handle is invalid.
 """
 function docstring(handle::Handle)
     record = valid_handle_record(handle)
@@ -307,7 +338,11 @@ function docstring(handle::Handle)
 end
 
 """
-Return the source/text block associated with a handle.
+    string(handle)
+
+Return the source or text block referenced by `handle`.
+
+Throws `ArgumentError` if the handle is invalid.
 """
 function Base.string(handle::Handle)
     return valid_handle_record(handle).text
@@ -368,7 +403,8 @@ function Handle(::Nothing, line::Integer; return_invalid=true)
 end
 
 """
-Return a handle to the source block referenced by a StackFrame when source information is available.
+Return a handle to the source block referenced by a stack frame when source
+information is available.
 """
 function Handle(sf::StackTraces.StackFrame; return_invalid=true)
     (path, line) = if sf.linfo isa Core.MethodInstance
@@ -380,7 +416,7 @@ function Handle(sf::StackTraces.StackFrame; return_invalid=true)
 end
 
 """
-Return a handle to a Method's source block when source information is available.
+Return a handle to a method definition when source information is available.
 """
 function Handle(method::Method; return_invalid=true)
     (path, line) = functionloc(method)
@@ -388,7 +424,12 @@ function Handle(method::Method; return_invalid=true)
 end
 
 """
-Return the EOF handle for a file.
+    eof_handle(path; parse_as=:auto)
+
+Return a handle to the end-of-file block for `path`.
+
+The EOF handle is useful as an insertion target when appending code. `parse_as`
+may be `:auto`, `:julia`, or `:text`.
 """
 function eof_handle(path::AbstractString; parse_as::Symbol=:auto)
     cache = load_file(path; parse_as=parse_as)
@@ -443,11 +484,17 @@ end
     handles(path; includes=false, parse_as=:auto)
     handles(paths; includes=false, parse_as=:auto)
     handles(root, pattern; includes=false, parse_as=:auto)
+    handles(repo::VersionControl; includes=false, parse_as=:auto)
+    handles(methods_or_stacktrace)
 
-Return handles for all parsed blocks in one file, a collection of files, or
-files under `root` matching `pattern`.
+Return a `Set{Handle}` for parsed blocks from files, directories, repositories,
+method lists, or stack traces.
 
-If `includes=true`, statically resolvable Julia `include(...)` paths are
+`handles(root, pattern)` searches paths matched by `Glob.glob(pattern, root)`.
+For git-backed `VersionControl` objects, only tracked UTF-8 files are scanned;
+`NoVersionControl()` returns an empty set.
+
+If `includes=true`, statically resolvable Julia `include(...)` calls are
 followed recursively. `parse_as` may be `:auto`, `:julia`, or `:text`.
 """
 function handles end

@@ -1,79 +1,38 @@
 # API reference
 
-This page summarizes the public API exported by CodeEdit.jl. For a guided introduction, see [Getting started](getting-started.md) and [Editing code](editing.md).
+This page summarizes the public API exported by CodeEdit.jl. For task-oriented examples, see [Getting started](getting-started.md), [Searching source](searching.md), and [Editing code](editing.md).
 
-The detailed docstrings for exported names are listed at the end of this page.
+Most workflows start by collecting [`Handle`](@ref)s, selecting the blocks to edit, constructing one or more [`AbstractEdit`](@ref) values, displaying the planned diff, and applying it through an explicit version-control policy.
 
-## Handles
+## Handles and source blocks
 
-Handles identify parsed blocks and are the primary objects used for searching and editing.
-
-- [`Handle`](@ref): create a handle to the block containing a file location or method.
-- [`handle_at`](@ref): look up a unique handle in a collection by path and line.
-- [`eof_handle`](@ref): create a handle to the end of a file.
-- [`handles`](@ref): collect handles for blocks in files, directories, or repositories.
-- [`reindex`](@ref): update existing handles after files changed outside CodeEdit.jl.
-
-## Searching
-
-- [`search`](@ref): search handles and files.
-
-[`handles`](@ref) and [`search`](@ref) return sets of handles. Use set operations such as `union` and `intersect` to combine selections. See [Searching source](searching.md) for the main source-search workflow and [Finding errors from stacktraces](searching-errors.md) for locating source blocks from ordered stack frames.
-
-## Edits
-
-Edits are immutable descriptions of changes. Constructing an edit does not modify the filesystem.
-
-- [`AbstractEdit`](@ref): abstract supertype for edit values.
-- [`Replace`](@ref): replace a block.
-- [`Delete`](@ref): delete a block.
-- [`InsertBefore`](@ref): insert code before a block.
-- [`InsertAfter`](@ref): insert code after a block.
-- [`CreateFile`](@ref): create a new file.
-- [`MoveFile`](@ref): move or rename a file.
-- [`DeleteFile`](@ref): delete a file.
-- [`Combine`](@ref): combine edits into one planned edit.
-- [`apply!`](@ref): apply an edit through an explicit version-control specification.
-- [`displayed!`](@ref): mark an edit as displayed.
-
-Combined edits succeed or fail as a unit. See [Editing code](editing.md) and [Safety and version control](safety.md) for workflow details and failure modes. The multiplication operator `*` can be used as shorthand for `Combine`, e.g. `apply!(repo, edit1 * edit2, message)` will apply both `edit1` and `edit2`. (Or, if there's a problem with either, none of them.)
-
-## Version control
-
-Version-control specifications determine how an edit is applied.
-
-- [`VersionControl`](@ref): describe a version-control backend and default `apply!` keyword arguments.
-- [`GitVersionControl`](@ref): git-backed version-control specification, type alias for `VersionControl{:git}`. 
-- [`NoVersionControl`](@ref): apply edits without version control, type alias for `VersionControl{:none}`. 
-
-`repo = VersionControl("path")` constructs the appropriate version-control specification for a repository. For git repositories, the displayed value is a [`GitVersionControl`](@ref).
-
-`apply!(repo, edit, message)` applies an edit, stages affected paths, and creates a git commit with `message` if `repo` is a `GitVersionControl` object.
-
-`apply!(NoVersionControl(require_view=true), edit)` applies without git while still requiring a displayed review.
-
-Display, printing, and `string(edit)` store the exact plan that was shown. When `require_view=true`, [`apply!`](@ref) replans the edit and rejects it if the current plan differs from the displayed plan.
-
-## Convenience functions
-
-- [`filepath`](@ref): return the file path for a handle.
-- [`lines`](@ref): return the line range for a handle.
-- [`docstring`](@ref): extract an attached docstring.
-- [`is_valid`](@ref): test whether a handle or edit is valid.
-- `string(handle)`: return the block text for a handle.
-- `string(edit)`: return the displayed edit plan and mark the edit as displayed.
-- `display(handle)`: show a handle header and source block.
-- `display(edit)`: show the edit plan and mark the edit as displayed.
-
-## Exported names
+Handles are stable references to parsed source or text blocks. They can be created from files, methods, stack frames, repositories, and search results.
 
 ```@docs
 Handle
-eof_handle
 handles
 handle_at
+eof_handle
 reindex
+```
+
+## Searching and filtering
+
+Search functions return `Set{Handle}` values. Use ordinary set operations such as `union`, `intersect`, and `setdiff` to combine selections.
+
+```@docs
 search
+filepath_matches
+is_julia
+is_text
+is_versioned
+```
+
+## Edits
+
+Edits are immutable descriptions of intended changes. Constructing an edit does not modify the filesystem. Displaying or stringifying an edit shows the planned diff and records the displayed plan for optional review enforcement.
+
+```@docs
 AbstractEdit
 Replace
 Delete
@@ -83,13 +42,29 @@ CreateFile
 MoveFile
 DeleteFile
 Combine
-apply!
 displayed!
+```
+
+## Applying edits and version control
+
+Edits are applied through an explicit [`VersionControl`](@ref) specification. Git-backed application can check cleanliness, require files to be versioned, stage affected paths, and create commits. [`NoVersionControl`](@ref) is available for scratch files and generated output.
+
+```@docs
 VersionControl
 GitVersionControl
 NoVersionControl
+apply!
+```
+
+## Handle utilities
+
+These convenience functions inspect handles and validate handles or edits.
+
+```@docs
 filepath
 lines
 docstring
 is_valid
 ```
+
+`string(handle)` returns the source text for a handle. `string(edit)` and `display(edit)` show the planned diff and mark that exact plan as displayed.

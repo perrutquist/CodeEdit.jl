@@ -39,11 +39,14 @@ function store_displayed_plan!(edit::AbstractEdit, plan)
 end
 
 """
-Set or clear the displayed marker for an edit.
+    displayed!(edit, displayed=true)
 
-When `displayed` is `true`, this compiles and validates the current edit plan
-and stores its fingerprint as the plan approved for application. It does not
-print the diff. Use this only when intentionally bypassing visible review.
+Set or clear the displayed-plan marker for `edit`.
+
+When `displayed` is `true`, CodeEdit compiles the current edit plan and stores
+its fingerprint as the plan approved for `apply!(...; require_view=true)`.
+This does not print the diff; use it only when intentionally bypassing visible
+review. Passing `false` clears the marker.
 """
 function displayed!(edit::AbstractEdit, displayed::Bool=true)
     if displayed
@@ -533,26 +536,38 @@ end
 
 
 """
-    apply!(repo::VersionControl, edit::AbstractEdit)
+    apply!(vc::VersionControl, edit; kwargs...)
+    apply!(vc::VersionControl, edit, message; kwargs...)
 
-Applies an edit using the provided version control schema.
+Plan, validate, and apply `edit` using the version-control policy `vc`.
 
-`apply!(repo, edit, message)` - Apply an edit, update files on disk, stage the affected paths, and create a git commit with `message` if `repo` is a git repository. This is the standard workflow.
+With [`GitVersionControl`](@ref), the message form stages affected paths and
+creates a git commit when there are staged changes. Without a positional
+message, `default_message` must be provided in `vc` or as a keyword argument.
+With [`NoVersionControl`](@ref), edits are written directly and any positional
+message is ignored.
 
-Keyword arguments:
-- `require_view=false` - If `true`, reject edits that have not been displayed. REPL printing, calls to `Base.display(edit)`, and calls to `string(edit)` all count.
-- `require_versioning=true` for git, `false` without version control - If `true`, reject edits to existing files that are not tracked by git and reject creation outside the worktree.
-- `require_clean` - If `true`, reject edits when tracked files in scope are dirty. Defaults to `true` unless `precommit_message` is supplied.
-- `atomic_repo=false` - If `true`, dirty-file checks and precommits apply to the whole repository rather than only affected files.
-- `precommit_message` - Commit message used to commit dirty tracked files before formatting or applying the edit.
-- `formatter` - Function from `AbstractString` to `AbstractString` applied to affected files after the edit, and also before the edit when `preformat=true`. (For example `Runic.format_string`.)
-- `preformat=true` - If `true` and a formatter is supplied, format affected files before applying the edit so handles can be reindexed against formatted source before the change.
-- `format_message` - Commit message for formatter-only changes.
-- `default_message` - Commit message used when `apply!(repo, edit)` is called without a positional message.
+Important keyword arguments:
 
-The above keyword arguments also can be provided when constructing the `VersionControl` object, and are then forwarded to `apply!` unless overridden.
+- `require_view=false`: require the edit to have been displayed or stringified,
+  and reject application if the plan changed since review.
+- `require_versioning`: require existing files to be tracked by git. Defaults to
+  `true` for git-backed policies and `false` otherwise.
+- `require_clean`: reject dirty tracked files in scope. Defaults to `true`
+  unless `precommit_message` is provided.
+- `precommit_message`: commit dirty tracked files before applying the edit.
+- `atomic_repo=false`: apply dirty-file checks and precommits to the whole
+  repository instead of only affected paths.
+- `formatter`: function from `AbstractString` to `AbstractString` run on
+  affected files before and/or after the edit.
+- `preformat=true`: when a formatter is supplied, format before applying so
+  handles can be reindexed against formatted source.
+- `format_message`: commit message for formatter-only changes in git mode.
+- `default_message`: commit message used by git mode when `message` is omitted.
 
-Applying edits can modify or invalidate the handles that they contain.
+Returns an `ApplyResult` summarizing changed files, commits, the applied diff,
+and paths changed by formatting. Applying an edit may update or invalidate
+handles that refer to affected files.
 """
 function apply!(vc::VersionControl{:none}, edit::AbstractEdit; kwargs...)
     options = merged_apply_kwargs(vc, kwargs)

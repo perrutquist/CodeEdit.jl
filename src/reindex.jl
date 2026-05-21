@@ -252,11 +252,11 @@ end
     reindex(path)
     reindex()
 
-Reparse cached files and conservatively preserve handles for uniquely matched
-blocks.
+Refresh cached parses after files changed outside CodeEdit.
 
-The path form reindexes one cached file. The zero-argument form reindexes all
-cached files that still exist.
+`reindex(path)` reparses one cached file. `reindex()` reparses all cached files
+that still exist. Existing handles are preserved only when CodeEdit can match
+their old block to a unique new block; otherwise they are invalidated.
 """
 function reindex end
 

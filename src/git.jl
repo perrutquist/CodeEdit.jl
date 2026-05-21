@@ -147,8 +147,15 @@ function commit_formatting!(
 end
 
 """
-Return whether a handle's file is tracked by the given version-control
-specification.
+    is_versioned(handle, vc)
+    is_versioned(vc, handle)
+    is_versioned(vc)
+
+Return whether `handle` is valid and its file is tracked by the git-backed
+version-control policy `vc`.
+
+For `NoVersionControl()`, this always returns `false`. The one-argument form
+returns a predicate suitable for filtering handles.
 """
 function is_versioned(handle::Handle, vc::VersionControl{:git})
     is_valid(handle) || return false
