@@ -127,5 +127,3 @@ CodeEdit.jl is also intended to be useful in AI-assisted coding workflows. Handl
 ## Development note
 
 CodeEdit.jl has been developed with assistance from large language models. Much of the code and documentation was drafted with AI help, then reviewed, tested, and revised by the maintainer.
-
-The package is also intended to be useful to large language models and other AI-assisted tools that need structured ways to search, inspect, and edit source code.

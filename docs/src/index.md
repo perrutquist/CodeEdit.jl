@@ -10,7 +10,9 @@ end
 
 # CodeEdit.jl
 
-CodeEdit.jl provides tools for making source edits from Julia. A [`Handle`](@ref) identifies a parsed source block, edit constructors such as [`Replace`](@ref) and [`InsertAfter`](@ref) describe changes, and [`apply!`](@ref) writes the result through an explicit version-control specification.
+CodeEdit.jl provides tools for making source edits from Julia. 
+
+The core idea is that because Julia code frequently consists of fairly short top-level blocks, and the meaning of each code block depends very little on its location in relation to other code. It therefore makes sense to be able to access, search and modify code in terms of blocks, rather than files.
 
 ## Manual
 
@@ -23,6 +25,8 @@ CodeEdit.jl provides tools for making source edits from Julia. A [`Handle`](@ref
 - [API reference](api.md)
 
 ## Basic workflow
+
+A [`Handle`](@ref) identifies a parsed source block, edit constructors such as [`Replace`](@ref) and [`InsertAfter`](@ref) describe changes, and [`apply!`](@ref) writes the result through an explicit version-control specification.
 
 A common workflow starts by choosing a version-control context and collecting handles from it:
 
