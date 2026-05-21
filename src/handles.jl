@@ -338,7 +338,7 @@ function handles(path::AbstractString; includes::Bool=false, parse_as::Symbol=:a
     return collect_handles!(Set{Handle}(), path, includes, parse_as, Set{String}())
 end
 
-function handles(paths; includes::Bool=false, parse_as::Symbol=:auto)
+function handles(paths::Vector{<:AbstractString}; includes::Bool=false, parse_as::Symbol=:auto)
     result = Set{Handle}()
 
     for path in paths
