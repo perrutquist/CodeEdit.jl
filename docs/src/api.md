@@ -56,7 +56,7 @@ NoVersionControl
 apply!
 ```
 
-Calling `Base.arg_gen(repo)` when `repo <: GitVersionControl` returns the repository path, so that `repo` can be interpolated into a `Cmd` command, e.g. ```run(`git -C $repo status`)```.
+If `repo <: GitVersionControl`, then paths relative to a repository can be created with `joinpath(repo, relative_path...)`. The path can also be interpolated into a `Cmd` command, e.g. ```run(`git -C $repo status`)```.
 
 ## Handle utilities
 

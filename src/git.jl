@@ -194,3 +194,5 @@ end
 
 # If Base.arg_gen(repo) returns the repo path, then commands like run(`git log $repo`) will work
 Base.arg_gen(vc::VersionControl{:git}) = Base.arg_gen(vc.repo_path)
+
+Base.joinpath(vc::VersionControl{:git}, parts::AbstractString...) = joinpath(vc.repo_path, parts...)
