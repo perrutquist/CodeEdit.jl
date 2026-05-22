@@ -56,6 +56,8 @@ NoVersionControl
 apply!
 ```
 
+Calling `Base.arg_gen(repo)` when `repo <: GitVersionControl` returns the repository path, so that `repo` can be interpolated into a `Cmd` command, e.g. ```run(`git -C $repo status`)```.
+
 ## Handle utilities
 
 These convenience functions inspect handles and validate handles or edits.
@@ -67,4 +69,4 @@ docstring
 is_valid
 ```
 
-`string(handle)` returns the source text for a handle. `string(edit)` and `display(edit)` show the planned diff and mark that exact plan as displayed.
+Calling `string(handle)` returns the source text for a handle. `string(edit)` and `display(edit)` show the planned diff and mark that exact plan as displayed.

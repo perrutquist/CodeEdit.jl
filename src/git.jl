@@ -191,3 +191,6 @@ end
 function handles(::VersionControl{:none}; includes::Bool=false, parse_as::Symbol=:auto)
     return Set{Handle}()
 end
+
+# If Base.arg_gen(repo) returns the repo path, then commands like run(`git log $repo`) will work
+Base.arg_gen(vc::VersionControl{:git}) = Base.arg_gen(vc.repo_path)

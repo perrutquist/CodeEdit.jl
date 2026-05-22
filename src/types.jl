@@ -19,7 +19,7 @@ struct VersionControl{T,S<:NamedTuple}
     kwargs::S
 end
 
-VersionControl(path::AbstractString; kwargs...) = VersionControl(Val(:git), String(path), (; kwargs...))
+VersionControl(path::AbstractString; kwargs...) = VersionControl(Val(:git), abspath(path), (; kwargs...))
 VersionControl(::Nothing; kwargs...) = VersionControl(Val(:none), "", (; kwargs...))
 
 const NoVersionControl{S} = VersionControl{:none,S}
@@ -42,6 +42,8 @@ NoVersionControl(; kwargs...) = VersionControl(nothing; kwargs...)
 
 Create a git-backed version-control policy for the worktree containing `path`.
 Keyword arguments are used as default `apply!` options.
+
+`path` is stored as an absolute path when the policy is constructed. 
 
 When applied with a commit message, git-backed edits check versioning
 requirements, stage affected paths, and create a commit for the edit.
