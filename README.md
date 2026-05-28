@@ -60,6 +60,8 @@ julia> apply!(repo, edit, "Change foo increment")
 Applied: 1 file changed, commit a1b2c3d
 ```
 
+Using a git repository is recommended as there is no other undo mechanism! If one commit per applied edit feels too granular, you can squash the commits later using your usual git workflow.
+
 For scratch files, generated files, or other changes that should not create a commit, use `NoVersionControl()` instead of a `VersionControl` object.
 
 If **Revise.jl** is loaded, CodeEdit.jl calls `Revise.revise()` after each successful edit so changed method definitions usually take effect immediately.
@@ -113,8 +115,6 @@ CodeEdit.jl works with handles to parsed source blocks. With those handles you c
 - create, move, or delete files
 - apply edits through git or explicitly without version control
 - require that an edit has been displayed before it is applied
-
-For scratch files, generated files, or other changes that should not create a commit, use `NoVersionControl()` instead of a `VersionControl` object.
 
 If **Revise.jl** is loaded, CodeEdit.jl calls `Revise.revise()` after each successful edit so changed method definitions usually take effect immediately.
 
