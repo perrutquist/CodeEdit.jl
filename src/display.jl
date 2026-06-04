@@ -9,7 +9,7 @@ function handle_header(handle::Handle)
     end
 
     block_label = record.span.lo == record.span.hi ? "EOF" : "$(record.lines.start) - $(record.lines.stop)"
-    return "# $(record.path) $block_label:"
+    return "# $(display_path(record.path)) $block_label:"
 end
 
 """
