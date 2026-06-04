@@ -274,8 +274,8 @@ function leading_julia_string_literal(text::AbstractString)
         stop = findnext("\"\"\"", stripped, nextind(stripped, nextind(stripped, nextind(stripped, firstindex(stripped)))))
         stop === nothing && return nothing
         content_start = nextind(stripped, nextind(stripped, nextind(stripped, firstindex(stripped))))
-        content_stop = prevind(stripped, stop)
-        rest_start = nextind(stripped, nextind(stripped, nextind(stripped, stop)))
+        content_stop = prevind(stripped, first(stop))
+        rest_start = nextind(stripped, last(stop))
         return (
             text = content_start > content_stop ? "" : String(stripped[content_start:content_stop]),
             rest = rest_start > ncodeunits(stripped) ? "" : String(stripped[rest_start:end]),
