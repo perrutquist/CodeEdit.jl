@@ -7,7 +7,7 @@ interpret_error(message::AbstractString) = InterpretResult(false, String(message
 sha1_hex(text::AbstractString) = bytes2hex(sha1(Vector{UInt8}(codeunits(text))))
 
 function display_path(path::AbstractString)
-    relative = relpath(path)
+    relative = relpath(isfile(path) ? realpath(path) : path, realpath(pwd()))
     if (!startswith(relative, "..") && !isabspath(relative)) 
         return relative
     end

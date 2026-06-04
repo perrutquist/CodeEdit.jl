@@ -431,7 +431,7 @@ function Base.show(io::IO, ::MIME"text/plain", set::Set{Handle})
     visible_groups = visible_group_count == length(groups) ? groups : groups[1:visible_group_count]
 
     for (_, records) in visible_groups
-        println(io, "\n# $(first(records).path):")
+        println(io, "\n# $(display_path(first(records).path)):")
 
         visible_records = length(records) >= SET_HANDLE_BLOCK_COLLAPSE_THRESHOLD ?
             records[1:SET_HANDLE_DISPLAY_LIMIT] :
