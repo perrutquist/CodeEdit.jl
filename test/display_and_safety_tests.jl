@@ -71,7 +71,7 @@ end
         other = only(search(hs, "other_function"))
 
         @test occursin("traced_function", sprint(show, MIME"text/plain"(), [traced]))
-        @test occursin("2 handles", sprint(show, MIME"text/plain"(), Set([traced, other])))
+        @test occursin("2 blocks", sprint(show, MIME"text/plain"(), Set([traced, other])))
 
         Base.invokelatest(include, path)
         traced_ref = getfield(@__MODULE__, :traced_function)
@@ -105,7 +105,7 @@ end
 
         string_edit = Replace(Handle(string_path, 1), "x = 2\n")
         @test string_edit.displayed[] === nothing
-        @test occursin("Edit modifies", string(string_edit))
+        @test occursin("Patch modifies", string(string_edit))
         @test string_edit.displayed[] !== nothing
 
         display_edit = Replace(Handle(display_path, 1), "y = 2\n")

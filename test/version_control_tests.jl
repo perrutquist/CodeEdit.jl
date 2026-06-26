@@ -18,7 +18,7 @@
             @test_throws ErrorException apply!(edit)
 
             display_text = sprint(show, MIME"text/plain"(), edit)
-            @test occursin("Edit modifies", display_text)
+            @test occursin("Patch modifies", display_text)
 
             apply!(NoVersionControl(require_view=true), edit)
             @test occursin("2", read("foo.jl", String))
@@ -111,7 +111,7 @@ end
             @test occursin("1", read("foo.jl", String))
 
             display_text = sprint(show, MIME"text/plain"(), edit)
-            @test occursin("Edit modifies", display_text)
+            @test occursin("Patch modifies", display_text)
 
             apply!(repo, edit, "Change after viewing")
             @test occursin("4", read("foo.jl", String))

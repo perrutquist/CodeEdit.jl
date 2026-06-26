@@ -56,7 +56,7 @@ end
         edit = Replace(first, replace(string(first), "1" => "10"))
         shown = sprint(show, MIME"text/plain"(), edit)
 
-        @test occursin("Edit modifies", shown)
+        @test occursin("Patch modifies", shown)
         @test occursin("<", shown)
         @test occursin(">", shown)
         @test edit.displayed[] !== nothing

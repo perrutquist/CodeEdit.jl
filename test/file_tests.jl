@@ -203,7 +203,7 @@ end
         @test length(search(from_vector, "first_value")) == 1
         @test length(search(from_vector, "second_value")) == 1
         @test length(search([first, second], "second_value")) == 1
-        @test length(search(dir, "*.jl", "first_value")) == 1
+        @test length(search(dir, "first_value"; files="*.jl")) == 1
         @test all(h -> endswith(filepath(h), ".jl"), from_glob)
     end
 end
