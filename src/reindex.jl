@@ -209,7 +209,7 @@ function assign_reindex_match!(
     id::Integer,
     index::Integer,
     key::FileKey,
-    blocks::Vector{Block},
+    blocks::AbstractVector{ParsedBlock},
     text::AbstractString,
     path::AbstractString,
     assigned_blocks::AbstractVector{Bool},
@@ -226,7 +226,12 @@ end
 """
 Return a simple deterministic score for matching old and new blocks.
 """
-function reindex_match_score(old_text::AbstractString, old_lines::UnitRange{Int}, block::Block, new_text::AbstractString)
+function reindex_match_score(
+    old_text::AbstractString,
+    old_lines::UnitRange{Int},
+    block::ParsedBlock,
+    new_text::AbstractString,
+)
     candidate_text = span_text(new_text, block.span)
     line_penalty = abs(old_lines.start - block.lines.start) + abs(old_lines.stop - block.lines.stop)
 
