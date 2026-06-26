@@ -162,7 +162,7 @@ line, line-oriented block spans would overlap. Merge those cases conservatively
 rather than returning overlapping blocks.
 """
 function push_julia_line_block!(
-    blocks::Vector{Block},
+    blocks::Vector{ParsedBlock},
     text::AbstractString,
     line_starts::Vector{Int},
     start_line::Integer,
@@ -195,7 +195,7 @@ following syntax node, but final comments have no following node and need their
 own block to preserve source reconstruction.
 """
 function push_julia_trailing_comment_block!(
-    blocks::Vector{Block},
+    blocks::Vector{ParsedBlock},
     text::AbstractString,
     line_starts::Vector{Int},
     cursor_line::Integer,
@@ -212,7 +212,7 @@ end
 Push a normal Julia syntax node as one block and return the next cursor line.
 """
 function push_julia_syntax_block!(
-    blocks::Vector{Block},
+    blocks::Vector{ParsedBlock},
     node,
     text::AbstractString,
     line_starts::Vector{Int},
@@ -379,7 +379,7 @@ end
 Push Julia blocks for `node` and return the next cursor line.
 """
 function push_julia_node_blocks!(
-    blocks::Vector{Block},
+    blocks::Vector{ParsedBlock},
     node,
     text::AbstractString,
     line_starts::Vector{Int},
@@ -415,7 +415,7 @@ If the module is not clearly multi-line, keep it as a single conservative
 block rather than inventing overlapping header/footer/body spans.
 """
 function push_julia_module_blocks!(
-    blocks::Vector{Block},
+    blocks::Vector{ParsedBlock},
     node,
     text::AbstractString,
     line_starts::Vector{Int},
