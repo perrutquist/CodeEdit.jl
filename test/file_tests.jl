@@ -1,3 +1,5 @@
+using JuliaSyntax
+
 @testset "file create, move, delete, and cache updates" begin
     CodeEdit.clear_cache!()
 
