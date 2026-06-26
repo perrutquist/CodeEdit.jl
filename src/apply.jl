@@ -144,7 +144,7 @@ function update_record_from_block!(
     record::HandleRecord,
     key::FileKey,
     block_index::Integer,
-    block::Block,
+    block::ParsedBlock,
     text::AbstractString,
 )
     record.file = key
@@ -161,7 +161,7 @@ function handle_record_from_block(
     key::FileKey,
     path::AbstractString,
     block_index::Integer,
-    block::Block,
+    block::ParsedBlock,
     text::AbstractString,
 )
     return HandleRecord(
@@ -604,9 +604,6 @@ function apply!(vc::VersionControl{:git}, edit::AbstractEdit; kwargs...)
     return apply!(vc, edit, String(default_message); kwargs...)
 end
 
-function apply!(::AbstractEdit)
-    error("apply! requires a VersionControl specification; use apply!(NoVersionControl(), edit) or apply!(VersionControl(path), edit, message)")
-end
 
 function apply!(vc::VersionControl{:git}, edit::AbstractEdit, message::AbstractString; kwargs...)
     options = merged_apply_kwargs(vc, kwargs)

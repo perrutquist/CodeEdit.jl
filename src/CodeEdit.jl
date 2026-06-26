@@ -2,6 +2,8 @@ module CodeEdit
 
 using JuliaSyntax, Glob, SHA
 
+import Base: diff, replace
+
 const _maybe_revise_callback = Ref{Function}(() -> nothing)
 
 function maybe_revise()
@@ -26,10 +28,16 @@ include("plan.jl")
 include("apply.jl")
 include("reindex.jl")
 include("format_modules.jl")
+include("ui.jl")
 
+export Workspace, workspace, repo, project, codebase
+export Block, block, blocks, source, text, path, span, docs
 export Handle, eof_handle, handles, handle_at, reindex, format_modules
-export search
-export AbstractEdit, Replace, Delete, InsertBefore, InsertAfter
+export find, search, grep
+export Patch, AbstractEdit, patch, replace, delete, insert_before, insert_after
+export append_to, prepend_to, create_file, move_file, delete_file
+export preview, diff, commit!, edit
+export Replace, Delete, InsertBefore, InsertAfter
 export CreateFile, MoveFile, DeleteFile, Combine, apply!, displayed!
 export VersionControl, NoVersionControl, GitVersionControl
 export filepath, lines, docstring, is_valid, is_julia, is_text, is_versioned, filepath_matches

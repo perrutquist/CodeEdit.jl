@@ -1,7 +1,7 @@
 """
 Return the index of the parsed block containing `offset`, or `nothing`.
 """
-function block_index_for_offset(blocks::Vector{Block}, offset::Integer)
+function block_index_for_offset(blocks::Vector{ParsedBlock}, offset::Integer)
     for (index, block) in pairs(blocks)
         block.kind == :eof && continue
         block.span.lo <= offset < block.span.hi && return index
@@ -19,7 +19,7 @@ function collect_module_boundary_replacements!(
     node,
     text::AbstractString,
     line_starts::Vector{Int},
-    blocks::Vector{Block},
+    blocks::Vector{ParsedBlock},
 )
     if julia_kind(node, "module")
         for offset in unsafe_module_boundary_offsets(node, text, line_starts)

@@ -1,83 +1,134 @@
 """
-    search(handles, needle)
-    search(path, needle; parse_as=:auto)
-    search(paths, needle; parse_as=:auto)
-    search(root, pattern, needle; includes=false, parse_as=:auto)
-    search(repo::VersionControl, needle)
+    find(target, query; files=nothing, as=:auto)
+    find(predicate, target; files=nothing, as=:auto)
+    search(args...; kwargs...)
+    grep(args...; kwargs...)
 
-Search parsed blocks and return matching handles as a `Set{Handle}`.
+Search parsed blocks and return matching blocks.
 
-`needle` may be a string, matched with `occursin`, or a `Regex`. Path arguments
-are first converted to handles with [`handles`](@ref). The `(root, pattern)`
-form uses `Glob.glob`; the repository form searches handles returned by
-`handles(repo)`.
+`query` may be a string or `Regex`. Predicate forms keep ordinary Julia
+filtering ergonomics, including `find(target) do block ... end`. Set-like
+inputs return a `Set{Handle}`; vector inputs preserve order and return a vector.
 """
-function search(handle_set, needle::AbstractString)
+function _query_predicate(needle::AbstractString)
+    return handle -> is_valid(handle) && occursin(needle, source(handle))
+end
+
+function _query_predicate(needle::Regex)
+    return handle -> is_valid(handle) && occursin(needle, source(handle))
+end
+
+function _filter_block_collection(collection::AbstractVector{Handle}, predicate::Function)
+    return Handle[handle for handle in collection if predicate(handle)]
+end
+
+function _filter_block_collection(collection, predicate::Function)
     result = Set{Handle}()
 
-    for handle in handle_set
-        is_valid(handle) || continue
-        occursin(needle, string(handle)) && push!(result, handle)
+    for handle in collection
+        predicate(handle) && push!(result, handle)
     end
 
     return result
 end
 
-function search(handle_set, needle::Regex)
-    result = Set{Handle}()
-
-    for handle in handle_set
-        is_valid(handle) || continue
-        occursin(needle, string(handle)) && push!(result, handle)
-    end
-
-    return result
-end
-
-function search(path::AbstractString, needle::AbstractString; parse_as::Symbol=:auto)
-    return search(handles(path; parse_as=parse_as), needle)
-end
-
-function search(path::AbstractString, needle::Regex; parse_as::Symbol=:auto)
-    return search(handles(path; parse_as=parse_as), needle)
-end
-
-function search(paths::AbstractVector{<:AbstractString}, needle::AbstractString; parse_as::Symbol=:auto)
-    return search(handles(paths; parse_as=parse_as), needle)
-end
-
-function search(paths::AbstractVector{<:AbstractString}, needle::Regex; parse_as::Symbol=:auto)
-    return search(handles(paths; parse_as=parse_as), needle)
-end
-
-function search(
-    root::AbstractString,
-    pattern::AbstractString,
-    needle::AbstractString;
+function _blocks_for_search(
+    target;
+    files=nothing,
+    as::Symbol=:auto,
+    parse_as=nothing,
     includes::Bool=false,
-    parse_as::Symbol=:auto,
+    follow_includes::Bool=includes,
 )
-    return search(handles(root, pattern; includes=includes, parse_as=parse_as), needle)
+    return target
 end
 
-function search(
-    root::AbstractString,
-    pattern::AbstractString,
-    needle::Regex;
+function _blocks_for_search(
+    ws::Workspace;
+    files=nothing,
+    as::Symbol=:auto,
+    parse_as=nothing,
     includes::Bool=false,
-    parse_as::Symbol=:auto,
+    follow_includes::Bool=includes,
 )
-    return search(handles(root, pattern; includes=includes, parse_as=parse_as), needle)
+    return blocks(ws; files=files, as=as, parse_as=parse_as, includes=includes, follow_includes=follow_includes)
 end
 
-function search(repo::VersionControl, needle::AbstractString)
-    return search(handles(repo), needle)
+function _blocks_for_search(
+    path::AbstractString;
+    files=nothing,
+    as::Symbol=:auto,
+    parse_as=nothing,
+    includes::Bool=false,
+    follow_includes::Bool=includes,
+)
+    return blocks(path; files=files, as=as, parse_as=parse_as, includes=includes, follow_includes=follow_includes)
 end
 
-function search(repo::VersionControl, needle::Regex)
-    return search(handles(repo), needle)
+function _blocks_for_search(
+    paths::AbstractVector{<:AbstractString};
+    files=nothing,
+    as::Symbol=:auto,
+    parse_as=nothing,
+    includes::Bool=false,
+    follow_includes::Bool=includes,
+)
+    files === nothing || throw(ArgumentError("files= is only supported when searching a workspace or root path"))
+    return blocks(paths; as=as, parse_as=parse_as, includes=includes, follow_includes=follow_includes)
 end
 
-function search(repo::VersionControl, trace)
-    return search(handles(repo), trace)
+function _blocks_for_search(
+    vc::VersionControl;
+    files=nothing,
+    as::Symbol=:auto,
+    parse_as=nothing,
+    includes::Bool=false,
+    follow_includes::Bool=includes,
+)
+    files === nothing || throw(ArgumentError("files= is not supported when searching VersionControl directly"))
+    mode = _normalize_parse_as(as=as, parse_as=parse_as)
+    return handles(vc; includes=follow_includes, parse_as=mode)
 end
+
+function find(
+    predicate::Function,
+    target;
+    files=nothing,
+    as::Symbol=:auto,
+    parse_as=nothing,
+    includes::Bool=false,
+    follow_includes::Bool=includes,
+)
+    collection = _blocks_for_search(
+        target;
+        files=files,
+        as=as,
+        parse_as=parse_as,
+        includes=includes,
+        follow_includes=follow_includes,
+    )
+    return _filter_block_collection(collection, predicate)
+end
+
+function find(
+    target,
+    needle;
+    files=nothing,
+    as::Symbol=:auto,
+    parse_as=nothing,
+    includes::Bool=false,
+    follow_includes::Bool=includes,
+)
+    return find(
+        _query_predicate(needle),
+        target;
+        files=files,
+        as=as,
+        parse_as=parse_as,
+        includes=includes,
+        follow_includes=follow_includes,
+    )
+end
+
+search(args...; kwargs...) = find(args...; kwargs...)
+grep(args...; kwargs...) = find(args...; kwargs...)

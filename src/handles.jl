@@ -351,7 +351,7 @@ end
 """
 Return whether `block` contains byte offset `offset`.
 """
-function contains_offset(block::Block, offset::Integer)
+function contains_offset(block::ParsedBlock, offset::Integer)
     return block.span.lo <= offset < block.span.hi
 end
 

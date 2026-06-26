@@ -103,7 +103,7 @@ function unsupported_plan(edit::AbstractEdit, message::AbstractString)
         false,
         String[message],
         sha1_hex(message),
-        "Unsupported edit: $message\n",
+        "Unsupported patch: $message\n",
     )
 end
 
@@ -136,7 +136,7 @@ function compile_content_edit_plan(edit::AbstractEdit)
     )
 
     io = IOBuffer()
-    println(io, "Edit modifies $(display_path(cache.primary_path)):")
+    println(io, "Patch modifies $(display_path(cache.primary_path)):")
     print(io, classic_diff(cache.text, new_text))
 
     if !valid
@@ -451,7 +451,7 @@ end
 
 function build_edit_plan(edit::AbstractEdit, edits::Vector{AbstractEdit})
     if isempty(edits)
-        return EditPlan(edit, FileEditEffect[], Tuple{String,String}[], String[], String[], true, String[], sha1_hex("noop"), "Edit makes no changes.\n")
+        return EditPlan(edit, FileEditEffect[], Tuple{String,String}[], String[], String[], true, String[], sha1_hex("noop"), "Empty patch\n")
     end
 
     virtual_by_key = Dict{FileKey,VirtualFileState}()
@@ -541,18 +541,18 @@ function build_edit_plan(edit::AbstractEdit, edits::Vector{AbstractEdit})
 
     for effect in sort(effects; by=e -> e.path)
         if effect.deleted
-            println(io, "Edit deletes $(display_path(effect.path))")
+            println(io, "Patch deletes $(display_path(effect.path))")
         elseif effect.created
-            println(io, "Edit creates $(display_path(effect.path)):")
+            println(io, "Patch creates $(display_path(effect.path)):")
             print(io, classic_diff("", effect.new_text === nothing ? "" : effect.new_text))
         elseif effect.original_path !== nothing && effect.original_path != effect.path
-            println(io, "Edit moves $(display_path(effect.original_path)) -> $(display_path(effect.path))")
+            println(io, "Patch moves $(display_path(effect.original_path)) -> $(display_path(effect.path))")
             if effect.old_text != effect.new_text
-                println(io, "Edit modifies $(display_path(effect.path)):")
+                println(io, "Patch modifies $(display_path(effect.path)):")
                 print(io, classic_diff(effect.old_text === nothing ? "" : effect.old_text, effect.new_text === nothing ? "" : effect.new_text))
             end
         else
-            println(io, "Edit modifies $(display_path(effect.path)):")
+            println(io, "Patch modifies $(display_path(effect.path)):")
             print(io, classic_diff(effect.old_text === nothing ? "" : effect.old_text, effect.new_text === nothing ? "" : effect.new_text))
         end
     end

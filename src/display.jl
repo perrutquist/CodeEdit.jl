@@ -417,13 +417,13 @@ function more_files_summary(groups)
         end
     end
 
-    return "$(length(groups)) more files, containing a total of $handle_count handles in $line_count lines…"
+    return "$(length(groups)) more files, containing a total of $handle_count blocks in $line_count lines…"
 end
 
 function Base.show(io::IO, ::MIME"text/plain", set::Set{Handle})
     ordered = sort(collect(set); by=handle_sort_key)
     count = length(ordered)
-    print(io, "$count handle$(count == 1 ? "" : "s")")
+    print(io, "$count block$(count == 1 ? "" : "s")")
     isempty(ordered) && return
 
     groups, invalid_count = grouped_handle_records(ordered)

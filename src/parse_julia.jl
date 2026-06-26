@@ -176,13 +176,13 @@ function push_julia_line_block!(
         merged_lines = previous.lines.start:max(previous.lines.stop, end_line)
         merged_hi = line_span(text, line_starts, merged_lines.stop).hi
         merged_kind = previous.kind == kind ? kind : :julia
-        blocks[end] = Block(Span(previous.span.lo, merged_hi), merged_lines, merged_kind)
+        blocks[end] = ParsedBlock(Span(previous.span.lo, merged_hi), merged_lines, merged_kind)
         return blocks
     end
 
     lo = line_span(text, line_starts, start_line).lo
     hi = line_span(text, line_starts, end_line).hi
-    push!(blocks, Block(Span(lo, hi), start_line:end_line, kind))
+    push!(blocks, ParsedBlock(Span(lo, hi), start_line:end_line, kind))
     return blocks
 end
 
@@ -474,7 +474,7 @@ function parse_julia_blocks(
 )
     tree = julia_parse_tree(text, path)
 
-    blocks = Block[]
+    blocks = ParsedBlock[]
     cursor_line = 1
 
     for node in syntax_children(tree)
@@ -494,7 +494,7 @@ function parse_julia_blocks(
 
     eof = eof_span(text)
     eof_lineno = eof_line(text, line_starts)
-    push!(blocks, Block(eof, eof_lineno:eof_lineno, :eof))
+    push!(blocks, ParsedBlock(eof, eof_lineno:eof_lineno, :eof))
 
     return blocks
 end

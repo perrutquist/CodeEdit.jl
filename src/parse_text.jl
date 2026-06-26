@@ -12,7 +12,7 @@ Parse non-Julia text into paragraph-like blocks separated by blank lines.
 The returned blocks include an EOF block.
 """
 function parse_text_blocks(text::AbstractString, line_starts::Vector{Int}=build_line_starts(text))
-    blocks = Block[]
+    blocks = ParsedBlock[]
     line_total = line_count(line_starts)
     line = 1
 
@@ -30,12 +30,12 @@ function parse_text_blocks(text::AbstractString, line_starts::Vector{Int}=build_
 
         lo = line_span(text, line_starts, start_line).lo
         hi = line_span(text, line_starts, end_line).hi
-        push!(blocks, Block(Span(lo, hi), start_line:end_line, :text))
+        push!(blocks, ParsedBlock(Span(lo, hi), start_line:end_line, :text))
     end
 
     eof = eof_span(text)
     eof_lineno = eof_line(text, line_starts)
-    push!(blocks, Block(eof, eof_lineno:eof_lineno, :eof))
+    push!(blocks, ParsedBlock(eof, eof_lineno:eof_lineno, :eof))
 
     return blocks
 end

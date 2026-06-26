@@ -51,6 +51,20 @@ requirements, stage affected paths, and create a commit for the edit.
 GitVersionControl(path::AbstractString; kwargs...) = VersionControl(path; kwargs...)
 
 """
+High-level editing workspace.
+
+A workspace stores the root being edited, whether git should be used by default,
+whether review is required before writing, and the lower-level version-control
+policy used when applying patches through the workspace.
+"""
+struct Workspace
+    root::String
+    git::Bool
+    review::Bool
+    vc::VersionControl
+end
+
+"""
 Information about a git commit created while applying an edit.
 """
 struct CommitInfo
@@ -112,7 +126,7 @@ end
 """
 A parsed block of source or text.
 """
-struct Block
+struct ParsedBlock
     span::Span
     lines::UnitRange{Int}
     kind::Symbol
@@ -151,7 +165,7 @@ mutable struct FileCache
     text::String
     line_starts::Vector{Int}
     line_ending::String
-    blocks::Vector{Block}
+    blocks::Vector{ParsedBlock}
     handles::Vector{Int}
     generation::Int
 end
@@ -175,6 +189,8 @@ an invalid handle when no source location is available. Test handles with
 struct Handle
     id::Int
 end
+
+const Block = Handle
 
 """
 Mutable registry entry backing a Handle.
@@ -201,6 +217,8 @@ They can be displayed to review the planned diff, validated with
 [`apply!`](@ref).
 """
 abstract type AbstractEdit end
+
+const Patch = AbstractEdit
 
 """
 Placeholder for the displayed-plan fingerprint used by later apply planning.
