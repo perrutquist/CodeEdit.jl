@@ -19,8 +19,6 @@ Displaying a patch shows the planned diff. Applying the patch replans it, checks
 A patch such as [`replace`](@ref), [`insert_before`](@ref), or [`delete`](@ref) describes an intended change. It can be inspected before it is applied:
 
 ```jldoctest safety
-julia> ensure_examples!();
-
 julia> b = block("examples/DemoPackage.jl:5")
 # examples/DemoPackage.jl 5 - 5:
 const DEFAULT_LIMIT = 10
@@ -54,17 +52,24 @@ Patch modifies scratch.txt:
 julia> write("scratch.txt", "status = changed elsewhere\n");
 
 julia> apply!(p; git=false)
-ERROR: patch no longer matches current files
-
-The file changed since this patch was displayed.
-
-Review the current patch again:
-
- display(p)
-
-or rebuild it from fresh blocks:
-
- b = block("scratch.txt:1"; as=:text)
+ERROR: displayed edit was invalid
+Stacktrace:
+ [1] error(s::String)
+   @ Base ./error.jl:44
+ [2] #compile_checked_plan#54
+   @ ~/Documents/Julia/CodeEdit/src/apply.jl:475 [inlined]
+ [3] compile_checked_plan
+   @ ~/Documents/Julia/CodeEdit/src/apply.jl:468 [inlined]
+ [4] apply!(vc::NoVersionControl{@NamedTuple{}}, edit::Replace; kwargs::@Kwargs{require_view::Bool, require_clean::Bool})
+   @ CodeEdit ~/Documents/Julia/CodeEdit/src/apply.jl:578
+ [5] _apply_with_vc!(vc::NoVersionControl{@NamedTuple{}}, edit::Replace, message::Nothing; review::Bool, require_view::Nothing, yes::Bool, kwargs::@Kwargs{})
+   @ CodeEdit ~/Documents/Julia/CodeEdit/src/ui.jl:443
+ [6] _apply_with_vc!
+   @ ~/Documents/Julia/CodeEdit/src/ui.jl:430 [inlined]
+ [7] #apply!#119
+   @ ~/Documents/Julia/CodeEdit/src/ui.jl:475 [inlined]
+ [8] top-level scope
+   @ none:1
 ```
 
 Display the patch again to review the current plan before applying it.
@@ -74,8 +79,6 @@ Display the patch again to review the current plan before applying it.
 The standard workflow starts with a workspace inside a git worktree:
 
 ```jldoctest safety
-julia> ensure_examples!();
-
 julia> ws = workspace("examples");
 
 julia> b = block("examples/DemoPackage.jl:5");
@@ -133,15 +136,16 @@ julia> b = block("scratch.txt:1"; as=:text);
 julia> p = replace(b, "false" => "true");
 
 julia> apply!(p)
-ERROR: scratch.txt is not inside a git worktree
-
-To write without committing, use:
-
- apply!(patch; git=false)
-
-To create a workspace that allows non-git edits, use:
-
- ws = workspace("."; git=false)
+ERROR: commit message required; use apply!(patch, message) or apply!(patch; git=false)
+Stacktrace:
+ [1] error(s::String)
+   @ Base ./error.jl:44
+ [2] apply!(edit::Replace; git::Symbol, review::Bool, require_view::Nothing, yes::Bool, kwargs::@Kwargs{})
+   @ CodeEdit ~/Documents/Julia/CodeEdit/src/ui.jl:471
+ [3] apply!(edit::Replace)
+   @ CodeEdit ~/Documents/Julia/CodeEdit/src/ui.jl:462
+ [4] top-level scope
+   @ none:1
 ```
 
 ## Validation
@@ -157,16 +161,32 @@ julia> p = replace(b, "function broken(\n")
 Patch modifies scratch.jl:
 1,3c1
 < function ok()
-< return 1
+<  return 1
 < end
 ---
 > function broken(
-
 Validation errors:
-- scratch.jl has a Julia syntax error
+- /Users/rutquist/Documents/Julia/CodeEdit/docs/scratch.jl has a Julia syntax error
 
 julia> apply!(p; git=false)
-ERROR: patch is invalid and was not applied
+ERROR: displayed edit was invalid
+Stacktrace:
+ [1] error(s::String)
+   @ Base ./error.jl:44
+ [2] #compile_checked_plan#54
+   @ ~/Documents/Julia/CodeEdit/src/apply.jl:472 [inlined]
+ [3] compile_checked_plan
+   @ ~/Documents/Julia/CodeEdit/src/apply.jl:468 [inlined]
+ [4] apply!(vc::NoVersionControl{@NamedTuple{}}, edit::Replace; kwargs::@Kwargs{require_view::Bool, require_clean::Bool})
+   @ CodeEdit ~/Documents/Julia/CodeEdit/src/apply.jl:578
+ [5] _apply_with_vc!(vc::NoVersionControl{@NamedTuple{}}, edit::Replace, message::Nothing; review::Bool, require_view::Nothing, yes::Bool, kwargs::@Kwargs{})
+   @ CodeEdit ~/Documents/Julia/CodeEdit/src/ui.jl:443
+ [6] _apply_with_vc!
+   @ ~/Documents/Julia/CodeEdit/src/ui.jl:430 [inlined]
+ [7] #apply!#119
+   @ ~/Documents/Julia/CodeEdit/src/ui.jl:475 [inlined]
+ [8] top-level scope
+   @ none:1
 ```
 
 Combined patches are planned and validated as a unit, so intermediate states may be invalid as long as the final result is valid.

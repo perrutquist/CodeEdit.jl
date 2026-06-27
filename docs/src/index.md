@@ -45,30 +45,28 @@ A common workflow is:
 The following example changes one function in a repository, applies the patch, and reads the updated block back from disk.
 
 ```jldoctest index
-julia> ensure_examples!();
-
 julia> ws = workspace("examples")
 Workspace("examples"; git=true, review=true)
 
 julia> b = only(find(ws, "function increment"))
 # examples/DemoPackage.jl 13 - 15:
 function increment(x)
- return x + 1
+    return x + 1
 end
 
 julia> p = replace(b, "x + 1" => "x + 2")
 Patch modifies examples/DemoPackage.jl:
 14c14
-< return x + 1
+<     return x + 1
 ---
-> return x + 2
+>     return x + 2
 
 julia> apply!(p, "Change increment")
 Applied: 1 file changed, commit 4c0ffee
 
 julia> println(source(block("examples/DemoPackage.jl:14")));
 function increment(x)
- return x + 2
+    return x + 2
 end
 ```
 

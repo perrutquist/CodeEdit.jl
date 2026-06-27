@@ -33,8 +33,6 @@ julia> using CodeEdit
 For source edits in a git repository, start with [`workspace`](@ref):
 
 ```jldoctest getting_started
-julia> ensure_examples!();
-
 julia> ws = workspace("examples")
 Workspace("examples"; git=true, review=true)
 ```
@@ -46,56 +44,50 @@ Workspace("examples"; git=true, review=true)
 Search a workspace directly with [`find`](@ref):
 
 ```jldoctest getting_started
-julia> ensure_examples!();
-
 julia> ws = workspace("examples");
 
 julia> find(ws, "old_function_name")
 1 block
 # examples/DemoPackage.jl:
- 17 - 19: function old_function_name(); return foo…
+  17 - 19: function old_function_name(); return foo…
 ```
 
 A block can be displayed, converted to source text, or passed directly to a patch constructor:
 
 ```jldoctest getting_started
-julia> ensure_examples!();
-
 julia> ws = workspace("examples");
 
 julia> b = only(find(ws, "function foo"))
 # examples/DemoPackage.jl 7 - 11:
 function foo(x)
- y = helper(x)
- z = y * 2
- return z
+    y = helper(x)
+    z = y * 2
+    return z
 end
 
 julia> source(b)
-"function foo(x)\n y = helper(x)\n z = y * 2\n return z\nend\n"
+"function foo(x)\n    y = helper(x)\n    z = y * 2\n    return z\nend\n"
 ```
 
 You can also select a block by file and line number:
 
 ```jldoctest getting_started
-julia> ensure_examples!();
-
 julia> ws = workspace("examples");
 
 julia> ws["DemoPackage.jl:7"]
 # examples/DemoPackage.jl 7 - 11:
 function foo(x)
- y = helper(x)
- z = y * 2
- return z
+    y = helper(x)
+    z = y * 2
+    return z
 end
 
 julia> block("examples/DemoPackage.jl:10")
 # examples/DemoPackage.jl 7 - 11:
 function foo(x)
- y = helper(x)
- z = y * 2
- return z
+    y = helper(x)
+    z = y * 2
+    return z
 end
 ```
 
@@ -117,8 +109,6 @@ With `review=true`, displaying the patch records the reviewed plan. When [`apply
     In the REPL, evaluating a patch without a trailing semicolon displays it. Calling `display(patch)` is equivalent.
 
 ```jldoctest getting_started
-julia> ensure_examples!();
-
 julia> ws = workspace("examples");
 
 julia> b = only(find(ws, "old_function_name"));
@@ -141,8 +131,6 @@ The patch is written to disk and committed to git with the message you provide.
 Use [`append_to`](@ref) when you want to add new text at the end of a file without first selecting an EOF block:
 
 ```jldoctest getting_started
-julia> ensure_examples!();
-
 julia> p = append_to("examples/helpers.jl", raw"""
        
        another_helper(x) = helper(x) * 2

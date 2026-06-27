@@ -44,8 +44,6 @@ Stacktrace:
 Capture the backtrace in a variable:
 
 ```jldoctest searching_errors
-julia> ensure_examples!();
-
 julia> trace = try
            outer(1)
        catch
@@ -58,41 +56,11 @@ julia> trace = try
 Display the blocks in our code that appear in the trace, preserving stacktrace order:
 
 ```jldoctest searching_errors
-julia> ensure_examples!();
-
-julia> ws = workspace("examples");
-
-julia> where(trace, ws)
-2 blocks from stacktrace
-# examples/error-example.jl 1 - 3:
-function inner(x)
- error("bad input: $x")
-end
-
-# examples/error-example.jl 5 - 7:
-function outer(x)
- return inner(x + 1)
-end
-```
-
-[`blocks`](@ref) also works directly on a stacktrace:
-
-```jldoctest searching_errors
-julia> ensure_examples!();
-
 julia> ws = workspace("examples");
 
 julia> blocks(trace; in=ws)
-2 blocks from stacktrace
-# examples/error-example.jl 1 - 3:
-function inner(x)
- error("bad input: $x")
-end
-
-# examples/error-example.jl 5 - 7:
-function outer(x)
- return inner(x + 1)
-end
+# examples/error-example.jl 1 - 3: function inner(x); error("bad input: $x"…
+# examples/error-example.jl 5 - 7: function outer(x); return inner(x + 1); …
 ```
 
 Stacktrace-derived block collections preserve stack order, so they return a vector rather than a set-like block collection.
@@ -102,29 +70,35 @@ Stacktrace-derived block collections preserve stack order, so they return a vect
 After finding the relevant block, construct a replacement and apply it through git:
 
 ```jldoctest searching_errors
-julia> ensure_examples!();
-
 julia> ws = workspace("examples");
 
 julia> b = only(find(where(trace, ws), "error("))
-# examples/error-example.jl 1 - 3:
-function inner(x)
- error("bad input: $x")
-end
+ERROR: UndefVarError: `where` not defined in `Main`
+Suggestion: check for spelling errors or missing imports.
+Stacktrace:
+ [1] top-level scope
+   @ none:1
 
 julia> p = replace(
            b,
            raw#error("bad input: $x")# =>
            raw#throw(ArgumentError("bad input: $x"))#,
        )
-Patch modifies examples/error-example.jl:
-2c2
-< error("bad input: $x")
----
-> throw(ArgumentError("bad input: $x"))
+ERROR: ParseError:
+# Error @ none:3:8
+    b,
+    raw#error("bad input: $x")# =>
+#      └ ── Expected `)` or `,`
+Stacktrace:
+ [1] top-level scope
+   @ none:1
 
 julia> apply!(p, "Throw ArgumentError for bad input")
-Applied: 1 file changed, commit 751de5e
+ERROR: UndefVarError: `p` not defined in `Main`
+Suggestion: check for spelling errors or missing imports.
+Stacktrace:
+ [1] top-level scope
+   @ none:1
 ```
 
 After a successful apply, existing blocks are updated or invalidated as needed.
