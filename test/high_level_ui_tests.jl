@@ -365,7 +365,7 @@ end
             @test occursin("x + 4", read("examples/DemoPackage.jl", String))
             @test strip(read(`git log -1 --pretty=%B`, String)) == "Commit alias changes increment"
 
-            apply!(dirty_patch, "Apply after precommit"; precommit="Checkpoint dirty work", yes=true)
+            apply!(dirty_patch, "Apply after precommit"; precommit="Checkpoint dirty work", yes=true, require_clean=false)
             @test occursin("x + 5", read("examples/DemoPackage.jl", String))
             @test split(strip(read(`git log --pretty=%B -2`, String)), "\n\n") == [
                 "Apply after precommit",
@@ -411,7 +411,7 @@ end
             write_demo_workspace(dir)
             ws = workspace("examples"; git=false)
 
-            Base.invokelatest(include, "examples/error-example.jl")
+            Base.invokelatest(include, joinpath(dir, "examples", "error-example.jl"))
             outer_ref = getfield(@__MODULE__, :outer)
 
             trace = try
@@ -420,11 +420,10 @@ end
                 stacktrace(catch_backtrace())
             end
 
-            trace_blocks = where(trace, ws)
+            trace_blocks = blocks(trace; in=ws)
             @test trace_blocks isa AbstractVector
             @test any(b -> occursin("function inner", source(b)), trace_blocks)
             @test any(b -> occursin("function outer", source(b)), trace_blocks)
-            @test blocks(trace; in=ws) == trace_blocks
 
             error_block = only(find(trace_blocks, "error("))
             p = replace(
@@ -435,7 +434,7 @@ end
             apply!(p; git=false, yes=true)
             @test occursin("throw(ArgumentError", read("examples/error-example.jl", String))
 
-            Base.invokelatest(include, "examples/DemoPackage.jl")
+            Base.invokelatest(include, joinpath(dir, "examples", "DemoPackage.jl"))
             increment_ref = getfield(getfield(@__MODULE__, :DemoPackage), :increment)
             method_block = block(first(methods(increment_ref)))
             @test occursin("function increment", source(method_block))
