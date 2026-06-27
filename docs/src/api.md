@@ -1,72 +1,83 @@
 # API reference
 
-This page summarizes the public API exported by CodeEdit.jl. For task-oriented examples, see [Getting started](getting-started.md), [Searching source](searching.md), and [Editing code](editing.md).
+This page summarizes the public high-level API exported by CodeEdit.jl. For task-oriented examples, see [Getting started](getting-started.md), [Searching source](searching.md), and [Editing code](editing.md).
 
-Most workflows start by collecting [`Handle`](@ref)s, selecting the blocks to edit, constructing one or more [`AbstractEdit`](@ref) values, displaying the planned diff, and applying it through an explicit version-control policy.
+Most workflows start by opening a [`Workspace`](@ref), selecting one or more [`Block`](@ref)s, constructing a [`Patch`](@ref), displaying the planned diff, and applying it.
 
-## Handles and source blocks
+## Workspaces
 
-Handles are stable references to parsed source or text blocks. They can be created from files, methods, stack frames, repositories, and search results.
+A workspace represents the root directory being edited.
 
 ```@docs
-Handle
-handles
-handle_at
-eof_handle
-reindex
+Workspace
+workspace
+repo
+project
+codebase
 ```
 
-## Searching and filtering
+## Blocks and source
 
-Search functions return `Set{Handle}` values. Use ordinary set operations such as `union`, `intersect`, and `setdiff` to combine selections.
+Blocks are user-facing source objects. They can be selected from files, methods, stack frames, workspaces, and stacktraces.
 
 ```@docs
+Block
+block
+blocks
+source
+text
+path
+lines
+span
+docstring
+docs
+reindex
+is_valid
+```
+
+## Searching
+
+Search functions return block collections. Use ordinary set operations such as `union`, `intersect`, and `setdiff` when working with set-like results.
+
+```@docs
+find
 search
+grep
+where
 filepath_matches
 is_julia
 is_text
 is_versioned
 ```
 
-## Edits
+## Patches
 
-Edits are immutable descriptions of intended changes. Constructing an edit does not modify the filesystem. Displaying or stringifying an edit shows the planned diff and records the displayed plan for optional review enforcement.
+Patches are immutable descriptions of intended changes. Constructing a patch does not modify the filesystem. Displaying or stringifying a patch shows the planned diff and records the reviewed plan when review is enabled.
 
 ```@docs
-AbstractEdit
-Replace
-Delete
-InsertBefore
-InsertAfter
-CreateFile
-MoveFile
-DeleteFile
-Combine
-displayed!
+Patch
+replace
+delete
+insert_before
+insert_after
+append_to
+prepend_to
+create_file
+move_file
+delete_file
+patch
+preview
+diff
+rename
 ```
 
-## Applying edits and version control
+## Applying patches
 
-Edits are applied through an explicit [`VersionControl`](@ref) specification. Git-backed application can check cleanliness, require files to be versioned, stage affected paths, and create commits. [`NoVersionControl`](@ref) is available for scratch files and generated output.
+Patches are applied with [`apply!`](@ref) or [`commit!`](@ref). Git-backed application can check cleanliness, infer worktrees, stage affected paths, and create commits. Non-git writes are enabled explicitly with `git=false`.
 
 ```@docs
-VersionControl
-GitVersionControl
-NoVersionControl
 apply!
+commit!
 ```
 
-If `repo <: GitVersionControl`, then paths relative to a repository can be created with `joinpath(repo, relative_path...)`. The path can also be interpolated into a `Cmd` command, e.g. ```run(`git -C $repo status`)```.
-
-## Handle utilities
-
-These convenience functions inspect handles and validate handles or edits.
-
-```@docs
-filepath
-lines
-docstring
-is_valid
-```
-
-Calling `string(handle)` returns the source text for a handle. `string(edit)` and `display(edit)` show the planned diff and mark that exact plan as displayed.
+Calling `String(block)` returns the source text for a block. `String(patch)` and `display(patch)` show the planned diff and mark that exact plan as reviewed.

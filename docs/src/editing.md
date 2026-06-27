@@ -10,280 +10,354 @@ end
 
 # Editing code
 
-Edit constructors create immutable edit values. Use [`apply!`](@ref) to write an edit through an explicit version-control specification.
+Patch constructors create immutable patch values. Use [`apply!`](@ref) or [`commit!`](@ref) to write a patch.
 
 ```text
-VersionControl -> handles -> Edit -> displayed plan -> apply!
+workspace -> blocks -> patches -> apply!/commit!
 ```
 
-The standard workflow uses [`VersionControl`](@ref) to apply the edit, stage the affected paths, and create a git commit. See [Safety and version control](safety.md) for review requirements, validation, and dirty-file behavior.
+The standard workflow infers git from the touched files, stages the affected paths, and creates a commit when you provide a commit message. See [Safety and version control](safety.md) for review requirements, validation, and dirty-file behavior.
 
-In doctest examples, omitting the semicolon from the `edit = ...` line displays the edit and marks it as displayed. Calling `display(edit)` has the same effect.
+In doctest examples, omitting the semicolon from the `p = ...` line displays the patch and marks it as reviewed. Calling `display(p)` has the same effect.
 
+## Replacing source
 
-```jldoctest editing
-julia> repo = VersionControl("examples"; require_view=true)
-GitVersionControl("examples"; require_view=true)
-
-julia> hs = handles(repo);
-
-```
-
-## Choosing an edit operation
-
-Most edits correspond to one of the following operations:
-
-- replace an existing block with [`Replace`](@ref);
-- insert code near an existing block with [`InsertBefore`](@ref) or [`InsertAfter`](@ref);
-- append code with [`eof_handle`](@ref) and [`InsertBefore`](@ref): the EOF handle is a zero-width anchor at the end of the file;
-- delete a block with [`Delete`](@ref);
-- create, move, or delete whole files;
-- group related edits with [`Combine`](@ref).
-
-The sections below follow that progression.
-
-## Replacing a block
-
-A replacement edit changes exactly the block referenced by a handle. This is usually the safest way to update a function, because the planned diff is limited to the selected block.
+A replacement patch changes exactly the selected block. This is usually the safest way to update a function, because the planned diff is limited to the chosen block.
 
 ```jldoctest editing
-julia> h = only(search(hs, "function increment"))
+julia> ensure_examples!();
+
+julia> ws = workspace("examples");
+
+julia> b = only(find(ws, "function increment"))
 # examples/DemoPackage.jl 13 - 15:
 function increment(x)
-    return x + 1
+ return x + 1
 end
 
-julia> new_code = replace(string(h), "x + 1" => "x + 2");
-
-julia> edit = Replace(h, new_code)
-Edit modifies examples/DemoPackage.jl:
+julia> p = replace(b, "x + 1" => "x + 2")
+Patch modifies examples/DemoPackage.jl:
 14c14
-<     return x + 1
+< return x + 1
 ---
->     return x + 2
-
-julia> apply!(repo, edit, "Change increment")
-Applied: 1 file changed, commit 67decaf
-
+> return x + 2
 ```
 
-## Inserting code
+If the second argument is a string rather than replacement pairs, the whole block is replaced:
 
-Insertion edits are useful when a nearby block provides a stable anchor point.
+```jldoctest editing
+julia> ensure_examples!();
+
+julia> ws = workspace("examples");
+
+julia> b = only(find(ws, "function increment"));
+
+julia> p = replace(b, raw"""
+       function increment(x)
+       return x + 10
+       end
+       """)
+Patch modifies examples/DemoPackage.jl:
+13,15c13,15
+< function increment(x)
+< return x + 1
+< end
+---
+> function increment(x)
+> return x + 10
+> end
+```
+
+You can also make several text replacements within the same block:
+
+```jldoctest editing
+julia> ensure_examples!();
+
+julia> ws = workspace("examples");
+
+julia> b = only(find(ws, "function foo"));
+
+julia> p = replace(b,
+           "y = helper(x)" => "y = helper(abs(x))",
+           "z = y * 2" => "z = y * DEFAULT_LIMIT",
+       )
+Patch modifies examples/DemoPackage.jl:
+8,9c8,9
+< y = helper(x)
+< z = y * 2
+---
+> y = helper(abs(x))
+> z = y * DEFAULT_LIMIT
+```
+
+Replacing across many matching blocks returns one combined patch:
+
+```jldoctest editing
+julia> ensure_examples!();
+
+julia> ws = workspace("examples");
+
+julia> p = replace(find(ws, "old_function_name"), "old_function_name" => "new_function_name")
+Patch modifies examples/DemoPackage.jl:
+17c17
+< function old_function_name()
+---
+> function new_function_name()
+```
+
+## Inserting source
+
+Insertion patches are useful when a nearby block provides a stable anchor point.
 
 Insert before a block:
 
 ```jldoctest editing
-julia> h = Handle("examples/DemoPackage.jl", 14)
-# examples/DemoPackage.jl 13 - 15:
-function increment(x)
-    return x + 2
-end
+julia> ensure_examples!();
 
-julia> edit = InsertBefore(h, raw"""
+julia> ws = workspace("examples");
+
+julia> b = only(find(ws, "function increment"));
+
+julia> p = insert_before(b, raw"""
        const SCALE = 2
        
        """)
-Edit modifies examples/DemoPackage.jl:
+Patch modifies examples/DemoPackage.jl:
 12c13,14
 ---
 > const SCALE = 2
 >
-
-julia> apply!(repo, edit, "Add scale constant")
-Applied: 1 file changed, commit 8c0ffee
-
 ```
 
 Insert after a block:
 
 ```jldoctest editing
-julia> h = Handle("examples/DemoPackage.jl", 16)
-# examples/DemoPackage.jl 15 - 17:
-function increment(x)
-    return x + 2
-end
+julia> ensure_examples!();
 
-julia> edit = InsertAfter(h, raw"""
+julia> ws = workspace("examples");
+
+julia> b = only(find(ws, "function increment"));
+
+julia> p = insert_after(b, raw"""
        
        function scaled_increment(x)
-           return increment(x) * SCALE
+       return increment(x) * SCALE
        end
        """)
-Edit modifies examples/DemoPackage.jl:
-18c19,22
+Patch modifies examples/DemoPackage.jl:
+15c16,19
 ---
-> function scaled_increment(x)
->     return increment(x) * SCALE
-> end
 >
-
-julia> apply!(repo, edit, "Add scaled_increment")
-Applied: 1 file changed, commit c0ffeed
-
+> function scaled_increment(x)
+> return increment(x) * SCALE
+> end
 ```
 
-Use raw string literals such as `raw"""..."""` when writing Julia code as strings. They avoid accidental escaping of backslashes and dollar signs.
+Use raw string literals such as `raw"""..."""` when writing Julia code as strings. Inserted text is used exactly as provided, so include leading or trailing newlines when you want blank lines around the inserted code.
 
-Inserted text is used exactly as provided. Include leading or trailing newlines when you want blank lines around the inserted code.
+## Appending and prepending
 
-## Deleting code
+Use [`append_to`](@ref) or [`prepend_to`](@ref) for file-level insertion without manually selecting an EOF block.
 
 ```jldoctest editing
-julia> h = only(search(handles(repo), "function obsolete"))
-# examples/DemoPackage.jl 27 - 29:
-function obsolete()
-    return :remove_me
-end
+julia> ensure_examples!();
 
-julia> edit = Delete(h)
-Edit modifies examples/DemoPackage.jl:
-27,29c26
-< function obsolete()
-<     return :remove_me
-< end
+julia> p = append_to("examples/helpers.jl", raw"""
+       
+       another_helper(x) = helper(x) * 2
+       """)
+Patch modifies examples/helpers.jl:
+1c2,3
 ---
-
-julia> apply!(repo, edit, "Remove obsolete function")
-Applied: 1 file changed, commit 123cafe
-
+>
+> another_helper(x) = helper(x) * 2
 ```
 
-Deleting an EOF handle has no effect and is usually not useful.
+```jldoctest editing
+julia> ensure_examples!();
+
+julia> p = prepend_to("examples/helpers.jl", "# Helper functions\n\n")
+Patch modifies examples/helpers.jl:
+0c1,2
+---
+> # Helper functions
+>
+```
+
+## Deleting source
+
+Deleting a block produces a patch that removes that block from the file:
+
+```jldoctest editing
+julia> ensure_examples!();
+
+julia> ws = workspace("examples");
+
+julia> b = only(find(ws, "function obsolete"))
+# examples/DemoPackage.jl 21 - 23:
+function obsolete()
+ return :remove_me
+end
+
+julia> p = delete(b)
+Patch modifies examples/DemoPackage.jl:
+21,23c20
+< function obsolete()
+< return :remove_me
+< end
+---
+```
+
+Deleting multiple matching blocks as one combined patch is also supported:
+
+```jldoctest editing
+julia> ensure_examples!();
+
+julia> ws = workspace("examples");
+
+julia> p = delete(find(ws, "return :remove_me"))
+Patch modifies examples/DemoPackage.jl:
+21,23c20
+< function obsolete()
+< return :remove_me
+< end
+---
+```
 
 ## Creating, moving, and deleting files
 
+Whole-file operations use explicit names that do not conflict with Base filesystem functions:
+
 ```jldoctest editing
-julia> edit = CreateFile("examples/generated.jl", raw"""
+julia> ensure_examples!();
+
+julia> p = create_file("examples/generated.jl", raw"""
        function generated_value()
-           return :ok
+       return :ok
        end
        """)
-Edit creates examples/generated.jl:
+Patch creates examples/generated.jl:
 0c1,3
 ---
 > function generated_value()
->     return :ok
+> return :ok
 > end
-
-julia> apply!(repo, edit, "Add generated file")
-Applied: 1 file changed, commit 1bada55
-
 ```
 
 ```jldoctest editing
-julia> edit = MoveFile("examples/generated.jl", "examples/generated-renamed.jl")
-Edit moves examples/generated.jl -> examples/generated-renamed.jl
+julia> ensure_examples!();
 
-julia> apply!(repo, edit, "Rename generated file")
-Applied: 1 file changed, commit 2facade
-
+julia> p = move_file("examples/generated.jl", "examples/generated-renamed.jl")
+Patch moves examples/generated.jl -> examples/generated-renamed.jl
 ```
 
 ```jldoctest editing
-julia> edit = DeleteFile("examples/generated-renamed.jl")
-Edit deletes examples/generated-renamed.jl
+julia> ensure_examples!();
 
-julia> apply!(repo, edit, "Remove generated file")
-Applied: 1 file changed, commit deada55
-
+julia> p = delete_file("examples/generated-renamed.jl")
+Patch deletes examples/generated-renamed.jl
 ```
 
-## Combining edits
+## Combining patches
 
-Use [`Combine`](@ref), or the `*` shorthand, when multiple edits are part of one logical change and should be planned together:
+Use `+` when multiple patches are part of one logical change and should be planned together:
 
 ```jldoctest editing
-julia> source = only(search(handles("examples/DemoPackage.jl"), "function old_function_name"))
-# examples/DemoPackage.jl 23 - 25:
-function old_function_name()
-    return foo(1)
-end
+julia> ensure_examples!();
 
-julia> destination = eof_handle("examples/notes.txt")
-# examples/notes.txt EOF:
+julia> ws = workspace("examples");
 
-julia> edit = Combine(
-           InsertBefore(destination, "\nMoved selected source:\n\n" * string(source)),
-           Delete(source),
+julia> b = only(find(ws, "function increment"));
+
+julia> p = replace(b, "x + 1" => "x + 2") +
+           insert_after(b, raw"""
+           
+           function decrement(x)
+           return x - 1
+           end
+           """)
+Patch modifies examples/DemoPackage.jl:
+14c14
+< return x + 1
+---
+> return x + 2
+15c16,19
+---
+>
+> function decrement(x)
+> return x - 1
+> end
+```
+
+A function form is available as well:
+
+```jldoctest editing
+julia> ensure_examples!();
+
+julia> ws = workspace("examples");
+
+julia> b = only(find(ws, "function increment"));
+
+julia> p = patch(
+           replace(b, "x + 1" => "x + 2"),
+           insert_after(b, "\nextra(x) = x\n"),
        )
-Edit modifies examples/DemoPackage.jl:
-23,25c22
-< function old_function_name()
-<     return foo(1)
-< end
+Patch modifies examples/DemoPackage.jl:
+14c14
+< return x + 1
 ---
-Edit modifies examples/notes.txt:
-3c4,9
+> return x + 2
+15c16,17
 ---
 >
-> Moved selected source:
->
-> function old_function_name()
->     return foo(1)
-> end
-
-julia> apply!(repo, edit, "Move selected source to notes")
-Applied: 2 files changed, commit 12feed3
-
+> extra(x) = x
 ```
 
-Equivalent shorthand:
+Combined patches are validated after the final combined result is planned. Intermediate states may therefore be invalid Julia syntax, provided the final result is valid.
+
+## Applying patches
+
+A patch becomes real only when you apply it:
 
 ```jldoctest editing
-julia> h = only(search(handles("examples/DemoPackage.jl"), "function increment"))
-# examples/DemoPackage.jl 15 - 17:
-function increment(x)
-    return x + 2
-end
+julia> ensure_examples!();
 
-julia> edit = InsertAfter(h, raw"""
-       
-       function bounded_increment(x)
-           return min(increment(x), DEFAULT_LIMIT)
-       end
-       """) * InsertBefore(eof_handle("examples/notes.txt"), "\nAdded bounded_increment to DemoPackage.jl\n")
-Edit modifies examples/DemoPackage.jl:
-18c19,22
----
-> function bounded_increment(x)
->     return min(increment(x), DEFAULT_LIMIT)
-> end
->
-Edit modifies examples/notes.txt:
-9c10,11
----
->
-> Added bounded_increment to DemoPackage.jl
+julia> ws = workspace("examples");
 
+julia> b = only(find(ws, "function increment"));
+
+julia> p = replace(b, "x + 1" => "x + 2")
+Patch modifies examples/DemoPackage.jl:
+14c14
+< return x + 1
+---
+> return x + 2
+
+julia> commit!(p, "Change increment")
+Applied: 1 file changed, commit 67decaf
 ```
 
-Combined edits are validated after the full combined result is planned. Intermediate states may therefore be invalid Julia syntax, provided the final result is valid.
+[`commit!`](@ref) is the obvious git-backed spelling. It is equivalent to `apply!(p, msg; git=:required)`.
 
-Planning and validation are all-or-nothing. Applying a combined edit that touches multiple files is still best-effort at the filesystem level: if a later filesystem operation fails, earlier operations may already have been applied. Use version control so changes can be reviewed and recovered.
+## Applying without git
 
-## Applying edits without version control
-
-For scratch files, generated files, or other changes that should not create a commit, pass an explicit [`NoVersionControl`](@ref) specification.
-
-[`NoVersionControl`](@ref) makes uncommitted edits explicit at the call site.
+For scratch files, generated files, or other changes that should not create a commit, pass `git=false` to [`apply!`](@ref):
 
 ```jldoctest editing
 julia> write("scratch-note.txt", "status = old\n")
 13
 
-julia> h = Handle("scratch-note.txt", 1; parse_as=:text)
+julia> b = block("scratch-note.txt:1"; as=:text)
 # scratch-note.txt 1 - 1:
 status = old
 
-julia> edit = Replace(h, "status = new\n")
-Edit modifies scratch-note.txt:
+julia> p = replace(b, "old" => "new")
+Patch modifies scratch-note.txt:
 1c1
 < status = old
 ---
 > status = new
 
-julia> apply!(NoVersionControl(require_view=true), edit)
+julia> apply!(p; git=false)
 Applied: 1 file changed
-
 ```

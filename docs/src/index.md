@@ -10,67 +10,68 @@ end
 
 # CodeEdit.jl
 
-CodeEdit.jl provides tools for making source edits from Julia. 
+CodeEdit.jl lets you search source as blocks, plan changes as patches, and apply them safely from Julia.
 
-The core idea is to divide Julia code into syntactically independent blocks, that can be manipulated directly from Julia.
+The high-level model is:
 
-Julia code frequently consists of fairly short top-level blocks where the meaning of each code block depends very little on its location in relation to other code. It therefore makes sense to be able to access, search and modify code in terms of blocks, rather than files.
+```text
+workspace -> blocks -> patches -> apply!/commit!
+```
+
+A Julia programmer who already understands files, git, grep, diffs, and stacktraces should be able to use the package almost immediately.
 
 ## Manual
 
 - [Getting started](getting-started.md)
-- [Blocks and handles](concepts.md)
+- [Workspaces and blocks](concepts.md)
 - [Searching source](searching.md)
 - [Editing code](editing.md)
 - [Safety and version control](safety.md)
-- [Finding errors from stacktraces](searching-errors.md)
+- [Finding blocks from stacktraces](searching-errors.md)
 - [API reference](api.md)
 
 ## Basic workflow
 
-A [`Handle`](@ref) identifies a parsed source block, edit constructors such as [`Replace`](@ref) and [`InsertAfter`](@ref) describe changes, and [`apply!`](@ref) writes the result through an explicit version-control specification.
+A [`Workspace`](@ref) represents the codebase being edited. [`find`](@ref) locates matching blocks, patch constructors such as [`replace`](@ref) and [`insert_after`](@ref) plan changes, and [`apply!`](@ref) or [`commit!`](@ref) writes the result.
 
 A common workflow is:
 
-1. Choose a `VersionControl` context.
-2. Collect `handles`.
-3. Search or select blocks.
-4. Construct an edit.
-5. Call `apply!`.
+1. Open a workspace.
+2. Find or select a block.
+3. Build a patch.
+4. Review the planned diff.
+5. Apply it.
 
-The following example changes one function in a repository, applies the edit, and reads the edited block back from disk.
-
+The following example changes one function in a repository, applies the patch, and reads the updated block back from disk.
 
 ```jldoctest index
-julia> repo = VersionControl("examples"; require_view=true)
-GitVersionControl("examples"; require_view=true)
+julia> ensure_examples!();
 
-julia> hs = handles(repo);
+julia> ws = workspace("examples")
+Workspace("examples"; git=true, review=true)
 
-julia> h = only(search(hs, "function increment"))
+julia> b = only(find(ws, "function increment"))
 # examples/DemoPackage.jl 13 - 15:
 function increment(x)
-    return x + 1
+ return x + 1
 end
 
-julia> replacement = replace(string(h), "x + 1" => "x + 2");
-
-julia> edit = Replace(h, replacement)
-Edit modifies examples/DemoPackage.jl:
+julia> p = replace(b, "x + 1" => "x + 2")
+Patch modifies examples/DemoPackage.jl:
 14c14
-<     return x + 1
+< return x + 1
 ---
->     return x + 2
+> return x + 2
 
-julia> apply!(repo, edit, "Change increment")
+julia> apply!(p, "Change increment")
 Applied: 1 file changed, commit 4c0ffee
 
-julia> println(string(Handle("examples/DemoPackage.jl", 14)));
+julia> println(source(block("examples/DemoPackage.jl:14")));
 function increment(x)
-    return x + 2
+ return x + 2
 end
 ```
 
-If Revise.jl is loaded, CodeEdit.jl calls Revise after a successful edit, so changed method definitions usually take effect immediately.
+If Revise.jl is loaded, CodeEdit.jl notifies Revise after a successful apply, so updated method definitions usually take effect immediately.
 
-See [Blocks and handles](concepts.md) for the source model and [Safety and version control](safety.md) for review, validation, and git behavior.
+See [Workspaces and blocks](concepts.md) for the source model and [Safety and version control](safety.md) for review, validation, and git behavior.

@@ -9,10 +9,9 @@ DocTestSetup = quote
 end
 ```
 
-# Finding errors from stacktraces
+# Finding blocks from stacktraces
 
-CodeEdit.jl can locate source blocks referenced by a stacktrace. This makes a debugging session into an editing workflow: catch the error, capture the stacktrace with `catch_backtrace()`, map frames to handles, inspect the matching blocks, then edit the source and commit the fix.
-
+CodeEdit.jl can locate source blocks referenced by a stacktrace. This turns a debugging session into an editing workflow: catch the error, capture the stacktrace with `catch_backtrace()`, map frames to blocks, inspect the relevant source, then build and apply a patch.
 
 ## Starting from a stacktrace
 
@@ -45,6 +44,8 @@ Stacktrace:
 Capture the backtrace in a variable:
 
 ```jldoctest searching_errors
+julia> ensure_examples!();
+
 julia> trace = try
            outer(1)
        catch
@@ -54,56 +55,78 @@ julia> trace = try
 
 ## Inspecting the most relevant blocks
 
-Let's display the blocks in our code that appear in the trace, preserving stacktrace order.
+Display the blocks in our code that appear in the trace, preserving stacktrace order:
 
 ```jldoctest searching_errors
-julia> repo = VersionControl("examples"; require_view=true);
+julia> ensure_examples!();
 
-julia> hs = handles(repo);
+julia> ws = workspace("examples");
 
-julia> trace_handles = [h for h in Handle.(trace) if h in hs];
-
-julia> for h in trace_handles
-           println(h)
-       end
+julia> where(trace, ws)
+2 blocks from stacktrace
 # examples/error-example.jl 1 - 3:
 function inner(x)
-    error("bad input: $x")
+ error("bad input: $x")
 end
 
 # examples/error-example.jl 5 - 7:
 function outer(x)
-    return inner(x + 1)
+ return inner(x + 1)
 end
-
 ```
 
-A displayed handle includes the file name and line range, followed by the source block. `Handle.(trace)` returns a vector, so the order of stack frames is preserved. By contrast, [`handles`](@ref) and [`search`](@ref) return sets, which remove duplicate handles and have arbitrary iteration order.
+[`blocks`](@ref) also works directly on a stacktrace:
+
+```jldoctest searching_errors
+julia> ensure_examples!();
+
+julia> ws = workspace("examples");
+
+julia> blocks(trace; in=ws)
+2 blocks from stacktrace
+# examples/error-example.jl 1 - 3:
+function inner(x)
+ error("bad input: $x")
+end
+
+# examples/error-example.jl 5 - 7:
+function outer(x)
+ return inner(x + 1)
+end
+```
+
+Stacktrace-derived block collections preserve stack order, so they return a vector rather than a set-like block collection.
 
 ## Editing after locating the error
 
 After finding the relevant block, construct a replacement and apply it through git:
 
 ```jldoctest searching_errors
-julia> h = only(search(trace_handles, "error("))
+julia> ensure_examples!();
+
+julia> ws = workspace("examples");
+
+julia> b = only(find(where(trace, ws), "error("))
 # examples/error-example.jl 1 - 3:
 function inner(x)
-    error("bad input: $x")
+ error("bad input: $x")
 end
 
-julia> fixed = replace(string(h), "error(\"bad input: \$x\")" => "throw(ArgumentError(\"bad input: \$x\"))");
-
-julia> edit = Replace(h, fixed)
-Edit modifies examples/error-example.jl:
+julia> p = replace(
+           b,
+           raw#error("bad input: $x")# =>
+           raw#throw(ArgumentError("bad input: $x"))#,
+       )
+Patch modifies examples/error-example.jl:
 2c2
-<     error("bad input: $x")
+< error("bad input: $x")
 ---
->     throw(ArgumentError("bad input: $x"))
+> throw(ArgumentError("bad input: $x"))
 
-julia> apply!(repo, edit, "Throw ArgumentError for bad input")
+julia> apply!(p, "Throw ArgumentError for bad input")
 Applied: 1 file changed, commit 751de5e
 ```
 
-After a successful edit, existing handles are updated or invalidated as needed.
+After a successful apply, existing blocks are updated or invalidated as needed.
 
 For ordinary string, regex, glob, and recursive include searches, see [Searching source](searching.md).

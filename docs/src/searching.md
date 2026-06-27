@@ -10,40 +10,64 @@ end
 
 # Searching source
 
-Searches operate on parsed blocks. Results are handles that can be displayed, inspected, filtered, combined, or passed to edit constructors.
+Searches operate on parsed blocks. Results can be displayed, filtered, combined, or passed directly to patch constructors.
 
 The usual pattern is:
 
 ```text
-VersionControl -> handles -> search -> inspect -> edit
+workspace -> find -> inspect -> patch
 ```
 
-## Searching a repository
+## Searching a workspace
 
-Create a version-control context, collect handles with [`handles`](@ref), then search them by string:
+Create a workspace, then search it by string:
 
 ```jldoctest searching
-julia> repo = VersionControl("examples"; require_view=true);
+julia> ensure_examples!();
 
-julia> hs = handles(repo);
+julia> ws = workspace("examples");
 
-julia> search(hs, "old_function_name")
-1 handle
+julia> find(ws, "old_function_name")
+1 block
 # examples/DemoPackage.jl:
-  17 - 19: function old_function_name(); return foo…
+ 17 - 19: function old_function_name(); return foo…
 ```
 
 Display a match to see the full block:
 
 ```jldoctest searching
-julia> h = only(search(hs, "old_function_name"));
+julia> ensure_examples!();
 
-julia> println(h)
+julia> ws = workspace("examples");
+
+julia> b = only(find(ws, "old_function_name"));
+
+julia> println(b)
 # examples/DemoPackage.jl 17 - 19:
 function old_function_name()
-    return foo(1)
+ return foo(1)
 end
 
+```
+
+## Search aliases
+
+[`search`](@ref) and [`grep`](@ref) are equivalent aliases for [`find`](@ref):
+
+```jldoctest searching
+julia> ensure_examples!();
+
+julia> ws = workspace("examples");
+
+julia> search(ws, "DEFAULT_LIMIT")
+1 block
+# examples/DemoPackage.jl:
+ 5 - 5: const DEFAULT_LIMIT = 10
+
+julia> grep(ws, "DEFAULT_LIMIT")
+1 block
+# examples/DemoPackage.jl:
+ 5 - 5: const DEFAULT_LIMIT = 10
 ```
 
 ## Regex searches
@@ -51,115 +75,167 @@ end
 Use a regular expression when the exact text is not known:
 
 ```jldoctest searching
-julia> search(hs, r"function .*increment")
-1 handle
+julia> ensure_examples!();
+
+julia> ws = workspace("examples");
+
+julia> find(ws, r"function .*increment")
+1 block
 # examples/DemoPackage.jl:
-  13 - 15: function increment(x); return x + 1; end
+ 13 - 15: function increment(x); return x + 1; end
 ```
 
-## Searching files and directories
+## Restricting by file glob
 
-You can also collect handles directly from a file or from files matching a glob:
+Pass `files=` to search only matching paths inside a workspace:
 
 ```jldoctest searching
-julia> file_handles = handles("examples/DemoPackage.jl");
+julia> ensure_examples!();
 
-julia> hs = handles("examples", "*.jl")
-14 handles
+julia> ws = workspace("examples");
+
+julia> find(ws, "helper"; files="**/*.jl")
+2 blocks
 # examples/DemoPackage.jl:
-   1 -  1: module DemoPackage
-   3 -  3: include("helpers.jl")
-   5 -  5: const DEFAULT_LIMIT = 10
-   7 - 11: function foo(x); y = helper(x); z = y * …
-  13 - 15: function increment(x); return x + 1; end
-  17 - 19: function old_function_name(); return foo…
-  21 - 23: function obsolete(); return :remove_me; …
-  25 - 25: end
-  EOF:
-
-# examples/error-example.jl:
-  1 - 3: function inner(x); error("bad input: $x"…
-  5 - 7: function outer(x); return inner(x + 1); …
-  EOF:
+ 3 - 3: include("helpers.jl")
+ 7 - 11: function foo(x); y = helper(x); z = y * …
 
 # examples/helpers.jl:
-  1 - 1: helper(x) = x + 1
-  EOF:
+ 1 - 1: helper(x) = x + 1
 ```
 
-For common cases, [`search`](@ref) can collect handles and search in one call:
+## Searching files and globs directly
+
+A workspace is not required for one-off searches:
 
 ```jldoctest searching
-julia> search("examples/DemoPackage.jl", "DEFAULT_LIMIT")
-1 handle
+julia> ensure_examples!();
+
+julia> find("examples/DemoPackage.jl", "DEFAULT_LIMIT")
+1 block
 # examples/DemoPackage.jl:
-  5 - 5: const DEFAULT_LIMIT = 10
+ 5 - 5: const DEFAULT_LIMIT = 10
 ```
 
-## Following includes
-
-For Julia entry-point files, pass `includes=true` to follow `include` statements recursively:
-
 ```jldoctest searching
-julia> handles("examples/DemoPackage.jl"; includes = true)
-11 handles
+julia> ensure_examples!();
+
+julia> find("examples/**/*.jl", "old_function_name")
+1 block
 # examples/DemoPackage.jl:
-   1 -  1: module DemoPackage
-   3 -  3: include("helpers.jl")
-   5 -  5: const DEFAULT_LIMIT = 10
-   7 - 11: function foo(x); y = helper(x); z = y * …
-  13 - 15: function increment(x); return x + 1; end
-  17 - 19: function old_function_name(); return foo…
-  21 - 23: function obsolete(); return :remove_me; …
-  25 - 25: end
-  EOF:
-
-# examples/helpers.jl:
-  1 - 1: helper(x) = x + 1
-  EOF:
+ 17 - 19: function old_function_name(); return foo…
 ```
 
-Recursive include traversal uses cycle detection, so include loops are visited at most once.
+## Searching inside a block collection
 
-## Handle sets and order
-
-[`handles`](@ref) and [`search`](@ref) return sets. A handle appears at most once in a set, and standard set operations can be used to combine search results:
-
-```julia
-functions = search(hs, "function")
-limits = search(hs, "DEFAULT_LIMIT")
-targets = union(functions, limits)
-```
-
-The displayed summary is grouped by file and sorted for readability. Iterating over a set yields arbitrary order. If order matters, use `sort!(collect(hs))` to produce a vector in display order.
-
-Use a vector when the input order has meaning. For example, `Handle.(stacktrace)` preserves stacktrace order; see [Finding errors from stacktraces](searching-errors.md).
-
-# Extracting a single handle from a search
-
-A `search` or `filter` operation that returns a single handle can be passed to the `only` function to extract that handle, for example:
+You can search any block collection, not only a workspace:
 
 ```jldoctest searching
-julia> h0 = only(search(hs, "function foo"))
+julia> ensure_examples!();
+
+julia> ws = workspace("examples");
+
+julia> bs = blocks(ws);
+
+julia> find(bs, "function increment")
+1 block
+# examples/DemoPackage.jl:
+ 13 - 15: function increment(x); return x + 1; end
+```
+
+## Predicate searches
+
+Users can filter with ordinary Julia predicates:
+
+```jldoctest searching
+julia> ensure_examples!();
+
+julia> ws = workspace("examples");
+
+julia> find(ws) do b
+           occursin("function", source(b)) && endswith(path(b), "DemoPackage.jl")
+       end
+4 blocks
+# examples/DemoPackage.jl:
+ 7 - 11: function foo(x); y = helper(x); z = y * …
+ 13 - 15: function increment(x); return x + 1; end
+ 17 - 19: function old_function_name(); return foo…
+ 21 - 23: function obsolete(); return :remove_me; …
+```
+
+This is equivalent to filtering `blocks(ws)` directly.
+
+## Block collections and order
+
+Search results over ordinary code behave like sets of blocks. Standard set operations can therefore be used to combine them:
+
+```jldoctest searching
+julia> ensure_examples!();
+
+julia> ws = workspace("examples");
+
+julia> funcs = find(ws, "function");
+
+julia> old = find(ws, "old_function_name");
+
+julia> intersect(funcs, old)
+1 block
+# examples/DemoPackage.jl:
+ 17 - 19: function old_function_name(); return foo…
+```
+
+When order matters, convert to a vector and sort explicitly:
+
+```jldoctest searching
+julia> ensure_examples!();
+
+julia> ws = workspace("examples");
+
+julia> sort(collect(find(ws, "function")))
+6-element Vector{Block}:
+ # examples/DemoPackage.jl 7 - 11: function foo(x) …
+ # examples/DemoPackage.jl 13 - 15: function increment(x) …
+ # examples/DemoPackage.jl 17 - 19: function old_function_name() …
+ # examples/DemoPackage.jl 21 - 23: function obsolete() …
+ # examples/error-example.jl 1 - 3: function inner(x) …
+ # examples/error-example.jl 5 - 7: function outer(x) …
+```
+
+Stacktrace-derived block collections preserve stacktrace order instead; see [Finding blocks from stacktraces](searching-errors.md).
+
+## Extracting a single block
+
+A search that returns exactly one block can be passed to `only`:
+
+```jldoctest searching
+julia> ensure_examples!();
+
+julia> ws = workspace("examples");
+
+julia> b0 = only(find(ws, "function foo"))
 # examples/DemoPackage.jl 7 - 11:
 function foo(x)
-    y = helper(x)
-    z = y * 2
-    return z
+ y = helper(x)
+ z = y * 2
+ return z
 end
-
 ```
 
-A simple way is often to use the `Handle` constructor with the filename and line number.
+You can also select the same block with a `path:line` selector:
 
 ```jldoctest searching
-julia> h1 = hs["DemoPackage.jl:10"];
+julia> ensure_examples!();
 
-julia> h2 = Handle("examples/DemoPackage.jl", 10);
+julia> ws = workspace("examples");
 
-julia> h3 = only(filter(h -> occursin("DemoPackage", filepath(h)) && 10 in lines(h), hs));
+julia> b1 = ws["DemoPackage.jl:10"];
 
-julia> h0 == h1 === h2 === h3
+julia> b2 = block("examples/DemoPackage.jl:10");
+
+julia> b3 = only(filter(b -> occursin("DemoPackage", path(b)) && 10 in lines(b), blocks(ws)));
+
+julia> b0 = only(find(ws, "function foo"));
+
+julia> b0 == b1 == b2 == b3
 true
-
 ```
