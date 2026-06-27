@@ -161,7 +161,7 @@ function blocks(
     follow_includes::Bool=includes,
 )
     mode = _normalize_parse_as(as=as, parse_as=parse_as)
-    result = Set{Handle}()
+    result = Set{Block}()
 
     for path in _workspace_paths(ws; files=files)
         union!(result, handles(path; includes=follow_includes, parse_as=mode))
@@ -179,7 +179,7 @@ function blocks(
     follow_includes::Bool=includes,
 )
     mode = _normalize_parse_as(as=as, parse_as=parse_as)
-    result = Set{Handle}()
+    result = Set{Block}()
 
     for path in _paths_for_path_or_glob(path_or_glob; files=files)
         union!(result, handles(path; includes=follow_includes, parse_as=mode))
@@ -196,7 +196,7 @@ function blocks(
     follow_includes::Bool=includes,
 )
     mode = _normalize_parse_as(as=as, parse_as=parse_as)
-    result = Set{Handle}()
+    result = Set{Block}()
 
     for path in paths
         union!(result, blocks(path; as=mode, includes=includes, follow_includes=follow_includes))
@@ -207,11 +207,11 @@ end
 
 function blocks(trace::Vector{StackTraces.StackFrame}; kwargs...)
     ws = get(kwargs, :in, nothing)
-    result = Handle[]
+    result = Block[]
     seen = Set{Int}()
 
     for frame in trace
-        handle = Handle(frame; return_invalid=true)
+        handle = Block(frame; return_invalid=true)
         is_valid(handle) || continue
 
         if ws isa Workspace && !_is_under_path(filepath(handle), ws.root)
@@ -241,50 +241,51 @@ location metadata.
 function block(selector::AbstractString; as::Symbol=:auto, parse_as=nothing)
     mode = _normalize_parse_as(as=as, parse_as=parse_as)
     path_suffix, line, pos = _parse_handle_at_key(selector)
-    return Handle(path_suffix, line, something(pos, 1); parse_as=mode)
+    return Block(path_suffix, line, something(pos, 1); parse_as=mode)
 end
 
-block(method::Method; kwargs...) = Handle(method; kwargs...)
-block(frame::StackTraces.StackFrame; kwargs...) = Handle(frame; kwargs...)
+block(method::Method; kwargs...) = Block(method; kwargs...)
+block(frame::StackTraces.StackFrame; kwargs...) = Block(frame; kwargs...)
 
 function Base.getindex(ws::Workspace, selector::AbstractString)
     return handle_at(blocks(ws), selector)
 end
 
-source(handle::Handle) = string(handle)
-text(handle::Handle) = source(handle)
-path(handle::Handle) = filepath(handle)
-span(handle::Handle) = (path(handle), lines(handle))
-docs(handle::Handle) = docstring(handle)
+source(handle::Block) = string(handle)
+Base.String(handle::Block) = string(handle)
+text(handle::Block) = source(handle)
+path(handle::Block) = filepath(handle)
+span(handle::Block) = (path(handle), lines(handle))
+docs(handle::Block) = docstring(handle)
 
-function replace(handle::Handle, replacement::Pair, replacements::Pair...; kwargs...)
+function replace(handle::Block, replacement::Pair, replacements::Pair...; kwargs...)
     return Replace(handle, Base.replace(source(handle), replacement, replacements...; kwargs...))
 end
 
-function replace(handle::Handle, new_source::AbstractString)
+function replace(handle::Block, new_source::AbstractString)
     return Replace(handle, new_source)
 end
 
-function replace(collection::AbstractSet{Handle}, replacements::Pair...; kwargs...)
+function replace(collection::AbstractSet{Block}, replacements::Pair...; kwargs...)
     return patch([replace(handle, replacements...; kwargs...) for handle in collection]...)
 end
 
-function replace(collection::AbstractVector{Handle}, replacements::Pair...; kwargs...)
+function replace(collection::AbstractVector{Block}, replacements::Pair...; kwargs...)
     return patch([replace(handle, replacements...; kwargs...) for handle in collection]...)
 end
 
-delete(handle::Handle) = Delete(handle)
+delete(handle::Block) = Delete(handle)
 
-function delete(collection::AbstractSet{Handle})
+function delete(collection::AbstractSet{Block})
     return patch([Delete(handle) for handle in collection]...)
 end
 
-function delete(collection::AbstractVector{Handle})
+function delete(collection::AbstractVector{Block})
     return patch([Delete(handle) for handle in collection]...)
 end
 
-insert_before(handle::Handle, code::AbstractString) = InsertBefore(handle, code)
-insert_after(handle::Handle, code::AbstractString) = InsertAfter(handle, code)
+insert_before(handle::Block, code::AbstractString) = InsertBefore(handle, code)
+insert_after(handle::Block, code::AbstractString) = InsertAfter(handle, code)
 
 function append_to(path::AbstractString, code::AbstractString; as::Symbol=:auto, parse_as=nothing)
     mode = _normalize_parse_as(as=as, parse_as=parse_as)

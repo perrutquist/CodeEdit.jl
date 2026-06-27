@@ -55,13 +55,13 @@ Store a handle record and return its public handle.
 function register_handle!(record::HandleRecord)
     id = allocate_handle_id!()
     STATE[].handles[id] = record
-    return Handle(id)
+    return Block(id)
 end
 
 """
 Return the registry record for a valid public handle id.
 """
-function handle_record(handle::Handle)
+function handle_record(handle::Block)
     return get(STATE[].handles, handle.id, nothing)
 end
 

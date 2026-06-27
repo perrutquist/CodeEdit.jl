@@ -5,7 +5,7 @@
         path = joinpath(dir, "edit.jl")
         write(path, "x = 1\n")
 
-        h = Handle(path, 1)
+        h = Block(path, 1)
         replace = Replace(h, "x = 2\n")
         delete = Delete(h)
         before = InsertBefore(h, "# before\n")
@@ -50,8 +50,8 @@ end
         end
         """)
 
-        first = Handle(path, 1)
-        second = Handle(path, 5)
+        first = Block(path, 1)
+        second = Block(path, 5)
 
         edit = Replace(first, replace(string(first), "1" => "10"))
         shown = sprint(show, MIME"text/plain"(), edit)
@@ -93,7 +93,7 @@ end
         end
         """)
 
-        second = Handle(path, 5)
+        second = Block(path, 5)
         edit = InsertBefore(second, "const inserted = 1\n\n")
         apply!(NoVersionControl(), edit)
 
@@ -123,8 +123,8 @@ end
         y = 2
         """)
 
-        x = Handle(path, 1)
-        y = Handle(path, 3)
+        x = Block(path, 1)
+        y = Block(path, 3)
         @test lines(y) == 3:3
         edit = Delete(x)
         apply!(NoVersionControl(), edit)
@@ -146,7 +146,7 @@ end
         path = joinpath(dir, "invalid.jl")
         write(path, "x = 1\n")
 
-        h = Handle(path, 1)
+        h = Block(path, 1)
         edit = Replace(h, "function broken(\n")
         shown = sprint(show, MIME"text/plain"(), edit)
 
@@ -164,7 +164,7 @@ end
         write(path, "x = 1\n")
         sleep(1.1)
 
-        h = Handle(path, 1)
+        h = Block(path, 1)
         edit = Replace(h, "x = 2\n")
         displayed!(edit)
         write(path, "x = 3\n")
@@ -179,7 +179,7 @@ end
         path = joinpath(dir, "undisplayed.jl")
         write(path, "x = 1\n")
 
-        h = Handle(path, 1)
+        h = Block(path, 1)
         edit = Replace(h, "x = 2\n")
 
         @test_throws ErrorException apply!(NoVersionControl(require_view=true), edit)
@@ -212,7 +212,7 @@ end
 
         Base.invokelatest(include, parent)
         parent_function_ref = getfield(@__MODULE__, :parent_function)
-        method_handle = Handle(first(methods(parent_function_ref)))
+        method_handle = Block(first(methods(parent_function_ref)))
         @test occursin("parent_function", string(method_handle))
 
         trace = try
@@ -237,8 +237,8 @@ end
         y = 2
         """)
 
-        x = Handle(path, 1)
-        y = Handle(path, 3)
+        x = Block(path, 1)
+        y = Block(path, 3)
         edit = Combine(InsertBefore(y, "z = 3\n\n"), Replace(y, "y = 20\n"))
         displayed!(edit)
         apply!(NoVersionControl(require_view=true), edit)
@@ -266,8 +266,8 @@ end
         b = 2
         """)
 
-        a = Handle(path, 1)
-        b = Handle(path, 3)
+        a = Block(path, 1)
+        b = Block(path, 3)
         edit = Combine(InsertBefore(b, string(a) * "\n"), Delete(a))
         displayed!(edit)
         apply!(NoVersionControl(), edit)

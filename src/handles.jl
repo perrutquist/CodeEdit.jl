@@ -1,11 +1,11 @@
 const _refreshing_file_keys = Set{FileKey}()
 
-const invalid_handle = Handle(0)
+const invalid_handle = Block(0)
 
 """
 Refresh a handle's backing cache if the file changed externally.
 """
-function refresh_handle!(handle::Handle)
+function refresh_handle!(handle::Block)
     record = handle_record(handle)
 
     if record === nothing || !record.valid || record.file === nothing
@@ -46,7 +46,7 @@ end
 """
 Throw if `handle` is invalid, otherwise return its handle record.
 """
-function valid_handle_record(handle::Handle)
+function valid_handle_record(handle::Block)
     record = refresh_handle!(handle)
     (record === nothing || !record.valid) && throw(ArgumentError("invalid handle"))
     return record
@@ -63,7 +63,7 @@ Handles may become invalid after file edits, file deletion, or external changes
 that cannot be matched during reindexing. For edits, this performs planning but
 does not write to the filesystem.
 """
-function is_valid(handle::Handle)
+function is_valid(handle::Block)
     record = refresh_handle!(handle)
     return record !== nothing && record.valid
 end
@@ -75,7 +75,7 @@ Return the absolute path of the file containing `handle`.
 
 Throws `ArgumentError` if the handle is invalid.
 """
-function filepath(handle::Handle)
+function filepath(handle::Block)
     return valid_handle_record(handle).path
 end
 
@@ -86,7 +86,7 @@ Return the 1-based line range covered by `handle`.
 
 Throws `ArgumentError` if the handle is invalid.
 """
-function lines(handle::Handle)
+function lines(handle::Block)
     return valid_handle_record(handle).lines
 end
 
@@ -94,7 +94,7 @@ end
 Return the parse mode associated with a valid handle, or `nothing` for an
 invalid handle.
 """
-function handle_parse_as(handle::Handle)
+function handle_parse_as(handle::Block)
     record = refresh_handle!(handle)
 
     if record === nothing || !record.valid || record.file === nothing
@@ -111,7 +111,7 @@ end
 
 Return `true` if `handle` is valid and its file was parsed as Julia source.
 """
-function is_julia(handle::Handle)
+function is_julia(handle::Block)
     return handle_parse_as(handle) == :julia
 end
 
@@ -120,7 +120,7 @@ end
 
 Return `true` if `handle` is valid and its file was parsed as plain text.
 """
-function is_text(handle::Handle)
+function is_text(handle::Block)
     return handle_parse_as(handle) == :text
 end
 
@@ -134,12 +134,12 @@ Return whether `handle` is valid and its filepath matches `regex`.
 The one-argument form returns a predicate suitable for `filter`, `search`
 pipelines, and set comprehensions.
 """
-function filepath_matches(handle::Handle, regex::Regex)
+function filepath_matches(handle::Block, regex::Regex)
     is_valid(handle) || return false
     return occursin(regex, filepath(handle))
 end
 
-filepath_matches(regex::Regex, handle::Handle) = filepath_matches(handle, regex)
+filepath_matches(regex::Regex, handle::Block) = filepath_matches(handle, regex)
 
 filepath_matches(regex::Regex) = Base.Fix2(filepath_matches, regex)
 
@@ -184,7 +184,7 @@ function _handle_at_query(path_suffix::AbstractString, line::Integer, pos)
     return pos === nothing ? "$path_suffix:$line" : "$path_suffix:$line:$pos"
 end
 
-function _handle_touches_location(handle::Handle, line::Integer, pos)
+function _handle_touches_location(handle::Block, line::Integer, pos)
     line in lines(handle) || return false
     pos === nothing && return true
 
@@ -217,12 +217,12 @@ position on the line.
 Throws `ArgumentError` if no path matches, the path suffix is ambiguous, no
 block covers the requested location, or multiple blocks match.
 """
-function handle_at(handles::AbstractSet{Handle}, key::AbstractString)
+function handle_at(handles::AbstractSet{Block}, key::AbstractString)
     path_suffix, line, pos = _parse_handle_at_key(key)
     return handle_at(handles, path_suffix, line, pos)
 end
 
-function handle_at(handles::AbstractSet{Handle}, path_suffix::AbstractString, line::Integer, pos=nothing)
+function handle_at(handles::AbstractSet{Block}, path_suffix::AbstractString, line::Integer, pos=nothing)
     line < 1 && throw(ArgumentError("line must be positive: $line"))
     pos !== nothing && pos < 1 && throw(ArgumentError("position must be positive: $pos"))
 
@@ -244,7 +244,7 @@ function handle_at(handles::AbstractSet{Handle}, path_suffix::AbstractString, li
     end
 
     path = paths[1]
-    matches = Handle[]
+    matches = Block[]
 
     for handle in handles
         is_valid(handle) || continue
@@ -261,7 +261,7 @@ function handle_at(handles::AbstractSet{Handle}, path_suffix::AbstractString, li
     return matches[1]
 end
 
-Base.getindex(handles::AbstractSet{Handle}, key::AbstractString) = handle_at(handles, key)
+Base.getindex(handles::AbstractSet{Block}, key::AbstractString) = handle_at(handles, key)
 
 """
 Return whether `text` begins with a Julia string literal docstring prefix.
@@ -318,7 +318,7 @@ Return leading Julia string-literal docstrings attached to `handle`, or
 Adjacent leading string literals are joined with newlines. Throws
 `ArgumentError` if the handle is invalid.
 """
-function docstring(handle::Handle)
+function docstring(handle::Block)
     record = valid_handle_record(handle)
     record.doc !== nothing && return record.doc
 
@@ -344,7 +344,7 @@ Return the source or text block referenced by `handle`.
 
 Throws `ArgumentError` if the handle is invalid.
 """
-function Base.string(handle::Handle)
+function Base.string(handle::Block)
     return valid_handle_record(handle).text
 end
 
@@ -367,7 +367,7 @@ function block_index_at_offset(cache::FileCache, offset::Integer)
     return length(cache.blocks)
 end
 
-function Handle(path::AbstractString, line::Integer, pos::Integer=1; parse_as::Symbol=:auto, return_invalid=false)
+function Block(path::AbstractString, line::Integer, pos::Integer=1; parse_as::Symbol=:auto, return_invalid=false)
     if !isfile(path)
         return_invalid && return invalid_handle
         throw(ArgumentError("source file could not be located: $path"))
@@ -397,7 +397,7 @@ function Handle(path::AbstractString, line::Integer, pos::Integer=1; parse_as::S
     return block_handle(cache, block_index_at_offset(cache, offset))
 end
 
-function Handle(::Nothing, line::Integer; return_invalid=true)
+function Block(::Nothing, line::Integer; return_invalid=true)
     return_invalid && return invalid_handle
     throw(ArgumentError("invalid source location"))
 end
@@ -406,21 +406,21 @@ end
 Return a handle to the source block referenced by a stack frame when source
 information is available.
 """
-function Handle(sf::StackTraces.StackFrame; return_invalid=true)
+function Block(sf::StackTraces.StackFrame; return_invalid=true)
     (path, line) = if sf.linfo isa Core.MethodInstance
         functionloc(sf.linfo.def)
     else
         (Base.find_source_file(Base.fixup_stdlib_path(string(sf.file))), Int32(sf.line))
     end
-    Handle(path, line; return_invalid)
+    Block(path, line; return_invalid)
 end
 
 """
 Return a handle to a method definition when source information is available.
 """
-function Handle(method::Method; return_invalid=true)
+function Block(method::Method; return_invalid=true)
     (path, line) = functionloc(method)
-    Handle(path, line; return_invalid)
+    Block(path, line; return_invalid)
 end
 
 """
@@ -459,7 +459,7 @@ function included_paths(cache::FileCache)
 end
 
 function collect_handles!(
-    result::Set{Handle},
+    result::Set{Block},
     path::AbstractString,
     includes::Bool,
     parse_as::Symbol,
@@ -469,7 +469,7 @@ function collect_handles!(
     abs_path = cache.primary_path
     abs_path in seen && return result
     push!(seen, abs_path)
-    union!(result, Set(Handle.(cache.handles)))
+    union!(result, Set(Block.(cache.handles)))
 
     if includes
         for included in included_paths(cache)
@@ -487,7 +487,7 @@ end
     handles(repo::VersionControl; includes=false, parse_as=:auto)
     handles(methods_or_stacktrace)
 
-Return a `Set{Handle}` for parsed blocks from files, directories, repositories,
+Return a `Set{Block}` for parsed blocks from files, directories, repositories,
 method lists, or stack traces.
 
 `handles(root, pattern)` searches paths matched by `Glob.glob(pattern, root)`.
@@ -500,11 +500,11 @@ followed recursively. `parse_as` may be `:auto`, `:julia`, or `:text`.
 function handles end
 
 function handles(path::AbstractString; includes::Bool=false, parse_as::Symbol=:auto)
-    return collect_handles!(Set{Handle}(), path, includes, parse_as, Set{String}())
+    return collect_handles!(Set{Block}(), path, includes, parse_as, Set{String}())
 end
 
 function handles(paths::Vector{<:AbstractString}; includes::Bool=false, parse_as::Symbol=:auto)
-    result = Set{Handle}()
+    result = Set{Block}()
 
     for path in paths
         union!(result, handles(path; includes=includes, parse_as=parse_as))
@@ -518,11 +518,11 @@ function handles(root::AbstractString, pattern::AbstractString; includes::Bool=f
 end
 
 function handles(ml::Base.MethodList)
-    Set(Handle(f) for f in ml)
+    Set(Block(f) for f in ml)
 end
 
 function handles(sf::Vector{StackTraces.StackFrame})
-    Set(Handle(f) for f in sf)
+    Set(Block(f) for f in sf)
 end
 
 handles(trace::Vector{Union{Ptr{Nothing}, Base.InterpreterIP}}) = handles(stacktrace(trace))
@@ -530,7 +530,7 @@ handles(trace::Vector{Union{Ptr{Nothing}, Base.InterpreterIP}}) = handles(stackt
 """
 Sort key used when displaying collections of handles.
 """
-function handle_sort_key(handle::Handle)
+function handle_sort_key(handle::Block)
     record = handle_record(handle)
 
     if record === nothing || !record.valid
@@ -540,6 +540,6 @@ function handle_sort_key(handle::Handle)
     return (handle_primary_path(record), record.span.lo, record.span.hi, handle.id)
 end
 
-function Base.isless(a::Handle, b::Handle)
+function Base.isless(a::Block, b::Block)
     isless(handle_sort_key(a), handle_sort_key(b))
 end

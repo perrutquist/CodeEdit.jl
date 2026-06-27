@@ -98,7 +98,7 @@ function unsupported_plan(edit::AbstractEdit, message::AbstractString)
         "",
         "",
         "",
-        Handle(0),
+        Block(0),
         :unsupported,
         false,
         String[message],
@@ -203,7 +203,7 @@ function current_path_exists(path::AbstractString, virtual_by_path::Dict{String,
 end
 
 function virtual_file_for_handle!(
-    handle::Handle,
+    handle::Block,
     virtual_by_key::Dict{FileKey,VirtualFileState},
     virtual_by_path::Dict{String,VirtualFileState},
 )
@@ -236,7 +236,7 @@ function virtual_file_for_handle!(
     handle_spans = Dict{Int,Union{Nothing,Span}}()
 
     for id in cache.handles
-        rec = handle_record(Handle(id))
+        rec = handle_record(Block(id))
         rec !== nothing && rec.valid && (handle_spans[id] = rec.span)
     end
 
@@ -276,7 +276,7 @@ function virtual_file_for_existing_path!(
         handle_spans = Dict{Int,Union{Nothing,Span}}()
 
         for id in cache.handles
-            rec = handle_record(Handle(id))
+            rec = handle_record(Block(id))
             rec !== nothing && rec.valid && (handle_spans[id] = rec.span)
         end
 
@@ -293,7 +293,7 @@ function virtual_file_for_existing_path!(
     return vf
 end
 
-function replace_virtual_text!(vf::VirtualFileState, span::Span, code::AbstractString, target::Union{Nothing,Handle}, operation::Symbol)
+function replace_virtual_text!(vf::VirtualFileState, span::Span, code::AbstractString, target::Union{Nothing,Block}, operation::Symbol)
     vf.text === nothing && return interpret_error("cannot edit deleted file: $(vf.path)")
     old_text = vf.text
 

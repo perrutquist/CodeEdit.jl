@@ -32,7 +32,7 @@ include("ui.jl")
 
 export Workspace, workspace, repo, project, codebase
 export Block, block, blocks, source, text, path, span, docs
-export Handle, eof_handle, handles, handle_at, reindex, format_modules
+export Block, eof_handle, handles, handle_at, reindex, format_modules
 export find, search, grep
 export Patch, AbstractEdit, patch, replace, delete, insert_before, insert_after
 export append_to, prepend_to, create_file, move_file, delete_file

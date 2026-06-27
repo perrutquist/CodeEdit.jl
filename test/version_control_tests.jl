@@ -9,7 +9,7 @@
             end
             """)
 
-            edit = Replace(Handle("foo.jl", 1), """
+            edit = Replace(Block("foo.jl", 1), """
             function foo()
                 2
             end
@@ -44,7 +44,7 @@ end
             run(`git add foo.jl`)
             run(`git commit -m initial`)
 
-            edit = Replace(Handle("foo.jl", 1), """
+            edit = Replace(Block("foo.jl", 1), """
             function foo()
                 3
             end
@@ -100,7 +100,7 @@ end
             run(`git add foo.jl`)
             run(`git commit -m initial`)
 
-            edit = Replace(Handle("foo.jl", 1), """
+            edit = Replace(Block("foo.jl", 1), """
             function foo()
                 4
             end
@@ -138,7 +138,7 @@ end
             run(`git add foo.jl`)
             run(`git commit -m initial`)
 
-            edit = Replace(Handle("foo.jl", 1), """
+            edit = Replace(Block("foo.jl", 1), """
             function foo()
                 5
             end
@@ -177,7 +177,7 @@ end
             end
             """)
 
-            edit = Replace(Handle("foo.jl", 1), """
+            edit = Replace(Block("foo.jl", 1), """
             function foo()
                 6
             end
@@ -215,7 +215,7 @@ end
             end
             """)
 
-            edit = Replace(Handle("foo.jl", 1), """
+            edit = Replace(Block("foo.jl", 1), """
             function foo()
                 7
             end
@@ -253,7 +253,7 @@ end
             end
             """)
 
-            edit = Replace(Handle("scratch.jl", 1), """
+            edit = Replace(Block("scratch.jl", 1), """
             function scratch()
                 8
             end

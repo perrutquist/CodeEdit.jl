@@ -11,8 +11,8 @@ using Runic
             function after();3;end
             """)
 
-            target = Handle("sample.jl", 2)
-            after = Handle("sample.jl", 3)
+            target = Block("sample.jl", 2)
+            after = Block("sample.jl", 3)
             @test first(lines(after)) == 3
 
             edit = Replace(target, """
@@ -48,8 +48,8 @@ end
             function target();3;end
             """)
 
-            watched = Handle("sample.jl", 2)
-            target = Handle("sample.jl", 3)
+            watched = Block("sample.jl", 2)
+            target = Block("sample.jl", 3)
 
             edit = Replace(target, """
             function target()
@@ -83,7 +83,7 @@ end
             function marker();2;end
             """)
 
-            marker = Handle("sample.jl", 2)
+            marker = Block("sample.jl", 2)
             edit = InsertBefore(marker, "function inserted();3;end\n")
 
             apply!(NoVersionControl(formatter=Runic.format_string), edit)
@@ -114,8 +114,8 @@ end
             function survivor();3;end
             """)
 
-            victim = Handle("sample.jl", 2)
-            survivor = Handle("sample.jl", 3)
+            victim = Block("sample.jl", 2)
+            survivor = Block("sample.jl", 3)
 
             apply!(NoVersionControl(formatter=Runic.format_string), Delete(victim))
 
@@ -143,8 +143,8 @@ end
             function second_target();3;end
             """)
 
-            first_target = Handle("sample.jl", 2)
-            second_target = Handle("sample.jl", 3)
+            first_target = Block("sample.jl", 2)
+            second_target = Block("sample.jl", 3)
 
             edit = Combine(
                 Replace(first_target, """

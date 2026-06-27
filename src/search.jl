@@ -8,7 +8,7 @@ Search parsed blocks and return matching blocks.
 
 `query` may be a string or `Regex`. Predicate forms keep ordinary Julia
 filtering ergonomics, including `find(target) do block ... end`. Set-like
-inputs return a `Set{Handle}`; vector inputs preserve order and return a vector.
+inputs return a `Set{Block}`; vector inputs preserve order and return a vector.
 """
 function _query_predicate(needle::AbstractString)
     return handle -> is_valid(handle) && occursin(needle, source(handle))
@@ -18,12 +18,12 @@ function _query_predicate(needle::Regex)
     return handle -> is_valid(handle) && occursin(needle, source(handle))
 end
 
-function _filter_block_collection(collection::AbstractVector{Handle}, predicate::Function)
-    return Handle[handle for handle in collection if predicate(handle)]
+function _filter_block_collection(collection::AbstractVector{Block}, predicate::Function)
+    return Block[handle for handle in collection if predicate(handle)]
 end
 
 function _filter_block_collection(collection, predicate::Function)
-    result = Set{Handle}()
+    result = Set{Block}()
 
     for handle in collection
         predicate(handle) && push!(result, handle)

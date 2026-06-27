@@ -13,7 +13,7 @@ using JuliaSyntax
         @test read(created, String) == "created_value = 1\n"
         @test length(search(created, "created_value")) == 1
 
-        h = Handle(created, 1)
+        h = Block(created, 1)
         edit = Combine(MoveFile(created, moved), Replace(h, "created_value = 2\n"))
         apply!(NoVersionControl(), edit)
 
@@ -41,8 +41,8 @@ end
         second = 2
         """)
 
-        first = Handle(path, 1)
-        second = Handle(path, 3)
+        first = Block(path, 1)
+        second = Block(path, 3)
 
         write(path, """
         inserted = 0
@@ -68,14 +68,14 @@ end
         path = joinpath(dir, "recreated.jl")
         write(path, "original_value = 1\n")
 
-        original = Handle(path, 1)
+        original = Block(path, 1)
         @test is_valid(original)
 
         rm(path)
         @test !is_valid(original)
 
         write(path, "recreated_value = 2\n")
-        recreated = Handle(path, 1)
+        recreated = Block(path, 1)
 
         @test is_valid(recreated)
         @test occursin("recreated_value = 2", string(recreated))
@@ -94,8 +94,8 @@ end
         second = 2
         """)
 
-        first = Handle(path, 1)
-        second = Handle(path, 3)
+        first = Block(path, 1)
+        second = Block(path, 3)
 
         write(path, """
         inserted = 0
@@ -125,17 +125,17 @@ end
         γδ = 2
         """)
 
-        first = Handle(path, 1, 2)
-        next = Handle(path, 2, 1)
+        first = Block(path, 1, 2)
+        next = Block(path, 2, 1)
 
         @test lines(first) == 1:1
         @test occursin("αβ = 1", string(first))
         @test lines(next) == 3:3
         @test occursin("γδ = 2", string(next))
-        @test_throws ArgumentError Handle(path, 0)
-        @test_throws ArgumentError Handle(path, 5)
-        @test_throws ArgumentError Handle(path, 1, 0)
-        @test_throws ArgumentError Handle(path, 1, 100)
+        @test_throws ArgumentError Block(path, 0)
+        @test_throws ArgumentError Block(path, 5)
+        @test_throws ArgumentError Block(path, 1, 0)
+        @test_throws ArgumentError Block(path, 1, 100)
     end
 end
 
@@ -155,11 +155,11 @@ end
         beta
         """)
 
-        text_handle = Handle(path, 1; parse_as=:text)
+        text_handle = Block(path, 1; parse_as=:text)
         @test is_valid(text_handle)
         @test lines(text_handle) == 1:1
 
-        julia_handle = Handle(path, 1; parse_as=:julia)
+        julia_handle = Block(path, 1; parse_as=:julia)
         @test is_valid(julia_handle)
         @test !is_valid(text_handle)
     end
@@ -175,9 +175,9 @@ end
         symlink(path, link)
 
         cd(dir) do
-            relative = Handle("same.jl", 1)
-            absolute = Handle(path, 1)
-            linked = Handle(link, 1)
+            relative = Block("same.jl", 1)
+            absolute = Block(path, 1)
+            linked = Block(link, 1)
 
             @test relative === absolute
             @test relative === linked

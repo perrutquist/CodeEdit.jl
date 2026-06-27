@@ -180,5 +180,5 @@ end
 Return the public handle for a parsed block in a cache entry.
 """
 function block_handle(cache::FileCache, block_index::Integer)
-    return Handle(cache.handles[block_index])
+    return Block(cache.handles[block_index])
 end

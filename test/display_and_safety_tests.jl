@@ -103,12 +103,12 @@ end
         write(display_path, "y = 1\n")
         write(callback_path, "z = 1\n")
 
-        string_edit = Replace(Handle(string_path, 1), "x = 2\n")
+        string_edit = Replace(Block(string_path, 1), "x = 2\n")
         @test string_edit.displayed[] === nothing
         @test occursin("Patch modifies", string(string_edit))
         @test string_edit.displayed[] !== nothing
 
-        display_edit = Replace(Handle(display_path, 1), "y = 2\n")
+        display_edit = Replace(Block(display_path, 1), "y = 2\n")
         @test display_edit.displayed[] === nothing
         display(display_edit)
         @test display_edit.displayed[] !== nothing
@@ -117,7 +117,7 @@ end
         old_callback = CodeEdit._maybe_revise_callback[]
         try
             CodeEdit._maybe_revise_callback[] = () -> (calls[] += 1; nothing)
-            callback_edit = Replace(Handle(callback_path, 1), "z = 2\n")
+            callback_edit = Replace(Block(callback_path, 1), "z = 2\n")
             apply!(NoVersionControl(), callback_edit)
 
             @test calls[] == 1
@@ -192,8 +192,8 @@ end
         write(first_path, "first_value = 1\n")
         write(second_path, "second_value = 2\n")
 
-        first = Handle(first_path, 1)
-        second = Handle(second_path, 1)
+        first = Block(first_path, 1)
+        second = Block(second_path, 1)
         edit = Combine(
             Replace(first, "first_value = 10\n"),
             Replace(second, "second_value = 20\n"),

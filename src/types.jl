@@ -171,9 +171,9 @@ mutable struct FileCache
 end
 
 """
-    Handle(path, line[, pos=1]; parse_as=:auto)
-    Handle(method)
-    Handle(stackframe)
+    Block(path, line[, pos=1]; parse_as=:auto)
+    Block(method)
+    Block(stackframe)
 
 Reference to one parsed source or text block.
 
@@ -186,14 +186,14 @@ Method and stack-frame constructors use Julia source-location metadata and retur
 an invalid handle when no source location is available. Test handles with
 [`is_valid`](@ref) before using them when source information may be missing.
 """
-struct Handle
+struct Block
     id::Int
 end
 
-const Block = Handle
+const Handle = Block # backwards compatibility
 
 """
-Mutable registry entry backing a Handle.
+Mutable registry entry backing a Block.
 """
 mutable struct HandleRecord
     file::Union{Nothing,FileKey}
@@ -239,7 +239,7 @@ Applying the edit may invalidate or update handles that refer to affected
 blocks.
 """
 struct Replace <: AbstractEdit
-    handle::Handle
+    handle::Block
     code::String
     displayed::Base.RefValue{Union{Nothing,DisplayedPlan}}
 end
@@ -252,7 +252,7 @@ Edit that deletes the block referenced by `handle`.
 Deleting an EOF handle is valid and has no effect.
 """
 struct Delete <: AbstractEdit
-    handle::Handle
+    handle::Block
     displayed::Base.RefValue{Union{Nothing,DisplayedPlan}}
 end
 
@@ -262,7 +262,7 @@ end
 Edit that inserts `code` immediately before the block referenced by `handle`.
 """
 struct InsertBefore <: AbstractEdit
-    handle::Handle
+    handle::Block
     code::String
     displayed::Base.RefValue{Union{Nothing,DisplayedPlan}}
 end
@@ -273,7 +273,7 @@ end
 Edit that inserts `code` immediately after the block referenced by `handle`.
 """
 struct InsertAfter <: AbstractEdit
-    handle::Handle
+    handle::Block
     code::String
     displayed::Base.RefValue{Union{Nothing,DisplayedPlan}}
 end
@@ -350,7 +350,7 @@ struct ReplacementEditPlan
     code::String
     old_text::String
     new_text::String
-    target::Handle
+    target::Block
     operation::Symbol
     valid::Bool
     errors::Vector{String}

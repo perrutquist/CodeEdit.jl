@@ -99,14 +99,14 @@ end
         hs = handles(path)
         @test length(hs) == 3
 
-        h = Handle(path, 2)
+        h = Block(path, 2)
         @test is_valid(h)
         @test filepath(h) == path
         @test lines(h) == 1:3
         @test occursin("function foo", string(h))
         @test docstring(h) === nothing
 
-        same = Handle(path, 1)
+        same = Block(path, 1)
         @test h === same
 
         eof = eof_handle(path)
@@ -120,7 +120,7 @@ end
 
         found = search(path, "foo(1)")
         @test length(found) == 1
-        @test only(found) === Handle(path, 5)
+        @test only(found) === Block(path, 5)
     end
 end
 
@@ -131,7 +131,7 @@ end
         path = joinpath(dir, "notes.txt")
         write(path, "alpha\n\nbeta\n")
 
-        h = Handle(path, 2; parse_as=:text)
+        h = Block(path, 2; parse_as=:text)
         @test string(h) == "beta\n"
         @test lines(h) == 3:3
         @test eof_handle(path; parse_as=:text) in handles(path; parse_as=:text)

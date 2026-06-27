@@ -157,7 +157,7 @@ version-control policy `vc`.
 For `NoVersionControl()`, this always returns `false`. The one-argument form
 returns a predicate suitable for filtering handles.
 """
-function is_versioned(handle::Handle, vc::VersionControl{:git})
+function is_versioned(handle::Block, vc::VersionControl{:git})
     is_valid(handle) || return false
 
     try
@@ -168,17 +168,17 @@ function is_versioned(handle::Handle, vc::VersionControl{:git})
     end
 end
 
-function is_versioned(::Handle, ::VersionControl{:none})
+function is_versioned(::Block, ::VersionControl{:none})
     return false
 end
 
-is_versioned(vc::VersionControl, handle::Handle) = is_versioned(handle, vc)
+is_versioned(vc::VersionControl, handle::Block) = is_versioned(handle, vc)
 
 is_versioned(vc::VersionControl) = Base.Fix2(is_versioned, vc)
 
 function handles(vc::VersionControl{:git}; includes::Bool=false, parse_as::Symbol=:auto)
     repo_root = git_worktree_root(vc.repo_path)
-    result = Set{Handle}()
+    result = Set{Block}()
 
     for path in git_tracked_paths(repo_root)
         is_valid_utf8_file(path) || continue
@@ -189,7 +189,7 @@ function handles(vc::VersionControl{:git}; includes::Bool=false, parse_as::Symbo
 end
 
 function handles(::VersionControl{:none}; includes::Bool=false, parse_as::Symbol=:auto)
-    return Set{Handle}()
+    return Set{Block}()
 end
 
 # If Base.arg_gen(repo) returns the repo path, then commands like run(`git log $repo`) will work

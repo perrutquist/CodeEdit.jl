@@ -1,10 +1,10 @@
 
 display_ref() = Ref{Union{Nothing,DisplayedPlan}}(nothing)
 
-Replace(handle::Handle, code::AbstractString) = Replace(handle, String(code), display_ref())
-Delete(handle::Handle) = Delete(handle, display_ref())
-InsertBefore(handle::Handle, code::AbstractString) = InsertBefore(handle, String(code), display_ref())
-InsertAfter(handle::Handle, code::AbstractString) = InsertAfter(handle, String(code), display_ref())
+Replace(handle::Block, code::AbstractString) = Replace(handle, String(code), display_ref())
+Delete(handle::Block) = Delete(handle, display_ref())
+InsertBefore(handle::Block, code::AbstractString) = InsertBefore(handle, String(code), display_ref())
+InsertAfter(handle::Block, code::AbstractString) = InsertAfter(handle, String(code), display_ref())
 
 function CreateFile(path::AbstractString, code::AbstractString; parse_as::Symbol=:auto)
     parse_as in VALID_PARSE_MODES || throw(ArgumentError("parse_as must be :auto, :julia, or :text"))

@@ -1,7 +1,7 @@
 """
 Return a compact source-location header for a handle.
 """
-function handle_header(handle::Handle)
+function handle_header(handle::Block)
     record = handle_record(handle)
 
     if record === nothing || !record.valid
@@ -15,7 +15,7 @@ end
 """
 Write a full handle display to `io`.
 """
-function show_handle(io::IO, handle::Handle)
+function show_handle(io::IO, handle::Block)
     record = handle_record(handle)
 
     if record === nothing || !record.valid
@@ -28,11 +28,11 @@ function show_handle(io::IO, handle::Handle)
     return
 end
 
-function Base.show(io::IO, ::MIME"text/plain", handle::Handle)
+function Base.show(io::IO, ::MIME"text/plain", handle::Block)
     show_handle(io, handle)
 end
 
-function Base.show(io::IO, handle::Handle)
+function Base.show(io::IO, handle::Block)
     show_handle(io, handle)
 end
 
@@ -420,7 +420,7 @@ function more_files_summary(groups)
     return "$(length(groups)) more files, containing a total of $handle_count blocks in $line_count lines…"
 end
 
-function Base.show(io::IO, ::MIME"text/plain", set::Set{Handle})
+function Base.show(io::IO, ::MIME"text/plain", set::Set{Block})
     ordered = sort(collect(set); by=handle_sort_key)
     count = length(ordered)
     print(io, "$count block$(count == 1 ? "" : "s")")
@@ -462,7 +462,7 @@ function Base.show(io::IO, ::MIME"text/plain", set::Set{Handle})
     end
 end
 
-function Base.show(io::IO, ::MIME"text/plain", vector::Vector{Handle})
+function Base.show(io::IO, ::MIME"text/plain", vector::Vector{Block})
     if length(vector) == 1
         show_handle(io, only(vector))
         return

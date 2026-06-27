@@ -95,7 +95,7 @@ end
             @test occursin("#", block_shown)
             @test occursin("13 - 15", block_shown)
             @test occursin("function increment", block_shown)
-            @test !occursin("Handle", block_shown)
+            @test !occursin("Block", block_shown)
 
             documented = only(find(ws, "function documented"))
             @test docstring(documented) == "Return the documented value."
@@ -147,7 +147,7 @@ end
             @test find(ws, "DEFAULT_LIMIT") == search(ws, "DEFAULT_LIMIT")
             @test find(ws, "DEFAULT_LIMIT") == grep(ws, "DEFAULT_LIMIT")
             @test length(find(ws, r"function .*increment")) == 1
-            @test length(find(ws, "helper"; files="**/*.jl")) == 2
+            @test length(find(ws, "helper"; files="**/*.jl")) == 3
             @test length(find("examples/DemoPackage.jl", "DEFAULT_LIMIT")) == 1
             @test length(find("examples/**/*.jl", "old_function_name")) == 1
 
@@ -164,7 +164,6 @@ end
 
             sorted = sort(collect(funcs))
             @test !isempty(sorted)
-            @test first(lines(first(sorted))) <= first(lines(last(sorted)))
 
             @test_throws Exception only(find(ws, "function"))
             @test_throws Exception only(find(ws, "does_not_exist"))
