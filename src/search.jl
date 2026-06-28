@@ -1,15 +1,3 @@
-"""
-    find(target, query; files=nothing, as=:auto)
-    find(predicate, target; files=nothing, as=:auto)
-    search(args...; kwargs...)
-    grep(args...; kwargs...)
-
-Search parsed blocks and return matching blocks.
-
-`query` may be a string or `Regex`. Predicate forms keep ordinary Julia
-filtering ergonomics, including `find(target) do block ... end`. Set-like
-inputs return a `Set{Block}`; vector inputs preserve order and return a vector.
-"""
 function _query_predicate(needle::AbstractString)
     return handle -> is_valid(handle) && occursin(needle, source(handle))
 end
@@ -90,6 +78,18 @@ function _blocks_for_search(
     return handles(vc; includes=follow_includes, parse_as=mode)
 end
 
+"""
+    find(target, query; files=nothing, as=:auto)
+    find(predicate, target; files=nothing, as=:auto)
+    search(args...; kwargs...)
+    grep(args...; kwargs...)
+
+Search parsed blocks and return matching blocks.
+
+`query` may be a string or `Regex`. Predicate forms keep ordinary Julia
+filtering ergonomics, including `find(target) do block ... end`. Set-like
+inputs return a `Set{Block}`; vector inputs preserve order and return a vector.
+"""
 function find(
     predicate::Function,
     target;
@@ -130,5 +130,12 @@ function find(
     )
 end
 
+"""
+`search` is currently an alias for `find`. It may change behaviour in a future relase of CodeEdit
+"""
 search(args...; kwargs...) = find(args...; kwargs...)
+
+"""
+`grep` is currently an alias for `find`. It may change behaviour in a future relase of CodeEdit
+"""
 grep(args...; kwargs...) = find(args...; kwargs...)

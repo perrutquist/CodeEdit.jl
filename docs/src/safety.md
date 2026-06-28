@@ -53,23 +53,6 @@ julia> write("scratch.txt", "status = changed elsewhere\n");
 
 julia> apply!(p; git=false)
 ERROR: displayed edit was invalid
-Stacktrace:
- [1] error(s::String)
-   @ Base ./error.jl:44
- [2] #compile_checked_plan#54
-   @ ~/Documents/Julia/CodeEdit/src/apply.jl:475 [inlined]
- [3] compile_checked_plan
-   @ ~/Documents/Julia/CodeEdit/src/apply.jl:468 [inlined]
- [4] apply!(vc::NoVersionControl{@NamedTuple{}}, edit::Replace; kwargs::@Kwargs{require_view::Bool, require_clean::Bool})
-   @ CodeEdit ~/Documents/Julia/CodeEdit/src/apply.jl:578
- [5] _apply_with_vc!(vc::NoVersionControl{@NamedTuple{}}, edit::Replace, message::Nothing; review::Bool, require_view::Nothing, yes::Bool, kwargs::@Kwargs{})
-   @ CodeEdit ~/Documents/Julia/CodeEdit/src/ui.jl:443
- [6] _apply_with_vc!
-   @ ~/Documents/Julia/CodeEdit/src/ui.jl:430 [inlined]
- [7] #apply!#119
-   @ ~/Documents/Julia/CodeEdit/src/ui.jl:475 [inlined]
- [8] top-level scope
-   @ none:1
 ```
 
 Display the patch again to review the current plan before applying it.
@@ -137,15 +120,6 @@ julia> p = replace(b, "false" => "true");
 
 julia> apply!(p)
 ERROR: commit message required; use apply!(patch, message) or apply!(patch; git=false)
-Stacktrace:
- [1] error(s::String)
-   @ Base ./error.jl:44
- [2] apply!(edit::Replace; git::Symbol, review::Bool, require_view::Nothing, yes::Bool, kwargs::@Kwargs{})
-   @ CodeEdit ~/Documents/Julia/CodeEdit/src/ui.jl:471
- [3] apply!(edit::Replace)
-   @ CodeEdit ~/Documents/Julia/CodeEdit/src/ui.jl:462
- [4] top-level scope
-   @ none:1
 ```
 
 ## Validation
@@ -170,23 +144,6 @@ Validation errors:
 
 julia> apply!(p; git=false)
 ERROR: displayed edit was invalid
-Stacktrace:
- [1] error(s::String)
-   @ Base ./error.jl:44
- [2] #compile_checked_plan#54
-   @ ~/Documents/Julia/CodeEdit/src/apply.jl:472 [inlined]
- [3] compile_checked_plan
-   @ ~/Documents/Julia/CodeEdit/src/apply.jl:468 [inlined]
- [4] apply!(vc::NoVersionControl{@NamedTuple{}}, edit::Replace; kwargs::@Kwargs{require_view::Bool, require_clean::Bool})
-   @ CodeEdit ~/Documents/Julia/CodeEdit/src/apply.jl:578
- [5] _apply_with_vc!(vc::NoVersionControl{@NamedTuple{}}, edit::Replace, message::Nothing; review::Bool, require_view::Nothing, yes::Bool, kwargs::@Kwargs{})
-   @ CodeEdit ~/Documents/Julia/CodeEdit/src/ui.jl:443
- [6] _apply_with_vc!
-   @ ~/Documents/Julia/CodeEdit/src/ui.jl:430 [inlined]
- [7] #apply!#119
-   @ ~/Documents/Julia/CodeEdit/src/ui.jl:475 [inlined]
- [8] top-level scope
-   @ none:1
 ```
 
 Combined patches are planned and validated as a unit, so intermediate states may be invalid as long as the final result is valid.

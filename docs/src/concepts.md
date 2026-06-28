@@ -23,24 +23,9 @@ julia> ws = workspace("examples")
 Workspace("examples"; git=true, review=true)
 ```
 
-Aliases are available for the same operation:
-
-```jldoctest concepts
-julia> repo("examples")
-Workspace("examples"; git=true, review=true)
-
-julia> project("examples")
-Workspace("examples"; git=true, review=true)
-
-julia> codebase("examples")
-Workspace("examples"; git=true, review=true)
-```
-
-The canonical spelling in the manual is `workspace`.
-
 ## Blocks
 
-For Julia files, blocks are top-level syntactic units such as functions, types, macros, constants, assignments, imports, exports, and includes. Attached docstrings stay with the block they document, so replacing a documented function keeps the docstring and function together. Use [`docstring`](@ref) or [`docs`](@ref) to inspect attached documentation.
+For Julia files, blocks are top-level syntactic units such as functions, types, macros, constants, assignments, imports, exports, and includes. Attached docstrings stay with the block they document, so replacing a documented function keeps the docstring and function together. Use [`docstring`](@ref) to inspect attached documentation.
 
 For example, CodeEdit.jl sees a file like this as several separate blocks:
 

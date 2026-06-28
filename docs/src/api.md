@@ -30,7 +30,6 @@ path
 lines
 span
 docstring
-docs
 reindex
 is_valid
 ```
@@ -43,7 +42,6 @@ Search functions return block collections. Use ordinary set operations such as `
 find
 search
 grep
-where
 filepath_matches
 is_julia
 is_text
@@ -56,6 +54,9 @@ Patches are immutable descriptions of intended changes. Constructing a patch doe
 
 ```@docs
 Patch
+Combine
+GitVersionControl
+NoVersionControl
 replace
 delete
 insert_before
@@ -68,7 +69,6 @@ delete_file
 patch
 preview
 diff
-rename
 ```
 
 ## Applying patches

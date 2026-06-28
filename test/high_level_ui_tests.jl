@@ -67,7 +67,6 @@ end
             @test ws isa Workspace
             @test repo("examples") isa Workspace
             @test project("examples") isa Workspace
-            @test codebase("examples") isa Workspace
 
             ws_shown = show_plain(ws)
             @test occursin("Workspace", ws_shown)

@@ -72,33 +72,26 @@ After finding the relevant block, construct a replacement and apply it through g
 ```jldoctest searching_errors
 julia> ws = workspace("examples");
 
-julia> b = only(find(where(trace, ws), "error("))
-ERROR: UndefVarError: `where` not defined in `Main`
-Suggestion: check for spelling errors or missing imports.
-Stacktrace:
- [1] top-level scope
-   @ none:1
-
+julia> b = only(find(blocks(trace, in=ws), "error("))
+# examples/error-example.jl 1 - 3:
+function inner(x)
+    error("bad input: $x")
+end
+ 
 julia> p = replace(
            b,
-           raw#error("bad input: $x")# =>
-           raw#throw(ArgumentError("bad input: $x"))#,
+           raw"""error("bad input: $x")""" =>
+           raw"""throw(ArgumentError("bad input: $x"))""",
        )
-ERROR: ParseError:
-# Error @ none:3:8
-    b,
-    raw#error("bad input: $x")# =>
-#      └ ── Expected `)` or `,`
-Stacktrace:
- [1] top-level scope
-   @ none:1
+Patch modifies examples/error-example.jl:
+2c2
+<     error("bad input: $x")
+---
+>     throw(ArgumentError("bad input: $x"))
 
 julia> apply!(p, "Throw ArgumentError for bad input")
-ERROR: UndefVarError: `p` not defined in `Main`
-Suggestion: check for spelling errors or missing imports.
-Stacktrace:
- [1] top-level scope
-   @ none:1
+Applied: 1 file changed, commit 1c6371a
+
 ```
 
 After a successful apply, existing blocks are updated or invalidated as needed.

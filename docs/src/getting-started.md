@@ -37,8 +37,6 @@ julia> ws = workspace("examples")
 Workspace("examples"; git=true, review=true)
 ```
 
-[`repo`](@ref), [`project`](@ref), and [`codebase`](@ref) are equivalent aliases. The canonical spelling in the manual is `workspace`.
-
 ## Finding blocks
 
 Search a workspace directly with [`find`](@ref):

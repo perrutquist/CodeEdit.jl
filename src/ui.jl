@@ -134,9 +134,15 @@ function workspace(path::AbstractString="."; git=:auto, review::Bool=true, requi
     return Workspace(root, uses_git, review_value, vc)
 end
 
+"""
+`repo` is an alias for `workspace`. It may be removed in the future.
+"""
 repo(path::AbstractString="."; kwargs...) = workspace(path; kwargs...)
+
+"""
+`project` is an alias for `workspace`. It may be removed in the future.
+"""
 project(path::AbstractString="."; kwargs...) = workspace(path; kwargs...)
-codebase(path::AbstractString="."; kwargs...) = workspace(path; kwargs...)
 
 function Base.show(io::IO, ws::Workspace)
     print(io, "Workspace(")
@@ -228,6 +234,9 @@ end
 
 blocks(trace::Vector{Union{Ptr{Nothing}, Base.InterpreterIP}}; kwargs...) = blocks(stacktrace(trace); kwargs...)
 
+"""
+`hanldes` is an alias for `blocks` for backwards compatibility. It may be removed in the future.
+"""
 handles(ws::Workspace; kwargs...) = blocks(ws; kwargs...)
 
 """
@@ -251,13 +260,37 @@ function Base.getindex(ws::Workspace, selector::AbstractString)
     return handle_at(blocks(ws), selector)
 end
 
+"""
+`source(block)` is currently an alias for `string(block)`. It may be removed in the future.
+"""
 source(handle::Block) = string(handle)
 Base.String(handle::Block) = string(handle)
-text(handle::Block) = source(handle)
-path(handle::Block) = filepath(handle)
-span(handle::Block) = (path(handle), lines(handle))
-docs(handle::Block) = docstring(handle)
 
+"""
+`text(block)` is currently an alias for `string(block)`. It may be removed in the future.
+"""
+text(handle::Block) = string(handle)
+
+"""
+`path(block)` is currently an alias for `filepath(block)`. It may be removed in the future.
+"""
+path(handle::Block) = filepath(handle)
+
+"""
+`span(block)` returns a `Tuple` of the filepath and line number range of a block.
+"""
+span(handle::Block) = (path(handle), lines(handle))
+
+"""
+    replace(handle, code)
+    replace(handle, original => replacement, ...)
+    replace(handles, original => replacement, ...)
+
+Create a patch that replaces the block referenced by `handle` with `code`.
+
+The patch is planned against the current state of the file(s) involved.
+Applying the edit may invalidate or update affected blocks.
+"""
 function replace(handle::Block, replacement::Pair, replacements::Pair...; kwargs...)
     return Replace(handle, Base.replace(source(handle), replacement, replacements...; kwargs...))
 end
@@ -274,6 +307,15 @@ function replace(collection::AbstractVector{Block}, replacements::Pair...; kwarg
     return patch([replace(handle, replacements...; kwargs...) for handle in collection]...)
 end
 
+"""
+    delete(handle)
+    delete(handles)
+
+Create a patch that deletes the blocks referenced.
+
+The patch is planned against the current state of the file(s) involved.
+Applying the edit will invalidate the blocks.
+"""
 delete(handle::Block) = Delete(handle)
 
 function delete(collection::AbstractSet{Block})
@@ -284,26 +326,70 @@ function delete(collection::AbstractVector{Block})
     return patch([Delete(handle) for handle in collection]...)
 end
 
+"""
+    insert_before(block, code)
+
+Creates a patch that inserts `code` immediately before the `block`.
+"""
 insert_before(handle::Block, code::AbstractString) = InsertBefore(handle, code)
+
+"""
+    insert_after(block, code)
+
+Creates a patch that inserts `code` immediately after the `block`.
+"""
 insert_after(handle::Block, code::AbstractString) = InsertAfter(handle, code)
 
+"""
+    append_to(filepath, code)
+
+Creates a patch that inserts `code` at the end of the given file.
+"""
 function append_to(path::AbstractString, code::AbstractString; as::Symbol=:auto, parse_as=nothing)
     mode = _normalize_parse_as(as=as, parse_as=parse_as)
     return InsertAfter(eof_handle(path; parse_as=mode), code)
 end
 
+"""
+    prepend_to(filepath, code)
+
+Creates a patch that inserts `code` at the beginning of the given file.
+"""
 function prepend_to(path::AbstractString, code::AbstractString; as::Symbol=:auto, parse_as=nothing)
     mode = _normalize_parse_as(as=as, parse_as=parse_as)
     cache = load_file(path; parse_as=mode)
     return InsertBefore(block_handle(cache, 1), code)
 end
 
+"""
+    create_file(filepath, code)
+
+Creates a patch that creates a new file containing the `code`.
+"""
 create_file(path::AbstractString, code::AbstractString; as::Symbol=:auto, parse_as=nothing) =
     CreateFile(path, code; parse_as=_normalize_parse_as(as=as, parse_as=parse_as))
 
+"""
+    move_file(old_path, new_file)
+
+Creates a patch that moves/renames a file.
+"""
 move_file(old_path::AbstractString, new_path::AbstractString) = MoveFile(old_path, new_path)
+
+"""
+    delete_file(filepath)
+
+Creates a patch that deletes a file containing the `code`.
+"""
 delete_file(path::AbstractString) = DeleteFile(path)
 
+"""
+    patch(edit1, edit2, ...)
+
+Combine many patches (edits) into one patch.
+
+A shorthand for this is: `edit1 + edit2 + ...`.
+"""
 patch(edits::AbstractEdit...) = Combine(edits...)
 patch(edits::AbstractVector{<:AbstractEdit}) = Combine(edits)
 
@@ -311,13 +397,21 @@ Base.:+(a::AbstractEdit, b::AbstractEdit) = Combine(a, b)
 Base.:+(a::Combine, b::AbstractEdit) = Combine(vcat(a.edits, AbstractEdit[b]), display_ref())
 Base.:+(a::AbstractEdit, b::Combine) = Combine(vcat(AbstractEdit[a], b.edits), display_ref())
 
+"""
+    preview(edit)
+
+Create a string containing a diff for a planned edit.
+"""
 function preview(edit::AbstractEdit)
     io = IOBuffer()
     show(io, MIME"text/plain"(), edit)
     return String(take!(io))
 end
 
-diff(edit::AbstractEdit) = preview(edit)
+"""
+`diff(edit::CodeEdit.AbstractEdit)` is an alias for `preview(edit)`. It may be removed in the future.
+"""
+Base.diff(edit::AbstractEdit) = preview(edit)
 
 edit(method::Method, args...; kwargs...) = replace(block(method), args...; kwargs...)
 
@@ -499,6 +593,9 @@ function apply!(
     return _apply_with_vc!(ws.vc, edit, nothing; review=review, require_view=require_view, yes=yes, kwargs...)
 end
 
+"""
+`commit!` is an alias for `apply!`. It may be removed in the future.
+"""
 commit!(edit::AbstractEdit, message::AbstractString; kwargs...) =
     apply!(edit, message; git=:required, kwargs...)
 

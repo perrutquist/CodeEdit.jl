@@ -30,9 +30,9 @@ include("reindex.jl")
 include("format_modules.jl")
 include("ui.jl")
 
-export Workspace, workspace, repo, project, codebase
-export Block, block, blocks, source, text, path, span, docs
-export Block, eof_handle, handles, handle_at, reindex, format_modules
+export Workspace, workspace, repo, project
+export Block, block, blocks, source, text, path, span
+export eof_handle, handles, handle_at, reindex, format_modules
 export find, search, grep
 export Patch, AbstractEdit, patch, replace, delete, insert_before, insert_after
 export append_to, prepend_to, create_file, move_file, delete_file
